@@ -18,6 +18,7 @@
 #include <toml.hpp>
 
 #include "config/proxy_provider_direct.h"
+#include "config/proxy_provider_enabled.h"
 #include "config/proxy_provider_interval.h"
 
 inline constexpr char kDefaultStashRuleBase[] = "base/stash.yaml";
@@ -92,6 +93,9 @@ struct Settings {
   int updateInterval = 0;
   int proxyProviderInterval = kDefaultProxyProviderInterval;
   bool proxyProviderDirect = kDefaultProxyProviderDirect;
+  // 部署级 proxy-provider 总开关；关闭后 Clash/ClashR 远程订阅改由后端代抓，
+  // 节点内联输出（请求参数 provider= 可逐次覆盖）。
+  bool proxyProviderEnabled = kDefaultProxyProviderEnabled;
   bool surgePolicyPath = true;
   bool surfboardPolicyPath = true;
   bool loonRemoteProxy = true;

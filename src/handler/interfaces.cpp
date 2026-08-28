@@ -3407,6 +3407,9 @@ struct ParsedSubRequest {
   tribool generate_classical_rule_provider;
   tribool tls13;
   tribool provider_proxy_direct;
+  // 单次请求覆盖 proxy-provider 开关；undef 时跟随部署级
+  // [proxy_provider] enabled 设置。
+  tribool provider_enabled;
 };
 
 static std::string parseSubRequestArguments(Request &request,
@@ -3508,6 +3511,7 @@ static std::string parseSubRequestArguments(Request &request,
   parsed.tls13 = getUrlArg(argument, "tls13");
   parsed.provider_proxy_direct =
       getUrlArg(argument, "provider_proxy_direct");
+  parsed.provider_enabled = getUrlArg(argument, "provider");
   parsed.explain.upload_requested = parsed.upload.get(false);
   if (parsed.explain_mode && parsed.upload) {
     parsed.upload = false;
@@ -3621,6 +3625,13 @@ static std::string buildEffectiveSubPolicy(Request &request,
            "and cannot be applied to Stash proxy-providers.\n"
            "无效请求：provider_proxy_direct 是 Mihomo 专用选项，不能应用于 "
            "Stash proxy-provider。";
+  }
+  if (!parsed.provider_enabled.is_undef() && parsed.target != "clash" &&
+      parsed.target != "clashr") {
+    response.status_code = 400;
+    return "Invalid request: provider is a Mihomo-only option and cannot be "
+           "applied to other targets.\n"
+           "无效请求：provider 是 Mihomo 专用选项，不能应用于其他目标。";
   }
   if (!providerHeadersFromRequest(request, parsed.provider_headers,
                                   policy.provider_headers,
@@ -4538,6 +4549,15 @@ static SubStageResponse processSubscriptionNodes(
   if (ext.nodelist) {
     remote_mode = RemoteSubscriptionMode::ServerSideParse;
     remote_reason = "list-mode";
+  } else if (remote_mode == RemoteSubscriptionMode::ClashProxyProvider &&
+             !parsed.provider_enabled.get(settings.proxyProviderEnabled)) {
+    // 部署级 [proxy_provider] enabled=false 或请求参数 provider=false：
+    // 回到传统流程，由后端代抓订阅并按节点内联输出。
+    remote_mode = RemoteSubscriptionMode::ServerSideParse;
+    remote_reason = parsed.provider_enabled.is_undef()
+                        ? "provider-disabled-setting"
+                        : "provider-disabled-request";
+    ext.use_proxy_provider = false;
   } else if (remote_mode == RemoteSubscriptionMode::QuanXServerRemote) {
     remote_reason = quanxRemoteCapabilityReason(parsed, policy, settings);
     if (remote_reason != "native-capable")

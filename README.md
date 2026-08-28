@@ -178,6 +178,9 @@ proxy_direct:false,https://example.com/sub
 # 对整个请求覆盖 Mihomo Provider 的直连策略
 &provider_proxy_direct=false
 
+# 关闭整条请求的 proxy-provider 模式（后端代抓订阅、节点内联输出）
+&provider=false
+
 # 返回脱敏诊断报告，不返回配置文件
 &explain=true
 ```
@@ -187,7 +190,8 @@ proxy_direct:false,https://example.com/sub
 - `ruleprepend` / `ruleappend`：向 Clash 完整规则的首尾插入远程规则来源；
 - `28800|no-resolve`：为 `clash-ipcidr` 规则集引用增加 `no-resolve`；
 - `provider_headers`：从当前请求中选择允许的请求头，并写入 Clash 或 Stash Provider；
-- `[proxy_provider]`：设置部署级 Provider 更新间隔和 `proxy: DIRECT` 默认行为。
+- `provider=true/false`：逐次请求覆盖 proxy-provider 模式的开关（仅 `target=clash`、`clashr`）；
+- `[proxy_provider]`：设置部署级 Provider 开关（`enabled=false` 可整体回到后端代抓订阅、节点内联输出的传统流程）、更新间隔和 `proxy: DIRECT` 默认行为。
 
 ---
 

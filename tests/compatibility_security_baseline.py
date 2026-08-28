@@ -1446,6 +1446,7 @@ def running_service(
     legacy_publish_enabled: bool = False,
     proxy_provider_interval: int | None = None,
     proxy_provider_direct: bool | None = None,
+    proxy_provider_enabled: bool | None = None,
     dashboard_client_ip_header: str | None = None,
     dashboard_trusted_proxy_cidrs: tuple[str, ...] = (),
     gist_api_base: str | None = None,
@@ -1490,13 +1491,21 @@ def running_service(
         baseline = baseline.replace(
             "publish_enabled = false", "publish_enabled = true"
         )
-    if proxy_provider_interval is not None or proxy_provider_direct is not None:
+    if (
+        proxy_provider_interval is not None
+        or proxy_provider_direct is not None
+        or proxy_provider_enabled is not None
+    ):
         provider_settings = ["[proxy_provider]"]
         if proxy_provider_interval is not None:
             provider_settings.append(f"interval = {proxy_provider_interval}")
         if proxy_provider_direct is not None:
             provider_settings.append(
                 f"proxy_direct = {str(proxy_provider_direct).lower()}"
+            )
+        if proxy_provider_enabled is not None:
+            provider_settings.append(
+                f"enabled = {str(proxy_provider_enabled).lower()}"
             )
         baseline = baseline.replace(
             "[custom_openclash_rules]",
@@ -5639,6 +5648,50 @@ def provider_interval_output_baseline(base_url: str, fixture_base: str) -> None:
             raise AssertionError(
                 f"proxy_direct on {label} returned HTTP {status}: {body!r}"
             )
+
+
+def provider_enabled_switch_baseline(
+    base_url: str, disabled_url: str, fixture_base: str
+) -> None:
+    """proxy-provider 总开关：部署级 enabled=false 与请求参数 provider= 的
+    相互覆盖行为。关闭后应回到后端代抓、节点内联输出的传统流程。"""
+    source = fixture_base + "/subscription.txt"
+    common = {"url": source, "config": DISABLE_RULEGEN_CONFIG}
+    cases = {
+        # (服务, 请求参数, 预期 provider 模式)
+        "setting-off-default": (disabled_url, {}, False),
+        "setting-off-request-on": (disabled_url, {"provider": "true"}, True),
+        "setting-on-request-off": (base_url, {"provider": "false"}, False),
+        "setting-on-default": (base_url, {}, True),
+    }
+    for label, (url, extra, expects_provider) in cases.items():
+        params = {"target": "clash", **common, **extra}
+        status, body, _ = request(url, "/sub", params)
+        output = body.decode("utf-8", errors="replace")
+        if status != 200:
+            raise AssertionError(
+                f"provider switch {label} returned HTTP {status}: {output!r}"
+            )
+        if ("proxy-providers:" in output) is not expects_provider:
+            raise AssertionError(
+                f"provider switch {label} mismatch: "
+                f"provider mode present={('proxy-providers:' in output)} "
+                f"expected={expects_provider}"
+            )
+        if not expects_provider and "Smoke" not in output:
+            raise AssertionError(
+                f"provider switch {label} lost expanded inline nodes"
+            )
+    # 非 clash 目标使用 provider 参数应明确拒绝
+    status, body, _ = request(
+        base_url,
+        "/sub",
+        {"target": "surge", "url": source, "provider": "false"},
+    )
+    if status != 400:
+        raise AssertionError(
+            f"provider on non-Clash target returned HTTP {status}: {body!r}"
+        )
 
 
 def dashboard_baseline(binary: Path, fixture_base: str) -> None:
@@ -12824,6 +12877,12 @@ def main() -> int:
             proxy_provider_direct=False,
         ) as base_url:
             provider_interval_output_baseline(base_url, fixture_base)
+        with running_service(binary) as default_url, running_service(
+            binary, proxy_provider_enabled=False
+        ) as provider_disabled_url:
+            provider_enabled_switch_baseline(
+                default_url, provider_disabled_url, fixture_base
+            )
         dashboard_baseline(binary, fixture_base)
         sensitive_log_baseline(binary, fixture_base)
         template_error_redaction_baseline(binary, fixture_base)

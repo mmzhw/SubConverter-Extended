@@ -1115,6 +1115,7 @@ std::string page(Request &request, Response &response) {
                     classic: "classic / classical 规则",
                     tls13: "tls13 / TLS 1.3",
                     provider_proxy_direct: "provider_proxy_direct / Provider 直连",
+                    provider: "provider / Provider 模式开关",
                     provider_headers: "provider_headers / Provider 请求头",
                     profile_data: "profile_data / 托管配置数据",
                     token: "token / 访问令牌",

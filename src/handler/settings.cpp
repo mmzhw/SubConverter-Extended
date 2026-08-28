@@ -303,6 +303,15 @@ static bool requireProxyProviderDirect(const std::string &value) {
   return proxy_direct;
 }
 
+static bool requireProxyProviderEnabled(const std::string &value) {
+  bool enabled = false;
+  if (!parseProxyProviderEnabled(value, enabled)) {
+    throw std::invalid_argument(
+        "proxy_provider.enabled 必须是 true、false、1 或 0。");
+  }
+  return enabled;
+}
+
 static bool pathInsideRoot(const std::string &path, const std::string &root) {
   return isPathInScope(path, root);
 }
@@ -972,6 +981,15 @@ void readYAMLConf(YAML::Node &node,
       global.proxyProviderDirect =
           requireProxyProviderDirect(proxy_direct.as<std::string>());
     }
+    YAML::Node enabled = proxy_provider["enabled"];
+    if (enabled.IsDefined()) {
+      if (!enabled.IsScalar()) {
+        throw std::invalid_argument(
+            "proxy_provider.enabled 必须是布尔值。");
+      }
+      global.proxyProviderEnabled =
+          requireProxyProviderEnabled(enabled.as<std::string>());
+    }
   }
 
   if (node["custom_openclash_rules"].IsDefined()) {
@@ -1320,6 +1338,15 @@ void readTOMLConf(toml::value &root,
             "proxy_provider.proxy_direct 必须是 TOML 布尔值。");
       }
       global.proxyProviderDirect = proxy_direct.as_boolean();
+    }
+    if (section_proxy_provider.contains("enabled")) {
+      const auto &enabled =
+          section_proxy_provider.as_table().at("enabled");
+      if (!enabled.is_boolean()) {
+        throw std::invalid_argument(
+            "proxy_provider.enabled 必须是 TOML 布尔值。");
+      }
+      global.proxyProviderEnabled = enabled.as_boolean();
     }
   }
 

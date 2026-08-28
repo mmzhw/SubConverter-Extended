@@ -560,6 +560,12 @@ IF(BUILD_TESTS)
     ADD_TEST(NAME proxy_provider_direct COMMAND proxy_provider_direct_test)
     SET_TESTS_PROPERTIES(proxy_provider_direct PROPERTIES LABELS fast)
 
+    ADD_EXECUTABLE(proxy_provider_enabled_test
+        tests/proxy_provider_enabled_test.cpp)
+    TARGET_INCLUDE_DIRECTORIES(proxy_provider_enabled_test PRIVATE src)
+    ADD_TEST(NAME proxy_provider_enabled COMMAND proxy_provider_enabled_test)
+    SET_TESTS_PROPERTIES(proxy_provider_enabled PROPERTIES LABELS fast)
+
     ADD_EXECUTABLE(mieru_uri_test
         tests/mieru_uri_test.cpp
         src/parser/mieru_uri.cpp)
