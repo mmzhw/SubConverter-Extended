@@ -15,11 +15,19 @@ ARG MIHOMO_CACHE_BUST=1
 ARG REFRESH_GO_DEPS=false
 ARG ENABLE_SANITIZERS=false
 ARG GITHUB_PROXY_PREFIX=""
+ARG DEBIAN_MIRROR=""
 
 WORKDIR /build/bridge
 
 # Debian 使用 apt 包管理器
-RUN apt-get update && \
+RUN if [ -n "${DEBIAN_MIRROR}" ]; then \
+      find /etc/apt -type f \( -name '*.list' -o -name '*.sources' \) -exec \
+        sed -i \
+          -e "s#http://deb.debian.org/debian#${DEBIAN_MIRROR%/}#g" \
+          -e "s#https://deb.debian.org/debian#${DEBIAN_MIRROR%/}#g" \
+          {} +; \
+    fi && \
+    apt-get update && \
     apt-get install -y --no-install-recommends git build-essential && \
     rm -rf /var/lib/apt/lists/*
 
@@ -151,11 +159,19 @@ ARG INJA_REF
 ARG JPCRE2_REF
 ARG ENABLE_SANITIZERS=false
 ARG GITHUB_PROXY_PREFIX=""
+ARG DEBIAN_MIRROR=""
 
 WORKDIR /
 
 # 安装 Debian 构建依赖
-RUN apt-get update && \
+RUN if [ -n "${DEBIAN_MIRROR}" ]; then \
+      find /etc/apt -type f \( -name '*.list' -o -name '*.sources' \) -exec \
+        sed -i \
+          -e "s#http://deb.debian.org/debian#${DEBIAN_MIRROR%/}#g" \
+          -e "s#https://deb.debian.org/debian#${DEBIAN_MIRROR%/}#g" \
+          {} +; \
+    fi && \
+    apt-get update && \
     apt-get install -y --no-install-recommends \
     git g++ build-essential cmake python3 python3-pip \
     pkg-config curl \

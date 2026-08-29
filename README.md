@@ -263,6 +263,8 @@ http://localhost:25500/healthz
 
 `docker-compose.yml` 示例已包含推荐默认值：`WEB_PORT=25500`、`SUBCONVERTER_LISTEN_PORT=25501`、`TZ=Asia/Shanghai`，并将短链映射持久化到 `./short-links:/base/short-links`。短链数量可通过 `SUBCONVERTER_SHORT_LINK_MAX_ENTRIES` 调整，默认保留 `500` 条。短链管理密码读取 `SUBCONVERTER_SHORT_LINK_PASSWORD`；Docker 容器未设置该变量时，会自动生成随机 token 并保存到 `/base/short-links/admin-password`，可通过 `docker exec SubConverter-Extended cat /base/short-links/admin-password` 查看。设置环境变量可覆盖自动生成值。
 
+国内服务器自行构建镜像时，可传入 `--build-arg DEBIAN_MIRROR=http://mirrors.aliyun.com/debian` 与 `--build-arg ALPINE_MIRROR=https://mirrors.aliyun.com/alpine`，降低基础镜像包管理器更新时的网络失败概率。
+
 ### Web 配置界面 / Web Config UI
 
 镜像内置 Vue 3 可视化配置界面：打开发布端口根路径即可组装真实可复制的订阅 URL。界面使用显式“生成”按钮，避免输入一个字符就更新链接；生成后可复制长链接、生成二维码，也可创建服务端短链。
