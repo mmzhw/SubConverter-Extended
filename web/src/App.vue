@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { Clock, Link, Operation, SwitchButton } from '@element-plus/icons-vue';
+import { Clock, Link, Operation } from '@element-plus/icons-vue';
 import { setLang } from './i18n';
 import { useFormState } from './composables/useFormState';
 import { useGeneratedLinks } from './composables/useGeneratedLinks';
+import BrandLogo from './components/BrandLogo.vue';
 import ConfigForm from './components/ConfigForm.vue';
 import UrlPreview from './components/UrlPreview.vue';
 import BottomActionBar from './components/BottomActionBar.vue';
@@ -23,11 +24,13 @@ function toggleLang() {
   <main class="shell">
     <div class="topbar" aria-label="header">
       <div class="brand">
-        <div class="eyebrow">
-          <el-icon><SwitchButton /></el-icon>
-          <span>{{ t('app.kicker') }}</span>
+        <div class="brand-row">
+          <BrandLogo />
+          <div class="brand-copy">
+            <div class="eyebrow">{{ t('app.kicker') }}</div>
+            <h1>{{ t('app.title') }}</h1>
+          </div>
         </div>
-        <h1>{{ t('app.title') }}</h1>
         <div class="subtitle">{{ t('app.subtitle') }}</div>
       </div>
       <div class="top-actions">
@@ -81,10 +84,18 @@ function toggleLang() {
   min-width: 0;
 }
 
-.eyebrow {
-  display: inline-flex;
+.brand-row {
+  display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 16px;
+  min-width: 0;
+}
+
+.brand-copy {
+  min-width: 0;
+}
+
+.eyebrow {
   margin-bottom: 10px;
   color: var(--accent);
   font-size: 0.78rem;
@@ -201,6 +212,10 @@ h1 {
   .topbar {
     gap: 18px;
     padding-bottom: 18px;
+  }
+
+  .brand-row {
+    gap: 12px;
   }
 
   h1 {

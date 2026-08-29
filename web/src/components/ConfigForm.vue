@@ -42,8 +42,8 @@ const githubProxyOptions = computed(() => GITHUB_PROXY_PRESETS.map((proxy) => ({
   displayLabel: `${isZh() ? proxy.label.zh : proxy.label.en}${latencyText(proxy.value)}`,
 })));
 const githubProxyHelp = computed(() => (isZh()
-  ? '仅作用于远程配置 config= 的 GitHub 地址。选择代理后，后端拉取规则模板时会请求代理后的地址；不影响订阅源 url=。'
-  : 'Only applies to GitHub URLs in config=. The backend will fetch the proxied config URL; the subscription source url= is unchanged.'));
+  ? '作用于远程配置 config= 的 GitHub 地址，并会继承到该配置内的 GitHub 规则集和基础模板地址；不影响订阅源 url=。'
+  : 'Applies to GitHub URLs in config= and is inherited by GitHub rulesets and base templates inside that config. The subscription source url= is unchanged.'));
 const customGithubProxyPlaceholder = computed(() => (isZh()
   ? '例如 https://example.com/，也支持 https://example.com/{url}'
   : 'For example https://example.com/, or https://example.com/{url}'));

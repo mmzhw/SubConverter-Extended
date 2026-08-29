@@ -306,18 +306,6 @@ export const OPTION_DEFS: OptionDef[] = [
     step: 1,
   },
   {
-    key: 'expand',
-    type: 'boolean',
-    label: { en: 'Expand rulesets', zh: '规则展开' },
-    description: {
-      en: 'Controls rules, not proxy nodes. On writes remote rulesets as concrete rule lines into the generated config; off keeps managed rule-provider/rule-set references when the target supports them.',
-      zh: '控制“规则”怎么输出，不控制节点。开启后把远程规则集展开成一条条具体规则写进最终配置；关闭时，在目标客户端支持的情况下保留 rule-provider/rule-set 这类规则引用。',
-    },
-    group: 'advanced',
-    defaultValue: false,
-    initialValue: true,
-  },
-  {
     key: 'append_type',
     type: 'boolean',
     label: { en: 'Show node protocol', zh: '节点类型标记' },
@@ -330,12 +318,24 @@ export const OPTION_DEFS: OptionDef[] = [
     initialValue: true,
   },
   {
+    key: 'expand',
+    type: 'boolean',
+    label: { en: 'Expand rulesets', zh: '规则展开' },
+    description: {
+      en: 'Controls rules, not proxy nodes. On writes remote rulesets as concrete rule lines into the generated config; off keeps managed rule-provider/rule-set references when the target supports them. It can be enabled together with Provider mode because Provider mode only controls node output. Output node list only skips full config and rule generation.',
+      zh: '控制“规则”怎么输出，不控制节点。开启后把远程规则集展开成一条条具体规则写进最终配置；关闭时，在目标客户端支持的情况下保留 rule-provider/rule-set 这类规则引用。可以和 Provider 模式同时开启，因为 Provider 模式只管节点输出；开启“只输出节点列表”时则不会生成完整配置和规则。',
+    },
+    group: 'advanced',
+    defaultValue: false,
+    initialValue: true,
+  },
+  {
     key: 'provider',
     type: 'boolean',
     label: { en: 'Provider mode', zh: 'Provider 模式' },
     description: {
-      en: 'Controls proxy nodes, not rules. On lets supported Clash/Mihomo configs reference the remote subscription as a proxy-provider; off sends provider=false so the backend fetches the subscription and writes proxy nodes directly into the config.',
-      zh: '控制“节点”怎么输出，不控制规则。开启时，支持的 Clash/Mihomo 配置会把订阅源作为 proxy-provider 引用；关闭时生成 provider=false，后端会代抓订阅并把节点直接写进配置。',
+      en: 'Controls proxy nodes, not rules or ruleset expansion. On lets supported Clash/Mihomo configs reference the remote subscription as a proxy-provider; off sends provider=false so the backend fetches the subscription and writes proxy nodes directly into the config.',
+      zh: '控制“节点”怎么输出，不控制规则，也不控制规则展开。开启时，支持的 Clash/Mihomo 配置会把订阅源作为 proxy-provider 引用；关闭时生成 provider=false，后端会代抓订阅并把节点直接写进配置。',
     },
     group: 'advanced',
     defaultValue: true,

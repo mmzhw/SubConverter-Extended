@@ -16,6 +16,13 @@ describe('responsive layout structure', () => {
     expect(source).toContain('grid-template-columns: repeat(2, minmax(0, 1fr));');
   });
 
+  it('renders the product logo as a dedicated component', () => {
+    const source = componentSource('../App.vue');
+
+    expect(source).toContain("import BrandLogo from './components/BrandLogo.vue';");
+    expect(source).toContain('<BrandLogo />');
+  });
+
   it('marks boolean option rows so mobile switch controls can stay inline', () => {
     const source = componentSource('ConfigForm.vue');
 

@@ -17,13 +17,15 @@ describe('short link manager helpers', () => {
       }),
     })) as unknown as typeof fetch;
 
-    const result = await requestShortLinks('http://server:25500', fetcher);
+    const result = await requestShortLinks('http://server:25500', 'secret', fetcher);
 
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.items[0].shortUrl).toBe('http://server:25500/s?id=Ab3k9Qx2');
     }
-    expect(fetcher).toHaveBeenCalledWith('http://server:25500/short/list');
+    expect(fetcher).toHaveBeenCalledWith('http://server:25500/short/list', {
+      headers: { 'X-Short-Link-Password': 'secret' },
+    });
   });
 
   it('deletes a short link by code', async () => {
@@ -32,10 +34,13 @@ describe('short link manager helpers', () => {
       json: async () => ({ deleted: true }),
     })) as unknown as typeof fetch;
 
-    const result = await requestDeleteShortLink('http://server:25500', 'Ab3k9Qx2', fetcher);
+    const result = await requestDeleteShortLink('http://server:25500', 'Ab3k9Qx2', 'secret', fetcher);
 
     expect(result).toEqual({ ok: true });
-    expect(fetcher).toHaveBeenCalledWith('http://server:25500/short?id=Ab3k9Qx2', { method: 'DELETE' });
+    expect(fetcher).toHaveBeenCalledWith('http://server:25500/short?id=Ab3k9Qx2', {
+      method: 'DELETE',
+      headers: { 'X-Short-Link-Password': 'secret' },
+    });
   });
 });
 

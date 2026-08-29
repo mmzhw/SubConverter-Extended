@@ -96,14 +96,21 @@ describe('OPTION_DEFS', () => {
   it('describes protocol tagging and ruleset expansion clearly', () => {
     const appendType = OPTION_DEFS.find((d) => d.key === 'append_type');
     const expand = OPTION_DEFS.find((d) => d.key === 'expand');
+    const provider = OPTION_DEFS.find((d) => d.key === 'provider');
+    const keys = OPTION_DEFS.map((d) => d.key);
     expect(appendType?.label.zh).toBe('节点类型标记');
     expect(appendType?.description.zh).toContain('代理协议类型');
     expect(appendType?.initialValue).toBe(true);
     expect(expand?.label.zh).toBe('规则展开');
     expect(expand?.description.zh).toContain('远程规则集');
+    expect(expand?.description.zh).toContain('可以和 Provider 模式同时开启');
+    expect(expand?.description.zh).toContain('只输出节点列表');
     expect(expand?.description.zh).not.toContain('短链');
     expect(expand?.defaultValue).toBe(false);
     expect(expand?.initialValue).toBe(true);
+    expect(provider?.description.zh).toContain('不控制规则');
+    expect(provider?.description.zh).toContain('规则展开');
+    expect(keys.indexOf('append_type')).toBeLessThan(keys.indexOf('expand'));
   });
   it('includes remote config presets that can accept custom URLs', () => {
     const config = OPTION_DEFS.find((d) => d.key === 'config');

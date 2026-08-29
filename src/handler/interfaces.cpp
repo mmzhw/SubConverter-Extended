@@ -35,6 +35,7 @@
 #include "generator/config/subexport.h"
 #include "generator/template/templates.h"
 #include "conversion_service.h"
+#include "github_proxy.h"
 #include "interfaces.h"
 #include "multithread.h"
 #include "ruleset_output.h"
@@ -3730,6 +3731,35 @@ struct ExternalConfigFetchPlan {
   std::vector<RulesetContent> ruleset_content;
 };
 
+static void applyGitHubProxyToExternalConfig(ExternalConfig &extconf,
+                                             const std::string &proxy_prefix) {
+  if (proxy_prefix.empty())
+    return;
+  applyGitHubProxyToRulesetConfigs(extconf.surge_ruleset, proxy_prefix);
+  applyGitHubProxyToSources(extconf.rule_prepend_sources, proxy_prefix);
+  applyGitHubProxyToSources(extconf.rule_append_sources, proxy_prefix);
+  extconf.clash_rule_base =
+      applyGitHubProxyToUrl(extconf.clash_rule_base, proxy_prefix);
+  extconf.surge_rule_base =
+      applyGitHubProxyToUrl(extconf.surge_rule_base, proxy_prefix);
+  extconf.surfboard_rule_base =
+      applyGitHubProxyToUrl(extconf.surfboard_rule_base, proxy_prefix);
+  extconf.mellow_rule_base =
+      applyGitHubProxyToUrl(extconf.mellow_rule_base, proxy_prefix);
+  extconf.quan_rule_base =
+      applyGitHubProxyToUrl(extconf.quan_rule_base, proxy_prefix);
+  extconf.quanx_rule_base =
+      applyGitHubProxyToUrl(extconf.quanx_rule_base, proxy_prefix);
+  extconf.loon_rule_base =
+      applyGitHubProxyToUrl(extconf.loon_rule_base, proxy_prefix);
+  extconf.sssub_rule_base =
+      applyGitHubProxyToUrl(extconf.sssub_rule_base, proxy_prefix);
+  extconf.singbox_rule_base =
+      applyGitHubProxyToUrl(extconf.singbox_rule_base, proxy_prefix);
+  extconf.stash_rule_base =
+      applyGitHubProxyToUrl(extconf.stash_rule_base, proxy_prefix);
+}
+
 static std::string buildExternalConfigFetchPlan(
     Response &response, const Settings &settings, ParsedSubRequest &parsed,
     EffectiveSubPolicy &policy, ExternalConfigFetchPlan &plan) {
@@ -3871,6 +3901,14 @@ static std::string buildExternalConfigFetchPlan(
     extconf.tpl_args = &policy.template_arguments;
     ExternalConfigLoadResult loaded =
         loadExternalConfig(candidate.path, extconf, candidate.context);
+    const std::string github_proxy_prefix =
+        inferGitHubProxyPrefixFromConfigUrl(candidate.path);
+    if (loaded.ok() && !github_proxy_prefix.empty()) {
+      applyGitHubProxyToExternalConfig(extconf, github_proxy_prefix);
+      writeLog(LOG_LEVEL_INFO,
+               "外部配置 GitHub 代理已应用到嵌套规则和模板来源：proxy=" +
+                   summarizeUrlForLog(github_proxy_prefix));
+    }
     bool effective =
         loaded.ok() && hasEffectiveExternalConfig(
                            extconf, policy.template_arguments, tpl_args_base,

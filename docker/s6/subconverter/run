@@ -5,4 +5,18 @@ export SUBCONVERTER_DASHBOARD_TRUSTED_PROXY_CIDRS="${SUBCONVERTER_DASHBOARD_TRUS
 export SUBCONVERTER_LISTEN_PORT="${SUBCONVERTER_LISTEN_PORT:-25501}"
 export SUBCONVERTER_SHORT_LINKS_FILE="${SUBCONVERTER_SHORT_LINKS_FILE:-/base/short-links/links.json}"
 mkdir -p "$(dirname "$SUBCONVERTER_SHORT_LINKS_FILE")"
+
+if [ -z "${SUBCONVERTER_SHORT_LINK_PASSWORD:-}" ]; then
+  password_file="${SUBCONVERTER_SHORT_LINK_PASSWORD_FILE:-/base/short-links/admin-password}"
+  mkdir -p "$(dirname "$password_file")"
+  if [ ! -s "$password_file" ]; then
+    umask 077
+    od -An -N24 -tx1 /dev/urandom | tr -d ' \n' > "$password_file"
+    printf '\n' >> "$password_file"
+  fi
+  export SUBCONVERTER_SHORT_LINK_PASSWORD="$(head -n 1 "$password_file")"
+  echo "Short-link management password loaded from $password_file"
+else
+  echo "Short-link management password loaded from SUBCONVERTER_SHORT_LINK_PASSWORD"
+fi
 exec /usr/local/bin/start-subconverter

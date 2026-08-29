@@ -20,6 +20,18 @@ function backendOrigin(origin: string) {
   return origin.replace(/\/+$/, '');
 }
 
+function authInit(password: string, init: RequestInit = {}): RequestInit | undefined {
+  const token = password.trim();
+  if (!token) return Object.keys(init).length ? init : undefined;
+  return {
+    ...init,
+    headers: {
+      ...(init.headers as Record<string, string> | undefined),
+      'X-Short-Link-Password': token,
+    },
+  };
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object';
 }
@@ -49,11 +61,12 @@ function normalizeItem(value: unknown, origin: string): ServerShortLink | undefi
 
 export async function requestShortLinks(
   origin: string,
+  password = '',
   fetcher: typeof fetch = fetch,
 ): Promise<ShortLinksResult> {
   try {
     const base = backendOrigin(origin);
-    const response = await fetcher(`${base}/short/list`);
+    const response = await fetcher(`${base}/short/list`, authInit(password));
     const payload = await response.json() as { items?: unknown; error?: unknown };
     if (!response.ok || !Array.isArray(payload.items)) {
       return { ok: false, error: typeof payload.error === 'string' ? payload.error : 'request-failed' };
@@ -72,11 +85,15 @@ export async function requestShortLinks(
 export async function requestDeleteShortLink(
   origin: string,
   code: string,
+  password = '',
   fetcher: typeof fetch = fetch,
 ): Promise<DeleteResult> {
   try {
     const base = backendOrigin(origin);
-    const response = await fetcher(`${base}/short?id=${encodeURIComponent(code)}`, { method: 'DELETE' });
+    const response = await fetcher(
+      `${base}/short?id=${encodeURIComponent(code)}`,
+      authInit(password, { method: 'DELETE' }),
+    );
     const payload = await response.json() as { deleted?: unknown; error?: unknown };
     if (!response.ok || payload.deleted !== true) {
       return { ok: false, error: typeof payload.error === 'string' ? payload.error : 'request-failed' };
@@ -87,7 +104,7 @@ export async function requestDeleteShortLink(
   }
 }
 
-export function useShortLinksManager(origin: string | Ref<string>) {
+export function useShortLinksManager(origin: string | Ref<string>, password: string | Ref<string> = '') {
   const items = ref<ServerShortLink[]>([]);
   const loading = ref(false);
   const error = ref('');
@@ -95,7 +112,7 @@ export function useShortLinksManager(origin: string | Ref<string>) {
   async function refresh() {
     loading.value = true;
     error.value = '';
-    const result = await requestShortLinks(unref(origin));
+    const result = await requestShortLinks(unref(origin), unref(password));
     loading.value = false;
     if (!result.ok) {
       error.value = result.error;
@@ -107,7 +124,7 @@ export function useShortLinksManager(origin: string | Ref<string>) {
 
   async function remove(code: string) {
     error.value = '';
-    const result = await requestDeleteShortLink(unref(origin), code);
+    const result = await requestDeleteShortLink(unref(origin), code, unref(password));
     if (!result.ok) {
       error.value = result.error;
       return false;

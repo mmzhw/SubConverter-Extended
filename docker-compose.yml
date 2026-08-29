@@ -16,6 +16,12 @@ services:
       WEB_PORT: "25500"
       SUBCONVERTER_LISTEN_PORT: "25501"
       SUBCONVERTER_SHORT_LINKS_FILE: "/base/short-links/links.json"
+      # 服务器短链管理密码。留空时容器启动脚本会在 /base/short-links/admin-password
+      # 自动生成并持久化一个随机 token；也可以显式设置此环境变量覆盖。
+      # Server short-link management password. Leave empty to let the container
+      # generate a persistent random token at /base/short-links/admin-password,
+      # or set this environment variable to override it.
+      SUBCONVERTER_SHORT_LINK_PASSWORD: ${SUBCONVERTER_SHORT_LINK_PASSWORD:-}
       SUBCONVERTER_SHORT_LINK_MAX_ENTRIES: "500"
       # WEB_PORT 控制 nginx 的公开入口；SUBCONVERTER_LISTEN_PORT 是容器内后端回环端口，
       # 保持与 WEB_PORT 不同以避免 nginx 与后端争抢同一个端口。

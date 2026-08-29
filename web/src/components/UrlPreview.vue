@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { Clock, Close, CopyDocument, Delete, Download, MagicStick, Refresh, Upload } from '@element-plus/icons-vue';
+import { Clock, Close, CopyDocument, Delete, Download, Lock, MagicStick, Refresh, Upload } from '@element-plus/icons-vue';
 import QRCode from 'qrcode';
 import { useCopy } from '../composables/useCopy';
 import { GeneratedLink } from '../composables/useGeneratedLinks';
@@ -19,6 +19,7 @@ const { state: copyState, copy } = useCopy();
 const qrDataUrl = ref('');
 const importVisible = ref(false);
 const managerTab = ref('history');
+const serverShortLinkPassword = ref(localStorage.getItem('sce.shortLinkPassword') || '');
 const serverBackendBase = computed(() => {
   try {
     return form.builtUrl.value ? new URL(form.builtUrl.value).origin : backendBaseForState(form.state);
@@ -26,7 +27,7 @@ const serverBackendBase = computed(() => {
     return backendBaseForState(form.state);
   }
 });
-const shortManager = useShortLinksManager(serverBackendBase);
+const shortManager = useShortLinksManager(serverBackendBase, serverShortLinkPassword);
 
 watch(
   () => form.builtUrl.value,
@@ -79,6 +80,10 @@ function shortLinkTime(value: number) {
 
 watch(managerTab, (tab) => {
   if (tab === 'short-links') void shortManager.refresh();
+});
+
+watch(serverShortLinkPassword, (value) => {
+  localStorage.setItem('sce.shortLinkPassword', value);
 });
 </script>
 
@@ -162,7 +167,20 @@ watch(managerTab, (tab) => {
               {{ t('history.refresh') }}
             </el-button>
           </div>
-          <div v-if="shortManager.error.value" class="history-empty danger">{{ t('history.serverLoadFailed') }}</div>
+          <div class="server-auth-row">
+            <el-input
+              v-model="serverShortLinkPassword"
+              :prefix-icon="Lock"
+              type="password"
+              show-password
+              clearable
+              :placeholder="t('history.serverPasswordPlaceholder')"
+              @keyup.enter="shortManager.refresh"
+            />
+          </div>
+          <div v-if="shortManager.error.value" class="history-empty danger">
+            {{ shortManager.error.value === 'unauthorized' ? t('history.serverUnauthorized') : t('history.serverLoadFailed') }}
+          </div>
           <div v-else-if="!shortManager.items.value.length" class="history-empty">{{ t('history.serverEmpty') }}</div>
           <div v-for="item in shortManager.items.value" :key="item.code" class="server-link-row">
             <button class="server-link-main" type="button" @click="loadServerShortLink(item)">
@@ -327,6 +345,14 @@ watch(managerTab, (tab) => {
 
 .history-empty.danger {
   color: var(--danger);
+}
+
+.server-auth-row {
+  margin-bottom: 10px;
+}
+
+.server-auth-row :deep(.el-input__wrapper) {
+  min-height: 42px;
 }
 
 .history-row {

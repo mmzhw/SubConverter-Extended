@@ -124,6 +124,7 @@ SET(SUBCONVERTER_RUNTIME_SOURCES
     src/handler/cocr_source_url.cpp
     src/handler/cache_storage.cpp
     src/handler/curl_handle_pool.cpp
+    src/handler/github_proxy.cpp
     src/handler/inspect_page.cpp
     src/handler/interfaces.cpp
     src/handler/multithread.cpp
@@ -137,6 +138,7 @@ SET(SUBCONVERTER_RUNTIME_SOURCES
     src/handler/ruleset_output.cpp
     src/handler/settings.cpp
     src/handler/settings_view.cpp
+    src/handler/short_link_auth.cpp
     src/handler/short_link_storage.cpp
     src/handler/short_links.cpp
     src/handler/sub_request_key.cpp
@@ -461,12 +463,29 @@ IF(BUILD_TESTS)
     ADD_TEST(NAME cocr_source_url COMMAND cocr_source_url_test)
     SET_TESTS_PROPERTIES(cocr_source_url PROPERTIES LABELS fast)
 
+    ADD_EXECUTABLE(short_link_auth_test
+        tests/short_link_auth_test.cpp
+        src/handler/short_link_auth.cpp
+        src/utils/string.cpp)
+    TARGET_INCLUDE_DIRECTORIES(short_link_auth_test PRIVATE src)
+    ADD_TEST(NAME short_link_auth COMMAND short_link_auth_test)
+    SET_TESTS_PROPERTIES(short_link_auth PROPERTIES LABELS fast)
+
     ADD_EXECUTABLE(ruleset_options_test
         tests/ruleset_options_test.cpp
         src/config/ruleset.cpp)
     TARGET_INCLUDE_DIRECTORIES(ruleset_options_test PRIVATE src)
     ADD_TEST(NAME ruleset_options COMMAND ruleset_options_test)
     SET_TESTS_PROPERTIES(ruleset_options PROPERTIES LABELS fast)
+
+    ADD_EXECUTABLE(github_proxy_test
+        tests/github_proxy_test.cpp
+        src/handler/github_proxy.cpp
+        src/utils/string.cpp
+        src/utils/urlencode.cpp)
+    TARGET_INCLUDE_DIRECTORIES(github_proxy_test PRIVATE src)
+    ADD_TEST(NAME github_proxy COMMAND github_proxy_test)
+    SET_TESTS_PROPERTIES(github_proxy PROPERTIES LABELS fast)
 
     ADD_EXECUTABLE(ruleset_output_test
         tests/ruleset_output_test.cpp
@@ -658,6 +677,8 @@ IF(BUILD_TESTS)
         client_ip_test
         dashboard_auth_limiter_test
         cocr_source_url_test
+        github_proxy_test
+        short_link_auth_test
         ruleset_options_test
         ruleset_output_test
         external_rules_test

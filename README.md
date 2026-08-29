@@ -245,6 +245,7 @@ docker run -d \
   --name SubConverter-Extended \
   -p 25500:25500 \
   -e TZ=Asia/Shanghai \
+  -e SUBCONVERTER_SHORT_LINK_PASSWORD=change-this-token \
   --restart unless-stopped \
   aethersailor/subconverter-extended:latest
 ```
@@ -260,7 +261,7 @@ http://localhost:25500/healthz
 > [!NOTE]
 > 上述命令是最小启动示例，不会持久化自定义配置、统计数据和短链映射。`-p 25500:25500` 会把端口发布到宿主机全部接口。需要保留配置、统计或短链时，请按照 Wiki 的 [Docker 部署](https://github.com/Aethersailor/SubConverter-Extended/wiki/Docker-Deployment)配置持久化目录，并根据实际网络范围选择安全档位。
 
-`docker-compose.yml` 示例已包含推荐默认值：`WEB_PORT=25500`、`SUBCONVERTER_LISTEN_PORT=25501`、`TZ=Asia/Shanghai`，并将短链映射持久化到 `./short-links:/base/short-links`。短链数量可通过 `SUBCONVERTER_SHORT_LINK_MAX_ENTRIES` 调整，默认保留 `500` 条。
+`docker-compose.yml` 示例已包含推荐默认值：`WEB_PORT=25500`、`SUBCONVERTER_LISTEN_PORT=25501`、`TZ=Asia/Shanghai`，并将短链映射持久化到 `./short-links:/base/short-links`。短链数量可通过 `SUBCONVERTER_SHORT_LINK_MAX_ENTRIES` 调整，默认保留 `500` 条。短链管理密码读取 `SUBCONVERTER_SHORT_LINK_PASSWORD`；Docker 容器未设置该变量时，会自动生成随机 token 并保存到 `/base/short-links/admin-password`，可通过 `docker exec SubConverter-Extended cat /base/short-links/admin-password` 查看。设置环境变量可覆盖自动生成值。
 
 ### Web 配置界面 / Web Config UI
 
@@ -275,11 +276,21 @@ Web UI 目前覆盖这些高频流程：
 - “更新间隔”按天填写，生成 URL 时自动换算为 `interval=<秒数>`；
 - “规则展开”在 Web UI 中默认开启，会把远程规则集获取后写成具体规则行；
 - 远程配置可选择 Aethersailor 或 ACL4SSR 预设，也可粘贴公开 `.ini` URL；
-- GitHub Proxy 选择和延迟测试用于改善远程配置模板访问，只改写 `config=`，不会改写 `url=` 订阅源；
+- GitHub Proxy 选择和延迟测试用于改善远程配置模板访问，并会继承到该配置内的 GitHub 规则集和基础模板地址；不会改写 `url=` 订阅源；
 - 生成历史保存在浏览器本地，点击可回显；
-- 服务端短链可在“短链管理”中刷新、复制、载入和删除。
+- Web UI 顶部内置项目 Logo，便于从普通表单页中识别当前工具；
+- 服务端短链可在“短链管理”中刷新、复制、载入和删除；列表和删除接口需要短链管理密码。
 
 nginx 同时将 `/sub`、`/getprofile`、`/getruleset`、`/short`、`/short/list`、`/s` 等接口反向代理到容器内 subconverter。容器默认只发布一个端口：`25500`。`WEB_PORT` 控制 nginx 的公开入口，`SUBCONVERTER_LISTEN_PORT` 控制容器内后端回环端口，两者应保持不同。
+
+### 短链管理密码
+
+`/s?id=...` 是客户端实际导入订阅时使用的短链解析入口，保持免密；否则 Clash、Nikki、OpenClash 等客户端无法定时更新。服务器短链的管理入口会受密码保护：
+
+- `GET /short/list`：查看服务器保存的短链；
+- `DELETE /short?id=<code>`：删除服务器短链。
+
+管理密码通过 `SUBCONVERTER_SHORT_LINK_PASSWORD` 配置。Web UI 的“服务器短链”页会把输入的密码作为 `X-Short-Link-Password` 请求头发送；命令行也可使用 `Authorization: Bearer <password>` 或 `X-Short-Link-Password: <password>`。Docker 启动时如果未显式设置密码，会在 `/base/short-links/admin-password` 生成并复用一个随机 token；挂载 `./short-links:/base/short-links` 后，重建容器不会丢失这个 token。
 
 ### 📦 可用交付形式
 
@@ -322,7 +333,7 @@ nginx 同时将 `/sub`、`/getprofile`、`/getruleset`、`/short`、`/short/list
 - 自行部署者需要自行管理 TLS、访问控制、防火墙、日志、备份和更新。
 - `lan` 是兼容旧部署的默认安全档位，不代表服务可以安全地直接暴露到公网。
 - 项目日志会对已知敏感字段进行脱敏，但这不是通用数据防泄漏系统。
-- 短链和短链管理接口会保存并展示原始订阅 URL；公开部署时请使用防火墙、反向代理鉴权或其他访问控制保护服务。
+- 短链解析入口 `/s?id=...` 会间接访问原始订阅 URL，短链管理接口会展示原始订阅 URL；公开部署时请设置 `SUBCONVERTER_SHORT_LINK_PASSWORD`，并配合防火墙、反向代理鉴权或其他访问控制保护服务。
 - 未修复的安全漏洞请按 [安全策略](SECURITY.md) 私密报告，不要在公开 Issue 中披露利用细节。
 
 > [!WARNING]

@@ -8,6 +8,7 @@
 #include <rapidjson/writer.h>
 
 #include "handler/interfaces.h"
+#include "handler/short_link_auth.h"
 #include "handler/short_link_storage.h"
 
 namespace {
@@ -91,6 +92,11 @@ std::string createShortLinkEndpoint(RESPONSE_CALLBACK_ARGS) {
 }
 
 std::string listShortLinksEndpoint(RESPONSE_CALLBACK_ARGS) {
+  if (!shortLinkAdminAuthorized(request)) {
+    response.headers["WWW-Authenticate"] = "Bearer realm=\"short-links\"";
+    return jsonError(response, 401, "unauthorized");
+  }
+
   response.status_code = 200;
   response.content_type = "application/json; charset=utf-8";
   response.headers["Cache-Control"] = "private, no-store";
@@ -123,6 +129,11 @@ std::string listShortLinksEndpoint(RESPONSE_CALLBACK_ARGS) {
 }
 
 std::string deleteShortLinkEndpoint(RESPONSE_CALLBACK_ARGS) {
+  if (!shortLinkAdminAuthorized(request)) {
+    response.headers["WWW-Authenticate"] = "Bearer realm=\"short-links\"";
+    return jsonError(response, 401, "unauthorized");
+  }
+
   const auto code = request.argument.find("id");
   if (code == request.argument.end())
     return jsonDeleted(response, false);
