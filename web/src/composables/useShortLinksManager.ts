@@ -4,6 +4,7 @@ export interface ServerShortLink {
   code: string;
   path: string;
   shortUrl: string;
+  maskedShortUrl: string;
   url: string;
   name: string;
   createdAt: number;
@@ -32,6 +33,10 @@ function authInit(password: string, init: RequestInit = {}): RequestInit | undef
   };
 }
 
+function maskShortUrl(value: string) {
+  return value.replace(/([?&]id=)([^&#]{3})[^&#]*/i, '$1$2***');
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object';
 }
@@ -48,10 +53,12 @@ function normalizeItem(value: unknown, origin: string): ServerShortLink | undefi
   ) {
     return undefined;
   }
+  const shortUrl = new URL(value.path, origin).toString();
   return {
     code: value.code,
     path: value.path,
-    shortUrl: new URL(value.path, origin).toString(),
+    shortUrl,
+    maskedShortUrl: maskShortUrl(shortUrl),
     url: value.url,
     name: value.name,
     createdAt: value.created_at,

@@ -2,6 +2,30 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { requestDeleteShortLink, requestShortLinks, useShortLinksManager } from './useShortLinksManager';
 
 describe('short link manager helpers', () => {
+  it('keeps full short links copyable but masks their display value', async () => {
+    const fetcher = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        items: [{
+          code: 'Ab3k9Qx2',
+          path: '/s?id=Ab3k9Qx2',
+          url: 'http://server:25500/sub?target=clash&url=https%3A%2F%2Fs',
+          name: 'Demo',
+          created_at: 1000,
+          last_access_at: 2000,
+        }],
+      }),
+    })) as unknown as typeof fetch;
+
+    const result = await requestShortLinks('http://server:25500', 'secret', fetcher);
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.items[0].shortUrl).toBe('http://server:25500/s?id=Ab3k9Qx2');
+      expect(result.items[0].maskedShortUrl).toBe('http://server:25500/s?id=Ab3***');
+    }
+  });
+
   it('loads short links from the backend origin', async () => {
     const fetcher = vi.fn(async () => ({
       ok: true,

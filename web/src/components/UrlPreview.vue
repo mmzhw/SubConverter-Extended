@@ -185,7 +185,7 @@ watch(serverShortLinkPassword, (value) => {
           <div v-for="item in shortManager.items.value" :key="item.code" class="server-link-row">
             <button class="server-link-main" type="button" @click="loadServerShortLink(item)">
               <span class="history-title">{{ item.name || item.code }}</span>
-              <span class="server-link-url">{{ item.shortUrl }}</span>
+              <span class="server-link-url">{{ item.maskedShortUrl }}</span>
               <span class="history-meta">
                 <span>{{ t('history.createdAt') }} {{ shortLinkTime(item.createdAt) }}</span>
                 <span>{{ t('history.lastAccessAt') }} {{ shortLinkTime(item.lastAccessAt) }}</span>
