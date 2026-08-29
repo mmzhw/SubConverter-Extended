@@ -35,9 +35,6 @@ h1 { margin: 0; font-size: 1.6rem; }
   .layout { grid-template-columns: 1fr; }
   .preview-col { position: static; }
 }
-</style>
-
-<style>
 @media (max-width: 767px) {
   .shell { padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px)); }
 }
