@@ -21,6 +21,7 @@ export function useFormState() {
     }
   }
   function applyParsed(next: FormState) {
+    sourceError.value = '';
     state.target = next.target;
     state.sourceUrl = next.sourceUrl;
     state.backendBase = next.backendBase;
