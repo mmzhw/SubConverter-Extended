@@ -23,6 +23,7 @@ describe('useFormState', () => {
     expect(form.builtUrl.value).toContain('sort=true');
     expect(form.builtUrl.value).toContain('fdn=true');
     expect(form.builtUrl.value).toContain('append_type=true');
+    expect(form.builtUrl.value).toContain('expand=true');
   });
 
   it('validates the source URL on demand', async () => {

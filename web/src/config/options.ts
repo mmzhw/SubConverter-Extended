@@ -315,6 +315,7 @@ export const OPTION_DEFS: OptionDef[] = [
     },
     group: 'advanced',
     defaultValue: false,
+    initialValue: true,
   },
   {
     key: 'append_type',

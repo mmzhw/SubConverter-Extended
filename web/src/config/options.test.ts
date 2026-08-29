@@ -103,6 +103,7 @@ describe('OPTION_DEFS', () => {
     expect(expand?.description.zh).toContain('远程规则集');
     expect(expand?.description.zh).not.toContain('短链');
     expect(expand?.defaultValue).toBe(false);
+    expect(expand?.initialValue).toBe(true);
   });
   it('includes remote config presets that can accept custom URLs', () => {
     const config = OPTION_DEFS.find((d) => d.key === 'config');
