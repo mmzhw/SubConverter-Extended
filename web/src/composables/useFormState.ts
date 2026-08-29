@@ -10,10 +10,24 @@ function defaultOptions(): FormState['options'] {
   );
 }
 
-const state = reactive<FormState>({ target: 'clash', sourceUrl: '', backendBase: '', options: defaultOptions() });
+const state = reactive<FormState>({
+  target: 'clash',
+  sourceUrl: '',
+  backendBase: '',
+  githubProxy: '',
+  customGithubProxy: '',
+  options: defaultOptions(),
+});
 const builtUrl = computed(() => {
   if (!state.sourceUrl) return '';
-  return buildSubUrl({ target: state.target, sourceUrl: state.sourceUrl, backendBase: state.backendBase, options: { ...state.options } });
+  return buildSubUrl({
+    target: state.target,
+    sourceUrl: state.sourceUrl,
+    backendBase: state.backendBase,
+    githubProxy: state.githubProxy,
+    customGithubProxy: state.customGithubProxy,
+    options: { ...state.options },
+  });
 });
 const sourceError = ref('');
 
@@ -35,6 +49,8 @@ function applyParsed(next: FormState) {
   state.target = next.target;
   state.sourceUrl = next.sourceUrl;
   state.backendBase = next.backendBase;
+  state.githubProxy = next.githubProxy || '';
+  state.customGithubProxy = next.customGithubProxy || '';
   state.options = { ...next.options };
 }
 

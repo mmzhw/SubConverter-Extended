@@ -1,15 +1,26 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { Connection, Finished, MagicStick, QuestionFilled } from '@element-plus/icons-vue';
+import { ElMessage } from 'element-plus';
+import { Connection, Finished, MagicStick, QuestionFilled, RefreshRight } from '@element-plus/icons-vue';
 import { TARGET_FORMATS, OPTION_DEFS, OptionDef } from '../config/options';
 import { useFormState } from '../composables/useFormState';
+import {
+  applyGitHubProxy,
+  GITHUB_PROXY_CUSTOM,
+  GITHUB_PROXY_PRESETS,
+  githubProxyPrefixFor,
+  isGitHubConfigUrl,
+} from '../lib/github-proxy';
 
 const { t, locale } = useI18n();
 const form = useFormState();
 const openGroups = ref(['node']);
 const tagDelimiter = /[|,，\s]+/;
 const secondsPerDay = 86400;
+const latencyTimeoutMs = 6000;
+
+type ProxyLatency = { status: 'idle' | 'testing' | 'ok' | 'timeout' | 'error'; ms?: number };
 
 const groups = [
   { key: 'node', labelKey: 'form.groups.node', icon: Connection },
@@ -22,6 +33,21 @@ const targetOptions = computed(() => TARGET_FORMATS.map((tgt) => ({
   label: isZh() ? tgt.label.zh : tgt.label.en,
 })));
 const sourceErrorMessage = computed(() => (form.sourceError.value ? t('form.sourceUrlInvalid') : ''));
+const selectedConfigUrl = computed(() => String(optionValue('config') || ''));
+const configUsesGitHub = computed(() => isGitHubConfigUrl(selectedConfigUrl.value));
+const proxyLatencies = ref<Record<string, ProxyLatency>>({});
+const isTestingProxyLatency = ref(false);
+const githubProxyOptions = computed(() => GITHUB_PROXY_PRESETS.map((proxy) => ({
+  ...proxy,
+  displayLabel: `${isZh() ? proxy.label.zh : proxy.label.en}${latencyText(proxy.value)}`,
+})));
+const githubProxyHelp = computed(() => (isZh()
+  ? '仅作用于远程配置 config= 的 GitHub 地址。选择代理后，后端拉取规则模板时会请求代理后的地址；不影响订阅源 url=。'
+  : 'Only applies to GitHub URLs in config=. The backend will fetch the proxied config URL; the subscription source url= is unchanged.'));
+const customGithubProxyPlaceholder = computed(() => (isZh()
+  ? '例如 https://example.com/，也支持 https://example.com/{url}'
+  : 'For example https://example.com/, or https://example.com/{url}'));
+const testProxyText = computed(() => (isZh() ? '测速' : 'Test'));
 
 function isZh() { return locale.value.startsWith('zh'); }
 function labelOf(def: OptionDef) { return isZh() ? def.label.zh : def.label.en; }
@@ -42,6 +68,55 @@ function optionValue(key: string): string | number | boolean | undefined {
 }
 function setOption(key: string, value: string | number | boolean | undefined) {
   form.state.options[key] = value;
+}
+function proxyLatencyKey(value: string) {
+  return value === GITHUB_PROXY_CUSTOM ? `${value}:${form.state.customGithubProxy || ''}` : value;
+}
+function latencyText(value: string) {
+  const latency = proxyLatencies.value[proxyLatencyKey(value)];
+  if (!latency || latency.status === 'idle') return '';
+  if (latency.status === 'testing') return isZh() ? ' · 测速中' : ' · testing';
+  if (latency.status === 'ok') return ` · ${latency.ms}ms`;
+  if (latency.status === 'timeout') return isZh() ? ' · 超时' : ' · timeout';
+  return isZh() ? ' · 失败' : ' · failed';
+}
+function proxyOptionClass(value: string) {
+  return proxyLatencies.value[proxyLatencyKey(value)]?.status || 'idle';
+}
+function proxiedConfigUrl(value: string) {
+  const prefix = githubProxyPrefixFor(value, form.state.customGithubProxy);
+  return applyGitHubProxy(selectedConfigUrl.value, prefix);
+}
+async function measureLatency(url: string): Promise<ProxyLatency> {
+  const start = performance.now();
+  const controller = new AbortController();
+  const timer = window.setTimeout(() => controller.abort(), latencyTimeoutMs);
+  try {
+    await fetch(url, { method: 'GET', mode: 'no-cors', cache: 'no-store', signal: controller.signal });
+    return { status: 'ok', ms: Math.round(performance.now() - start) };
+  } catch (error) {
+    return { status: error instanceof DOMException && error.name === 'AbortError' ? 'timeout' : 'error' };
+  } finally {
+    window.clearTimeout(timer);
+  }
+}
+async function testGithubProxyLatency() {
+  if (!configUsesGitHub.value || isTestingProxyLatency.value) return;
+  const candidates = GITHUB_PROXY_PRESETS.filter((proxy) => (
+    proxy.value !== GITHUB_PROXY_CUSTOM || !!form.state.customGithubProxy?.trim()
+  ));
+  isTestingProxyLatency.value = true;
+  proxyLatencies.value = {
+    ...proxyLatencies.value,
+    ...Object.fromEntries(candidates.map((proxy) => [proxyLatencyKey(proxy.value), { status: 'testing' as const }])),
+  };
+  await Promise.all(candidates.map(async (proxy) => {
+    const key = proxyLatencyKey(proxy.value);
+    const result = await measureLatency(proxiedConfigUrl(proxy.value));
+    proxyLatencies.value = { ...proxyLatencies.value, [key]: result };
+  }));
+  isTestingProxyLatency.value = false;
+  ElMessage.success(isZh() ? 'GitHub 加速测速完成' : 'GitHub proxy test complete');
 }
 function isOptionVisible(def: OptionDef) {
   return def.key !== 'provider' || form.state.target === 'clash' || form.state.target === 'clashr';
@@ -160,7 +235,7 @@ function updateSourceUrl(value: string) {
               @update:model-value="(v: boolean | string | number) => setOption(def.key, !!v)"
             />
             <el-select
-              v-else-if="def.type === 'enum'"
+              v-else-if="def.type === 'enum' && def.key !== 'config'"
               :model-value="String(optionValue(def.key))"
               :placeholder="placeholderOf(def)"
               filterable
@@ -172,6 +247,63 @@ function updateSourceUrl(value: string) {
               <el-option v-for="opt in def.enumValues" :key="opt.value" :value="opt.value"
                          :label="isZh() ? opt.label.zh : opt.label.en" />
             </el-select>
+            <div v-else-if="def.key === 'config'" class="remote-config-control">
+              <el-select
+                :model-value="String(optionValue(def.key))"
+                :placeholder="placeholderOf(def)"
+                filterable
+                clearable
+                :allow-create="def.allowCustom === true"
+                default-first-option
+                @update:model-value="(v: string) => setOption(def.key, v)"
+              >
+                <el-option v-for="opt in def.enumValues" :key="opt.value" :value="opt.value"
+                           :label="isZh() ? opt.label.zh : opt.label.en" />
+              </el-select>
+              <div v-if="configUsesGitHub" class="github-proxy-row">
+                <span class="proxy-label">
+                  <span>GitHub Proxy</span>
+                  <el-tooltip :content="githubProxyHelp" placement="top-start" popper-class="option-tooltip">
+                    <el-icon class="help-icon"><QuestionFilled /></el-icon>
+                  </el-tooltip>
+                </span>
+                <div class="proxy-controls">
+                  <el-select
+                    :model-value="form.state.githubProxy || ''"
+                    filterable
+                    @update:model-value="(v: string) => (form.state.githubProxy = v)"
+                  >
+                    <el-option
+                      v-for="proxy in githubProxyOptions"
+                      :key="proxy.value"
+                      :value="proxy.value"
+                      :label="proxy.displayLabel"
+                    >
+                      <span class="proxy-option">
+                        <span>{{ isZh() ? proxy.label.zh : proxy.label.en }}</span>
+                        <span class="proxy-latency" :class="proxyOptionClass(proxy.value)">
+                          {{ latencyText(proxy.value).replace(/^ · /, '') }}
+                        </span>
+                      </span>
+                    </el-option>
+                  </el-select>
+                  <el-button
+                    :icon="RefreshRight"
+                    :loading="isTestingProxyLatency"
+                    @click="testGithubProxyLatency"
+                  >
+                    {{ testProxyText }}
+                  </el-button>
+                </div>
+                <el-input
+                  v-if="form.state.githubProxy === GITHUB_PROXY_CUSTOM"
+                  :model-value="form.state.customGithubProxy || ''"
+                  :placeholder="customGithubProxyPlaceholder"
+                  clearable
+                  @update:model-value="(v: string) => (form.state.customGithubProxy = v)"
+                />
+              </div>
+            </div>
             <el-input-tag
               v-else-if="isTagInput(def)"
               :model-value="regexTags(def.key)"
@@ -357,6 +489,67 @@ h2 {
   justify-self: end;
 }
 
+.remote-config-control {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.github-proxy-row {
+  display: grid;
+  grid-template-columns: minmax(104px, 128px) minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--surface-border-subtle);
+  border-radius: 8px;
+  background: var(--control-bg);
+}
+
+.proxy-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: var(--text-secondary);
+  font-size: 0.86rem;
+  font-weight: 750;
+}
+
+.proxy-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  min-width: 0;
+}
+
+.github-proxy-row > :deep(.el-input) {
+  grid-column: 2;
+}
+
+.proxy-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+.proxy-latency {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  font-weight: 750;
+}
+
+.proxy-latency.ok {
+  color: var(--accent-2);
+}
+
+.proxy-latency.timeout,
+.proxy-latency.error {
+  color: var(--danger);
+}
+
 .number-control {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -385,6 +578,14 @@ h2 {
 
   .option-row :deep(.el-switch) {
     justify-self: end;
+  }
+
+  .github-proxy-row {
+    grid-template-columns: 1fr;
+  }
+
+  .github-proxy-row > :deep(.el-input) {
+    grid-column: auto;
   }
 }
 

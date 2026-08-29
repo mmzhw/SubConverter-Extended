@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { DEFAULT_EXCLUDE_REMARKS } from '../config/options';
+import { GITHUB_PROXY_CUSTOM } from './github-proxy';
 import { buildSubUrl, FormState } from './url-builder';
 
 const base = (over: Partial<FormState> = {}): FormState => ({
@@ -50,6 +51,32 @@ describe('buildSubUrl', () => {
     }));
     expect(url).toContain(
       'config=https%3A%2F%2Fraw.githubusercontent.com%2FACL4SSR%2FACL4SSR%2Fmaster%2FClash%2Fconfig%2FACL4SSR_Online.ini',
+    );
+  });
+
+  it('applies a GitHub proxy to remote config only', () => {
+    const url = buildSubUrl(base({
+      target: 'clash',
+      sourceUrl: 'https://sub.example.com',
+      githubProxy: 'https://gh-proxy.com/',
+      options: { config: 'https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online.ini' },
+    }));
+    expect(decodeURIComponent(url)).toContain(
+      'config=https://gh-proxy.com/https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online.ini',
+    );
+    expect(decodeURIComponent(url)).toContain('url=https://sub.example.com');
+  });
+
+  it('supports a custom GitHub proxy prefix for remote config', () => {
+    const url = buildSubUrl(base({
+      target: 'clash',
+      sourceUrl: 'https://sub.example.com',
+      githubProxy: GITHUB_PROXY_CUSTOM,
+      customGithubProxy: 'https://proxy.example/{url}',
+      options: { config: 'https://github.com/A/B/raw/main/config.ini' },
+    }));
+    expect(decodeURIComponent(url)).toContain(
+      'config=https://proxy.example/https://github.com/A/B/raw/main/config.ini',
     );
   });
 
