@@ -10,6 +10,9 @@
   --el-color-primary: #2563eb;
   --el-border-radius-base: 14px;
 }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+}
 @media (prefers-color-scheme: dark) {
   :root {
     --accent: #38bdf8; --accent-2: #60a5fa;

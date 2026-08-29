@@ -8,7 +8,8 @@ const form = useFormState();
 const { state: copyState, copy } = useCopy();
 
 function scrollToQr() {
-  document.getElementById('qr-target')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  document.getElementById('qr-target')?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
 }
 </script>
 
