@@ -50,4 +50,12 @@ describe('useFormState', () => {
     expect(form.validateSource()).toBe(false);
     expect(form.sourceError.value).toBe('invalid');
   });
+
+  it('is a module-level singleton: two calls share the same state', () => {
+    const a = useFormState();
+    const b = useFormState();
+    expect(a.state).toBe(b.state);
+    a.state.sourceUrl = 'https://shared.example.com';
+    expect(b.builtUrl.value).toContain('https%3A%2F%2Fshared.example.com');
+  });
 });
