@@ -19,7 +19,7 @@ services:
       WEB_PORT: "8080"
       # 按需取消注释并修改；环境变量会覆盖 pref.toml 中的对应配置。
       # Uncomment and edit as needed; environment variables override pref.toml.
-      # MANAGED_CONFIG_PREFIX: "http://your-domain-or-ip:25500"
+      # MANAGED_CONFIG_PREFIX: "http://your-domain-or-ip:8080"
       # 默认 lan 保持既有内网行为；确认公网可达的部署请显式选择 public 或 strict。
       # Default lan preserves existing LAN behavior. If Internet reachability is
       # confirmed, explicitly select public or strict.

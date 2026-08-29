@@ -237,6 +237,18 @@ http://localhost:25500/healthz
 > [!NOTE]
 > 上述命令是最小启动示例，不会持久化自定义配置和统计数据。`-p 25500:25500` 还会把端口发布到宿主机全部接口。需要保留配置或统计数据时，请按照 Wiki 的 [Docker 部署](https://github.com/Aethersailor/SubConverter-Extended/wiki/Docker-Deployment)配置持久化目录，并根据实际网络范围选择安全档位。
 
+### Web 配置界面 / Web Config UI
+
+镜像内置 Vue 3 可视化配置界面：打开发布端口根路径即可组装订阅 URL、
+导入现有链接、保存预设、复制或扫码使用。nginx 同时将 `/sub`、
+`/getprofile`、`/getruleset` 等接口反向代理到容器内 subconverter。
+
+> **BREAKING**：自本版本起镜像只发布一个端口（默认 `8080`，可用
+> `WEB_PORT` 覆盖）。原 `25500` 直连已取消，仅容器内回环可用。
+> 迁移：把宿主端口映射从 `25500:25500` 改为 `${WEB_PORT:-8080}:8080`，
+> 订阅 URL 中的 `:25500` 改为新端口或域名。回滚：pin 回上一版本镜像
+> 并恢复旧端口映射。
+
 ### 📦 可用交付形式
 
 | 交付形式 | 当前 Release 支持 |
