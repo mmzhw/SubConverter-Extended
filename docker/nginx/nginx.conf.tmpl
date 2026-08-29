@@ -16,7 +16,7 @@ server {
     # "clean them up" here. Custom [aliases] added by operators beyond the shipped
     # defaults are not in the regex and fall through to the SPA; they must be
     # proxied by editing the inventory and this regex together.
-    location ~ ^/(sub|getruleset|version|inspect|dashboard|healthz|robots\.txt|clash|clashr|loon|mellow|quan|quanx|singbox|ss|ssd|ssr|sssub|surfboard|surge|trojan|v|v2ray)(/|$) {
+    location ~ ^/(sub|short|s|getruleset|version|inspect|dashboard|healthz|robots\.txt|clash|clashr|loon|mellow|quan|quanx|singbox|ss|ssd|ssr|sssub|surfboard|surge|trojan|v|v2ray)(/|$) {
         proxy_pass http://127.0.0.1:25500;
         proxy_http_version 1.1;
         proxy_set_header Host $host;

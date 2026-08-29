@@ -1,4 +1,6 @@
 sub
+short
+s
 getruleset
 version
 inspect
