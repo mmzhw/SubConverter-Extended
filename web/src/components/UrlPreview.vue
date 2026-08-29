@@ -1,12 +1,15 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { Clock, Close, CopyDocument, Download, MagicStick, Upload } from '@element-plus/icons-vue';
+import { Clock, Close, CopyDocument, Delete, Download, MagicStick, Refresh, Upload } from '@element-plus/icons-vue';
 import QRCode from 'qrcode';
 import { useCopy } from '../composables/useCopy';
 import { GeneratedLink } from '../composables/useGeneratedLinks';
 import { useGenerateSubscription } from '../composables/useGenerateSubscription';
 import { useShortLink } from '../composables/useShortLink';
+import { useShortLinksManager, type ServerShortLink } from '../composables/useShortLinksManager';
+import { backendBaseForState } from '../lib/url-builder';
+import { parseSubUrl } from '../lib/url-parser';
 import ImportDialog from './ImportDialog.vue';
 
 const { t } = useI18n();
@@ -15,6 +18,15 @@ const shortLink = useShortLink();
 const { state: copyState, copy } = useCopy();
 const qrDataUrl = ref('');
 const importVisible = ref(false);
+const managerTab = ref('history');
+const serverBackendBase = computed(() => {
+  try {
+    return form.builtUrl.value ? new URL(form.builtUrl.value).origin : backendBaseForState(form.state);
+  } catch {
+    return backendBaseForState(form.state);
+  }
+});
+const shortManager = useShortLinksManager(serverBackendBase);
 
 watch(
   () => form.builtUrl.value,
@@ -43,13 +55,31 @@ function loadGenerated(item: GeneratedLink) {
   form.applyGenerated(item.state, item.url);
 }
 
+function loadServerShortLink(item: ServerShortLink) {
+  try {
+    form.applyParsed(parseSubUrl(item.url).state);
+  } catch {
+    copy(item.url);
+  }
+}
+
 async function createShortLink() {
-  await shortLink.create(form.builtUrl.value, form.state.subscriptionName);
+  const ok = await shortLink.create(form.builtUrl.value, form.state.subscriptionName);
+  if (ok && managerTab.value === 'short-links') void shortManager.refresh();
 }
 
 function generatedTime(item: GeneratedLink) {
   return new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit' }).format(item.createdAt);
 }
+
+function shortLinkTime(value: number) {
+  if (!value) return '-';
+  return new Intl.DateTimeFormat(undefined, { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).format(value);
+}
+
+watch(managerTab, (tab) => {
+  if (tab === 'short-links') void shortManager.refresh();
+});
 </script>
 
 <template>
@@ -95,30 +125,61 @@ function generatedTime(item: GeneratedLink) {
       </div>
     </div>
 
-    <div class="generated-history">
-      <div class="history-head">
-        <span>
-          <el-icon><Clock /></el-icon>
-          {{ t('history.title') }}
-        </span>
-        <el-button v-if="generated.links.value.length" link :icon="Close" @click="generated.clear">
-          {{ t('history.clear') }}
-        </el-button>
-      </div>
-      <div v-if="!generated.links.value.length" class="history-empty">{{ t('history.empty') }}</div>
-      <button
-        v-for="item in generated.links.value"
-        :key="item.id"
-        class="history-row"
-        type="button"
-        @click="loadGenerated(item)"
-      >
-        <span class="history-title">{{ item.title }}</span>
-        <span class="history-meta">
-          <span>{{ item.target }}</span>
-          <span>{{ generatedTime(item) }}</span>
-        </span>
-      </button>
+    <div class="link-management">
+      <el-tabs v-model="managerTab" class="management-tabs">
+        <el-tab-pane :label="t('history.local')" name="history">
+          <div class="history-head">
+            <span>
+              <el-icon><Clock /></el-icon>
+              {{ t('history.title') }}
+            </span>
+            <el-button v-if="generated.links.value.length" link :icon="Close" @click="generated.clear">
+              {{ t('history.clear') }}
+            </el-button>
+          </div>
+          <div v-if="!generated.links.value.length" class="history-empty">{{ t('history.empty') }}</div>
+          <button
+            v-for="item in generated.links.value"
+            :key="item.id"
+            class="history-row"
+            type="button"
+            @click="loadGenerated(item)"
+          >
+            <span class="history-title">{{ item.title }}</span>
+            <span class="history-meta">
+              <span>{{ item.target }}</span>
+              <span>{{ generatedTime(item) }}</span>
+            </span>
+          </button>
+        </el-tab-pane>
+        <el-tab-pane :label="t('history.serverShortLinks')" name="short-links">
+          <div class="history-head">
+            <span>
+              <el-icon><Clock /></el-icon>
+              {{ t('history.serverShortLinks') }}
+            </span>
+            <el-button link :icon="Refresh" :loading="shortManager.loading.value" @click="shortManager.refresh">
+              {{ t('history.refresh') }}
+            </el-button>
+          </div>
+          <div v-if="shortManager.error.value" class="history-empty danger">{{ t('history.serverLoadFailed') }}</div>
+          <div v-else-if="!shortManager.items.value.length" class="history-empty">{{ t('history.serverEmpty') }}</div>
+          <div v-for="item in shortManager.items.value" :key="item.code" class="server-link-row">
+            <button class="server-link-main" type="button" @click="loadServerShortLink(item)">
+              <span class="history-title">{{ item.name || item.code }}</span>
+              <span class="server-link-url">{{ item.shortUrl }}</span>
+              <span class="history-meta">
+                <span>{{ t('history.createdAt') }} {{ shortLinkTime(item.createdAt) }}</span>
+                <span>{{ t('history.lastAccessAt') }} {{ shortLinkTime(item.lastAccessAt) }}</span>
+              </span>
+            </button>
+            <div class="server-link-actions">
+              <el-button link :icon="CopyDocument" @click="copy(item.shortUrl)">{{ t('preview.copyShortLink') }}</el-button>
+              <el-button link type="danger" :icon="Delete" @click="shortManager.remove(item.code)">{{ t('history.delete') }}</el-button>
+            </div>
+          </div>
+        </el-tab-pane>
+      </el-tabs>
     </div>
 
     <ImportDialog v-model="importVisible" />
@@ -182,7 +243,7 @@ function generatedTime(item: GeneratedLink) {
 
 .preview-actions {
   display: grid;
-  grid-template-columns: 1.1fr 1fr 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(124px, 1fr));
   gap: 10px;
   margin-top: 14px;
 }
@@ -220,10 +281,14 @@ function generatedTime(item: GeneratedLink) {
   font-weight: 700;
 }
 
-.generated-history {
+.link-management {
   margin-top: 16px;
   padding-top: 14px;
   border-top: 1px solid var(--surface-border);
+}
+
+.management-tabs :deep(.el-tabs__header) {
+  margin: 0 0 10px;
 }
 
 .history-head {
@@ -249,6 +314,10 @@ function generatedTime(item: GeneratedLink) {
   color: var(--text-muted);
   font-size: 0.86rem;
   font-weight: 650;
+}
+
+.history-empty.danger {
+  color: var(--danger);
 }
 
 .history-row {
@@ -295,6 +364,56 @@ function generatedTime(item: GeneratedLink) {
   font-size: 0.78rem;
   font-weight: 750;
   white-space: nowrap;
+}
+
+.server-link-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 6px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--surface-border-subtle);
+}
+
+.server-link-main {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.server-link-main:hover .history-title,
+.server-link-main:focus-visible .history-title {
+  color: var(--accent);
+}
+
+.server-link-main:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.server-link-url {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.76rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.server-link-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.server-link-actions :deep(.el-button) {
+  margin-left: 0;
 }
 
 .qr-wrap {

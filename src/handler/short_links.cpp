@@ -1,6 +1,7 @@
 #include "handler/short_links.h"
 
 #include <chrono>
+#include <vector>
 
 #include <rapidjson/document.h>
 #include <rapidjson/stringbuffer.h>
@@ -48,6 +49,23 @@ std::string jsonCreated(Response &response,
   return buffer.GetString();
 }
 
+std::string jsonDeleted(Response &response, bool deleted) {
+  response.status_code = deleted ? 200 : 404;
+  response.content_type = "application/json; charset=utf-8";
+  response.headers["Cache-Control"] = "private, no-store";
+  rapidjson::StringBuffer buffer;
+  rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+  writer.StartObject();
+  writer.Key("deleted");
+  writer.Bool(deleted);
+  if (!deleted) {
+    writer.Key("error");
+    writer.String("not-found");
+  }
+  writer.EndObject();
+  return buffer.GetString();
+}
+
 } // namespace
 
 std::string createShortLinkEndpoint(RESPONSE_CALLBACK_ARGS) {
@@ -70,6 +88,45 @@ std::string createShortLinkEndpoint(RESPONSE_CALLBACK_ARGS) {
                      created.error);
   }
   return jsonCreated(response, created);
+}
+
+std::string listShortLinksEndpoint(RESPONSE_CALLBACK_ARGS) {
+  response.status_code = 200;
+  response.content_type = "application/json; charset=utf-8";
+  response.headers["Cache-Control"] = "private, no-store";
+  const std::vector<ShortLinkRecord> records = listShortLinks();
+  rapidjson::StringBuffer buffer;
+  rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+  writer.StartObject();
+  writer.Key("items");
+  writer.StartArray();
+  for (const ShortLinkRecord &record : records) {
+    writer.StartObject();
+    writer.Key("code");
+    writer.String(record.code.c_str());
+    writer.Key("path");
+    const std::string path = "/s?id=" + record.code;
+    writer.String(path.c_str());
+    writer.Key("url");
+    writer.String(record.url.c_str());
+    writer.Key("name");
+    writer.String(record.name.c_str());
+    writer.Key("created_at");
+    writer.Uint64(record.created_at);
+    writer.Key("last_access_at");
+    writer.Uint64(record.last_access_at);
+    writer.EndObject();
+  }
+  writer.EndArray();
+  writer.EndObject();
+  return buffer.GetString();
+}
+
+std::string deleteShortLinkEndpoint(RESPONSE_CALLBACK_ARGS) {
+  const auto code = request.argument.find("id");
+  if (code == request.argument.end())
+    return jsonDeleted(response, false);
+  return jsonDeleted(response, deleteShortLink(code->second));
 }
 
 std::string resolveShortLinkEndpoint(RESPONSE_CALLBACK_ARGS) {

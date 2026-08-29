@@ -395,6 +395,12 @@ int main(int argc, char *argv[]) {
 
   webServer.append_response("POST", "/short", "application/json; charset=utf-8",
                             createShortLinkEndpoint);
+  webServer.append_response("GET", "/short/list",
+                            "application/json; charset=utf-8",
+                            listShortLinksEndpoint);
+  webServer.append_response("DELETE", "/short",
+                            "application/json; charset=utf-8",
+                            deleteShortLinkEndpoint);
   webServer.append_response("GET", "/s", "text/plain;charset=utf-8",
                             resolveShortLinkEndpoint);
 

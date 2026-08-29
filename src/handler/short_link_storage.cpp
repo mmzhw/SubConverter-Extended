@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cstdlib>
+#include <cstring>
 #include <mutex>
 #include <random>
 #include <unordered_map>
@@ -18,6 +19,7 @@ namespace {
 constexpr size_t kMaxUrlLength = 256 * 1024;
 constexpr size_t kMaxNameLength = 160;
 constexpr size_t kCodeLength = 8;
+constexpr size_t kDefaultMaxEntries = 500;
 constexpr const char *kCodeAlphabet =
     "abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
@@ -95,6 +97,22 @@ bool validCode(const std::string &code) {
            return std::find(kCodeAlphabet, kCodeAlphabet + alphabet_length,
                             ch) != kCodeAlphabet + alphabet_length;
          });
+}
+
+size_t configuredMaxEntries() {
+  const char *configured =
+      std::getenv("SUBCONVERTER_SHORT_LINK_MAX_ENTRIES");
+  if (!configured || configured[0] == '\0')
+    return kDefaultMaxEntries;
+  char *end = nullptr;
+  const unsigned long parsed = std::strtoul(configured, &end, 10);
+  if (end == configured || *end != '\0' || parsed == 0)
+    return kDefaultMaxEntries;
+  return static_cast<size_t>(parsed);
+}
+
+uint64_t retentionTime(const ShortLinkRecord &record) {
+  return record.last_access_at != 0 ? record.last_access_at : record.created_at;
 }
 
 std::string trimName(std::string name) {
@@ -183,6 +201,24 @@ bool saveLocked() {
   return !fileCommitFailed(fileWrite(storagePath(), buffer.GetString(), true));
 }
 
+void pruneLocked(size_t max_entries) {
+  if (max_entries == 0 || records.size() <= max_entries)
+    return;
+  std::vector<std::pair<std::string, uint64_t>> candidates;
+  candidates.reserve(records.size());
+  for (const auto &[code, record] : records)
+    candidates.emplace_back(code, retentionTime(record));
+  std::sort(candidates.begin(), candidates.end(),
+            [](const auto &left, const auto &right) {
+              if (left.second != right.second)
+                return left.second < right.second;
+              return left.first < right.first;
+            });
+  const size_t remove_count = records.size() - max_entries;
+  for (size_t index = 0; index < remove_count; ++index)
+    records.erase(candidates[index].first);
+}
+
 } // namespace
 
 bool shortLinkSubTarget(const std::string &url, std::string &target) {
@@ -226,6 +262,11 @@ ShortLinkCreateResult createShortLink(const std::string &url,
   record.created_at = now_ms;
   record.last_access_at = 0;
   records[code] = std::move(record);
+  pruneLocked(configuredMaxEntries());
+  if (records.find(code) == records.end()) {
+    result.error = "code-exhausted";
+    return result;
+  }
   if (!saveLocked()) {
     records.erase(code);
     result.error = "storage-unavailable";
@@ -236,6 +277,39 @@ ShortLinkCreateResult createShortLink(const std::string &url,
   result.code = code;
   result.path = "/s?id=" + code;
   return result;
+}
+
+std::vector<ShortLinkRecord> listShortLinks() {
+  std::lock_guard<std::mutex> lock(storage_mutex);
+  loadLocked();
+  std::vector<ShortLinkRecord> result;
+  result.reserve(records.size());
+  for (const auto &[code, record] : records)
+    result.push_back(record);
+  std::sort(result.begin(), result.end(),
+            [](const ShortLinkRecord &left, const ShortLinkRecord &right) {
+              if (left.created_at != right.created_at)
+                return left.created_at > right.created_at;
+              return left.code < right.code;
+            });
+  return result;
+}
+
+bool deleteShortLink(const std::string &code) {
+  if (!validCode(code))
+    return false;
+  std::lock_guard<std::mutex> lock(storage_mutex);
+  loadLocked();
+  if (records.erase(code) == 0)
+    return false;
+  return saveLocked();
+}
+
+void pruneShortLinks(size_t max_entries) {
+  std::lock_guard<std::mutex> lock(storage_mutex);
+  loadLocked();
+  pruneLocked(max_entries);
+  (void)saveLocked();
 }
 
 ShortLinkResolveResult resolveShortLink(const std::string &code,

@@ -16,6 +16,7 @@ services:
       WEB_PORT: "25500"
       SUBCONVERTER_LISTEN_PORT: "25501"
       SUBCONVERTER_SHORT_LINKS_FILE: "/base/short-links/links.json"
+      SUBCONVERTER_SHORT_LINK_MAX_ENTRIES: "500"
       # WEB_PORT 控制 nginx 的公开入口；SUBCONVERTER_LISTEN_PORT 是容器内后端回环端口，
       # 保持与 WEB_PORT 不同以避免 nginx 与后端争抢同一个端口。
       # WEB_PORT is the public nginx entry; SUBCONVERTER_LISTEN_PORT is the

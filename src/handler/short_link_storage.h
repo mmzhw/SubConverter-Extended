@@ -2,7 +2,9 @@
 #define SHORT_LINK_STORAGE_H_INCLUDED
 
 #include <cstdint>
+#include <cstddef>
 #include <string>
+#include <vector>
 
 struct ShortLinkRecord {
   std::string code;
@@ -30,6 +32,9 @@ ShortLinkCreateResult createShortLink(const std::string &url,
                                       uint64_t now_ms);
 ShortLinkResolveResult resolveShortLink(const std::string &code,
                                         uint64_t now_ms);
+std::vector<ShortLinkRecord> listShortLinks();
+bool deleteShortLink(const std::string &code);
+void pruneShortLinks(size_t max_entries);
 bool shortLinkSubTarget(const std::string &url, std::string &target);
 
 #ifdef FILE_IO_TESTING

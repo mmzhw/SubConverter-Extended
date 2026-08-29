@@ -15,15 +15,19 @@ const explicitFalseKeys = new Set(
   OPTION_DEFS.filter((def) => def.type === 'boolean' && def.defaultValue === true).map((def) => def.key),
 );
 
-function defaultBackendBase(): string {
+export function defaultBackendBase(): string {
   const configured = import.meta.env.VITE_DEFAULT_BACKEND_BASE?.trim();
   if (configured) return configured;
   if (typeof window === 'undefined') return '';
   return window.location.origin === 'null' ? '' : window.location.origin;
 }
 
-function normalizeBackendBase(value: string): string {
+export function normalizeBackendBase(value: string): string {
   return value.replace(/\/+$/, '');
+}
+
+export function backendBaseForState(state: Pick<FormState, 'backendBase'>): string {
+  return normalizeBackendBase(state.backendBase || defaultBackendBase());
 }
 
 export function buildSubUrl(state: FormState): string {
@@ -47,6 +51,6 @@ export function buildSubUrl(state: FormState): string {
     }
     params.set(key, value === true ? 'true' : String(value));
   }
-  const base = normalizeBackendBase(state.backendBase || defaultBackendBase());
+  const base = backendBaseForState(state);
   return `${base}/sub?${params.toString()}`;
 }

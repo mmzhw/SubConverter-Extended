@@ -75,10 +75,40 @@ int main() {
   require(duplicate.ok, "duplicate URL was not accepted");
   require(duplicate.code == created.code, "duplicate URL did not reuse code");
 
+  std::vector<ShortLinkRecord> listed = listShortLinks();
+  require(listed.size() == 1, "created short link was not listed");
+  require(listed[0].code == created.code, "listed code changed");
+  require(listed[0].name == "Test", "listed name changed");
+  require(listed[0].last_access_at == 2000, "listed last access was not kept");
+
+  require(deleteShortLink(created.code), "created code was not deleted");
+  ShortLinkResolveResult deleted = resolveShortLink(created.code, 3500);
+  require(!deleted.ok && deleted.error == "not-found",
+          "deleted code still resolved");
+  require(listShortLinks().empty(), "deleted code remained in list");
+
+  ShortLinkCreateResult first =
+      createShortLink(url + "&rename=first", "First", 4100);
+  ShortLinkCreateResult second =
+      createShortLink(url + "&rename=second", "Second", 4200);
+  ShortLinkCreateResult third =
+      createShortLink(url + "&rename=third", "Third", 4300);
+  require(first.ok && second.ok && third.ok, "prune fixture links failed");
+  (void)resolveShortLink(first.code, 9000);
+  pruneShortLinks(2);
+  ShortLinkResolveResult old_missing = resolveShortLink(second.code, 9100);
+  require(!old_missing.ok && old_missing.error == "not-found",
+          "least recently used short link was not pruned");
+  require(resolveShortLink(first.code, 9200).ok,
+          "recently accessed short link was pruned");
+  require(resolveShortLink(third.code, 9300).ok,
+          "newest short link was pruned");
+  require(listShortLinks().size() == 2, "pruned list size is wrong");
+
   clearShortLinkMemoryForTests();
-  ShortLinkResolveResult reloaded = resolveShortLink(created.code, 4000);
+  ShortLinkResolveResult reloaded = resolveShortLink(first.code, 4000);
   require(reloaded.ok, "stored code was not reloaded from disk");
-  require(reloaded.record.url == url, "reloaded URL changed");
+  require(reloaded.record.url == url + "&rename=first", "reloaded URL changed");
 
   ShortLinkCreateResult invalid =
       createShortLink("http://127.0.0.1:8080/version?target=clash", "Bad",
