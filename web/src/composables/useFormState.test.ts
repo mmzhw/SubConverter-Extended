@@ -51,6 +51,15 @@ describe('useFormState', () => {
     expect(form.sourceError.value).toBe('invalid');
   });
 
+  it('prepends a custom backend base reactively', () => {
+    const form = useFormState();
+    form.state.target = 'clash';
+    form.state.options = {};
+    form.state.sourceUrl = 'https://s';
+    form.state.backendBase = 'http://127.0.0.1:25500/';
+    expect(form.builtUrl.value).toBe('http://127.0.0.1:25500/sub?target=clash&url=https%3A%2F%2Fs');
+  });
+
   it('is a module-level singleton: two calls share the same state', () => {
     const a = useFormState();
     const b = useFormState();

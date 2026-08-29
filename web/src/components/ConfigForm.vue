@@ -44,6 +44,11 @@ function defsOf(group: string) { return OPTION_DEFS.filter((d) => d.group === gr
     </el-form-item>
     <el-collapse v-model="openGroups">
       <el-collapse-item v-for="g in groups" :key="g.key" :name="g.key" :title="t(g.labelKey)">
+        <div v-if="g.key === 'advanced'" class="option-row backend-row">
+          <span class="option-label">{{ t('form.backendBase') }}</span>
+          <el-input :model-value="form.state.backendBase" :placeholder="t('form.backendBasePlaceholder')"
+                    @update:model-value="(v: string) => (form.state.backendBase = v)" style="width: 200px" />
+        </div>
         <div v-for="def in defsOf(g.key)" :key="def.key" class="option-row">
           <span class="option-label">{{ labelOf(def) }}</span>
           <el-switch v-if="def.type === 'boolean'" :model-value="optionValue(def.key) === true"

@@ -4,6 +4,7 @@ export default {
     target: 'Target Format', sourceUrl: 'Subscription Source URL',
     sourceUrlPlaceholder: 'https://sub.example.com/...', sourceUrlInvalid: 'Enter a valid http(s) URL',
     savePreset: 'Save as preset', importLink: 'Import from link',
+    backendBase: 'Custom backend', backendBasePlaceholder: 'https://your-backend:8080 (blank = same origin)',
     groups: { node: 'Node Options', rule: 'Rule Options', advanced: 'Advanced Options' },
   },
   preview: { title: 'Generated Subscription URL', copy: 'Copy', copied: 'Copied!', copyFailed: 'Copy failed', qr: 'QR Code' },
