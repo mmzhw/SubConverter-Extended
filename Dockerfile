@@ -368,6 +368,7 @@ ARG VERSION="dev"
 ARG SHA=""
 ARG BUILD_DATE=""
 ARG DEPENDENCY_SNAPSHOT_SHA=""
+ARG ALPINE_MIRROR=""
 LABEL \
   org.opencontainers.image.title="SubConverter-Extended" \
   org.opencontainers.image.description="A Modern Evolution of subconverter; an enhanced implementation aligned with Mihomo configuration" \
@@ -381,7 +382,11 @@ LABEL \
   maintainer="Aethersailor"
 
 ENV TZ=Asia/Shanghai
-RUN apk add --no-cache ca-certificates tzdata nginx gettext s6-overlay && \
+RUN if [ -n "${ALPINE_MIRROR}" ]; then \
+      sed -i "s#https://dl-cdn.alpinelinux.org/alpine#${ALPINE_MIRROR%/}#g" \
+        /etc/apk/repositories; \
+    fi && \
+    apk add --no-cache ca-certificates tzdata nginx gettext s6-overlay && \
     ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && \
     echo $TZ > /etc/timezone
 
