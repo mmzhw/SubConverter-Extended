@@ -286,17 +286,17 @@ export const OPTION_DEFS: OptionDef[] = [
     type: 'number',
     label: { en: 'Update interval', zh: '更新间隔' },
     description: {
-      en: 'Sets the generated subscription profile refresh interval in seconds. For Clash/Mihomo proxy-provider node refresh, use the source URL prefix format interval:21600,https://example.com/sub.',
-      zh: '设置生成订阅配置的刷新间隔，单位为秒。注意 Clash/Mihomo 的 proxy-provider 节点刷新间隔通常写在订阅源前缀里，例如 interval:21600,https://example.com/sub。',
+      en: 'Enter days in the UI; the generated URL converts it to seconds for interval=<seconds>. For Clash/Mihomo proxy-provider node refresh, use the source URL prefix format interval:21600,https://example.com/sub.',
+      zh: '界面按“天”输入，生成链接时会自动换算成 interval=<秒数>。注意 Clash/Mihomo 的 proxy-provider 节点刷新间隔通常写在订阅源前缀里，例如 interval:21600,https://example.com/sub。',
     },
     group: 'advanced',
     defaultValue: '',
     placeholder: {
-      en: 'Seconds, for example: 86400',
-      zh: '单位秒，例如：86400',
+      en: 'Days, for example: 1',
+      zh: '单位天，例如：1',
     },
     min: 0,
-    step: 3600,
+    step: 1,
   },
   {
     key: 'expand',

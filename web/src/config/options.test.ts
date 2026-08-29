@@ -45,8 +45,10 @@ describe('OPTION_DEFS', () => {
     expect(exclude?.description.zh).toContain('排除');
     expect(exclude?.defaultValue).toBe(DEFAULT_EXCLUDE_REMARKS);
     expect(interval?.type).toBe('number');
+    expect(interval?.description.zh).toContain('按“天”输入');
+    expect(interval?.placeholder?.zh).toContain('单位天');
     expect(interval?.min).toBe(0);
-    expect(interval?.step).toBe(3600);
+    expect(interval?.step).toBe(1);
   });
   it('includes the project provider override', () => {
     const provider = OPTION_DEFS.find((d) => d.key === 'provider');

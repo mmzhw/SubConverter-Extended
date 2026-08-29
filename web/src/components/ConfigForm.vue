@@ -9,6 +9,7 @@ const { t, locale } = useI18n();
 const form = useFormState();
 const openGroups = ref(['node']);
 const tagDelimiter = /[|,，\s]+/;
+const secondsPerDay = 86400;
 
 const groups = [
   { key: 'node', labelKey: 'form.groups.node', icon: Connection },
@@ -52,6 +53,22 @@ function regexTags(key: string): string[] {
 function setRegexTags(key: string, values?: string[]) {
   const next = [...new Set((values || []).map((item) => item.trim()).filter(Boolean))];
   setOption(key, next.join('|'));
+}
+function numberValue(def: OptionDef): number | undefined {
+  const value = optionValue(def.key);
+  if (typeof value !== 'number') return undefined;
+  return def.key === 'interval' ? value / secondsPerDay : value;
+}
+function setNumberOption(def: OptionDef, value?: number) {
+  if (value === undefined) {
+    setOption(def.key, undefined);
+    return;
+  }
+  setOption(def.key, def.key === 'interval' ? Math.round(value * secondsPerDay) : value);
+}
+function numberUnit(def: OptionDef) {
+  if (def.key !== 'interval') return '';
+  return isZh() ? '天' : 'days';
 }
 function updateSourceUrl(value: string) {
   form.state.sourceUrl = value;
@@ -168,15 +185,17 @@ function updateSourceUrl(value: string) {
               clearable
               @update:model-value="(v: string) => setOption(def.key, v)"
             />
-            <el-input-number
-              v-else
-              :model-value="optionValue(def.key) as number | undefined"
-              :placeholder="placeholderOf(def)"
-              :min="def.min"
-              :step="def.step || 1"
-              controls-position="right"
-              @update:model-value="(v: number | undefined) => setOption(def.key, v)"
-            />
+            <div v-else class="number-control">
+              <el-input-number
+                :model-value="numberValue(def)"
+                :placeholder="placeholderOf(def)"
+                :min="def.min"
+                :step="def.step || 1"
+                controls-position="right"
+                @update:model-value="(v: number | undefined) => setNumberOption(def, v)"
+              />
+              <span v-if="numberUnit(def)" class="number-unit">{{ numberUnit(def) }}</span>
+            </div>
           </div>
         </div>
       </el-collapse-item>
@@ -375,6 +394,20 @@ h2 {
 
 .option-row :deep(.el-switch) {
   justify-self: end;
+}
+
+.number-control {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.number-unit {
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 @media (max-width: 767px) {
