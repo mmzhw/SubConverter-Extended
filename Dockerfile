@@ -377,6 +377,7 @@ COPY --from=builder /runtime-libs/ /
 COPY --from=web-builder /build/web/dist /usr/share/nginx/html/
 COPY docker/nginx/nginx.conf.tmpl /etc/nginx/nginx.conf.tmpl
 COPY docker/s6/ /etc/s6-overlay/s6-rc.d/
+COPY --chmod=0755 docker/s6-scripts/nginx-config /etc/s6-overlay/scripts/nginx-config
 
 ENV LD_LIBRARY_PATH="/lib/x86_64-linux-gnu:/usr/lib/x86_64-linux-gnu:/lib/aarch64-linux-gnu:/usr/lib/aarch64-linux-gnu:/lib64:/usr/lib"
 
