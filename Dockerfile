@@ -14,6 +14,7 @@ ARG MIHOMO_REF="Meta"
 ARG MIHOMO_CACHE_BUST=1
 ARG REFRESH_GO_DEPS=false
 ARG ENABLE_SANITIZERS=false
+ARG GITHUB_PROXY_PREFIX=""
 
 WORKDIR /build/bridge
 
@@ -21,6 +22,12 @@ WORKDIR /build/bridge
 RUN apt-get update && \
     apt-get install -y --no-install-recommends git build-essential && \
     rm -rf /var/lib/apt/lists/*
+
+RUN if [ -n "${GITHUB_PROXY_PREFIX}" ]; then \
+      git config --global \
+        url."${GITHUB_PROXY_PREFIX%/}/https://github.com/".insteadOf \
+        "https://github.com/"; \
+    fi
 
 # Copy committed Go module files and source.
 COPY bridge/go.mod bridge/go.sum ./
@@ -143,6 +150,7 @@ ARG NLOHMANN_JSON_REF
 ARG INJA_REF
 ARG JPCRE2_REF
 ARG ENABLE_SANITIZERS=false
+ARG GITHUB_PROXY_PREFIX=""
 
 WORKDIR /
 
@@ -154,6 +162,12 @@ RUN apt-get update && \
     libcurl4-openssl-dev libpcre2-dev libboost-dev rapidjson-dev \
     libyaml-cpp-dev ca-certificates ninja-build ccache && \
     rm -rf /var/lib/apt/lists/*
+
+RUN if [ -n "${GITHUB_PROXY_PREFIX}" ]; then \
+      git config --global \
+        url."${GITHUB_PROXY_PREFIX%/}/https://github.com/".insteadOf \
+        "https://github.com/"; \
+    fi
 
 # quickjspp
 RUN set -xe && \
