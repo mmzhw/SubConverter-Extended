@@ -90,6 +90,15 @@ describe('OPTION_DEFS', () => {
   it('includes the README-documented list param', () => {
     expect(OPTION_DEFS.map((d) => d.key)).toContain('list');
   });
+  it('describes protocol tagging and ruleset expansion clearly', () => {
+    const appendType = OPTION_DEFS.find((d) => d.key === 'append_type');
+    const expand = OPTION_DEFS.find((d) => d.key === 'expand');
+    expect(appendType?.label.zh).toBe('节点类型标记');
+    expect(appendType?.description.zh).toContain('代理协议类型');
+    expect(expand?.label.zh).toBe('规则展开');
+    expect(expand?.description.zh).toContain('远程规则集');
+    expect(expand?.description.zh).not.toContain('短链');
+  });
   it('includes remote config presets that can accept custom URLs', () => {
     const config = OPTION_DEFS.find((d) => d.key === 'config');
     expect(config?.type).toBe('enum');

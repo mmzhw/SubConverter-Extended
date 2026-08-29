@@ -318,10 +318,10 @@ export const OPTION_DEFS: OptionDef[] = [
   {
     key: 'expand',
     type: 'boolean',
-    label: { en: 'Expand short links', zh: '展开短链' },
+    label: { en: 'Expand rulesets', zh: '规则展开' },
     description: {
-      en: 'Lets the backend expand supported short links before conversion. Keep it on for mixed subscriptions; turn it off when you need to preserve the original source links.',
-      zh: '让后端在转换前展开支持的短链。混合订阅通常建议开启；如果需要保留原始订阅链接形态，可以关闭。',
+      en: 'Expands remote rulesets into concrete rule lines in the generated config instead of keeping managed rule-provider references. Turn it on when the client cannot access rule-provider URLs; keep it off for smaller configs and client-side ruleset updates.',
+      zh: '把远程规则集展开成一条条具体规则写进最终配置，而不是保留 rule-provider 这类外部规则引用。客户端无法访问规则集地址时可开启；想保持配置更小、让客户端继续按规则集地址更新时保持关闭。',
     },
     group: 'advanced',
     defaultValue: true,
@@ -329,10 +329,10 @@ export const OPTION_DEFS: OptionDef[] = [
   {
     key: 'append_type',
     type: 'boolean',
-    label: { en: 'Append type tag', zh: '附加类型标记' },
+    label: { en: 'Show node protocol', zh: '节点类型标记' },
     description: {
-      en: 'Appends the proxy protocol type to node names, such as VMess or Trojan. Useful for debugging mixed sources, but it makes names longer.',
-      zh: '在节点名称后附加协议类型，例如 VMess、Trojan。排查混合订阅时很有用，但会让节点名称更长。',
+      en: 'Adds the proxy protocol type to each node name, such as SS, VMess, VLESS, Trojan, or Hysteria2. Useful when one subscription mixes many protocols, but it makes node names longer.',
+      zh: '在节点名称里标注代理协议类型，例如 SS、VMess、VLESS、Trojan、Hysteria2。一个订阅混合多种协议时方便识别，但会让节点名称变长。',
     },
     group: 'advanced',
     defaultValue: false,
