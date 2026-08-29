@@ -340,7 +340,7 @@ h2 {
 
 .option-row {
   display: grid;
-  grid-template-columns: minmax(160px, 1fr) minmax(180px, 240px);
+  grid-template-columns: minmax(112px, 150px) minmax(0, 1fr);
   align-items: center;
   gap: 16px;
   min-height: 48px;
@@ -390,10 +390,11 @@ h2 {
 .option-row :deep(.el-input-number),
 .option-row :deep(.el-input-tag) {
   width: 100%;
+  max-width: 100%;
 }
 
 .option-row :deep(.el-switch) {
-  justify-self: end;
+  justify-self: start;
 }
 
 .number-control {
