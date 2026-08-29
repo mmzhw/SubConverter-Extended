@@ -80,6 +80,18 @@ describe('buildSubUrl', () => {
     );
   });
 
+  it('rewrites GitHub remote config to jsDelivr when selected', () => {
+    const url = buildSubUrl(base({
+      target: 'clash',
+      sourceUrl: 'https://sub.example.com',
+      githubProxy: 'https://testingcf.jsdelivr.net/',
+      options: { config: 'https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online.ini' },
+    }));
+    expect(decodeURIComponent(url)).toContain(
+      'config=https://testingcf.jsdelivr.net/gh/ACL4SSR/ACL4SSR@master/Clash/config/ACL4SSR_Online.ini',
+    );
+  });
+
   it('serializes node filters and update interval', () => {
     const url = buildSubUrl(base({
       target: 'clashr',
