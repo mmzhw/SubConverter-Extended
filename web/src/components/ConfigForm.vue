@@ -15,7 +15,7 @@ import {
 
 const { t, locale } = useI18n();
 const form = useFormState();
-const openGroups = ref(['node']);
+const openGroups = ref(['node', 'rule', 'advanced']);
 const tagDelimiter = /[|,，\s]+/;
 const secondsPerDay = 86400;
 const latencyTimeoutMs = 6000;
