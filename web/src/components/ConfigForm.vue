@@ -240,7 +240,12 @@ function updateSourceUrl(value: string) {
               @update:model-value="(v: string) => (form.state.backendBase = v)"
             />
           </div>
-          <div v-for="def in defsOf(g.key)" :key="def.key" class="option-row">
+          <div
+            v-for="def in defsOf(g.key)"
+            :key="def.key"
+            class="option-row"
+            :class="{ 'boolean-option-row': def.type === 'boolean' }"
+          >
             <span class="option-label">
               <span>{{ labelOf(def) }}</span>
               <el-tooltip :content="descriptionOf(def)" placement="top-start" popper-class="option-tooltip">
@@ -597,6 +602,16 @@ h2 {
     grid-template-columns: 1fr;
     gap: 8px;
     padding: 12px 0;
+  }
+
+  .boolean-option-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .boolean-option-row .option-label {
+    padding-top: 0;
   }
 
   .option-row :deep(.el-switch) {

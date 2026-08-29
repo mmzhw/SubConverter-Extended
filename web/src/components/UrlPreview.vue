@@ -243,7 +243,7 @@ watch(managerTab, (tab) => {
 
 .preview-actions {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(124px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
   margin-top: 14px;
 }
@@ -251,6 +251,15 @@ watch(managerTab, (tab) => {
 .preview-actions :deep(.el-button) {
   min-height: 42px;
   margin-left: 0;
+  padding-inline: 12px;
+  white-space: normal;
+}
+
+.preview-actions :deep(.el-button > span) {
+  min-width: 0;
+  justify-content: center;
+  line-height: 1.2;
+  text-align: center;
 }
 
 .short-link-box {
@@ -459,10 +468,6 @@ watch(managerTab, (tab) => {
   .preview-head {
     align-items: stretch;
     flex-direction: column;
-  }
-
-  .preview-actions {
-    grid-template-columns: 1fr;
   }
 
   .short-link-box {
