@@ -222,7 +222,7 @@ https://api.asailor.org
 ```bash
 docker run -d \
   --name SubConverter-Extended \
-  -p 25500:25500 \
+  -p 8080:8080 \
   --restart unless-stopped \
   aethersailor/subconverter-extended:latest
 ```
@@ -230,12 +230,12 @@ docker run -d \
 检查服务：
 
 ```text
-http://localhost:25500/version
-http://localhost:25500/healthz
+http://localhost:8080/version
+http://localhost:8080/healthz
 ```
 
 > [!NOTE]
-> 上述命令是最小启动示例，不会持久化自定义配置和统计数据。`-p 25500:25500` 还会把端口发布到宿主机全部接口。需要保留配置或统计数据时，请按照 Wiki 的 [Docker 部署](https://github.com/Aethersailor/SubConverter-Extended/wiki/Docker-Deployment)配置持久化目录，并根据实际网络范围选择安全档位。
+> 上述命令是最小启动示例，不会持久化自定义配置和统计数据。`-p 8080:8080` 还会把端口发布到宿主机全部接口。需要保留配置或统计数据时，请按照 Wiki 的 [Docker 部署](https://github.com/Aethersailor/SubConverter-Extended/wiki/Docker-Deployment)配置持久化目录，并根据实际网络范围选择安全档位。
 
 ### Web 配置界面 / Web Config UI
 
