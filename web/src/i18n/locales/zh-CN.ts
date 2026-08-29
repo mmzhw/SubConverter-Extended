@@ -5,7 +5,7 @@ export default {
     sourceUrlPlaceholder: 'https://订阅地址/...', sourceUrlInvalid: '请输入合法的 http(s) 地址',
     sourceUrlHelp: '填写原始机场订阅或节点订阅地址。也可以使用支持的前缀，例如 provider:HK,interval:21600,https://example.com/sub 来指定 Provider 名称和更新间隔。',
     subscriptionName: '订阅名称',
-    subscriptionNamePlaceholder: '例如 良心云',
+    subscriptionNamePlaceholder: '例如 我的订阅',
     subscriptionNameHelp: '生成 filename= 参数，并让后端返回 Content-Disposition 文件名。很多 Clash/Mihomo 客户端导入时会用它作为订阅配置名称；留空则可能显示为 sub。',
     primaryTitle: '节点类型与订阅源',
     savePreset: '保存为预设', importLink: '导入现有链接',

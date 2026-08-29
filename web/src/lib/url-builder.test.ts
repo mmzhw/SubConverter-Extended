@@ -27,9 +27,9 @@ describe('buildSubUrl', () => {
   it('serializes a subscription filename when a subscription name is provided', () => {
     const url = buildSubUrl(base({
       sourceUrl: 'https://s',
-      subscriptionName: '良心云',
+      subscriptionName: '我的订阅',
     }));
-    expect(url).toContain('filename=%E8%89%AF%E5%BF%83%E4%BA%91');
+    expect(url).toContain('filename=%E6%88%91%E7%9A%84%E8%AE%A2%E9%98%85');
   });
 
   it('serializes false when disabling default-on options', () => {

@@ -7,9 +7,9 @@ describe('useFormState', () => {
     const form = useFormState();
     expect(form.builtUrl.value).toBe('');
     form.state.sourceUrl = 'https://sub.example.com/';
-    form.state.subscriptionName = '良心云';
+    form.state.subscriptionName = '我的订阅';
     expect(form.builtUrl.value).toContain('/sub?target=clash&url=https%3A%2F%2Fsub.example.com%2F');
-    expect(form.builtUrl.value).toContain('filename=%E8%89%AF%E5%BF%83%E4%BA%91');
+    expect(form.builtUrl.value).toContain('filename=%E6%88%91%E7%9A%84%E8%AE%A2%E9%98%85');
     expect(decodeURIComponent(form.builtUrl.value)).toContain(`exclude=${DEFAULT_EXCLUDE_REMARKS}`);
     expect(form.builtUrl.value).toContain('provider=false');
     expect(form.builtUrl.value).toContain('emoji=true');
