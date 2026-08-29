@@ -47,13 +47,13 @@ function remove(nameToDelete: string) {
     <div v-if="!presets().length" class="preset-empty">{{ t('presets.empty') }}</div>
     <div v-for="p in presets()" :key="p.name" class="preset-row">
       <span class="preset-name">{{ p.name }}</span>
-      <el-button size="small" :icon="RefreshRight" @click="load(p)">{{ t('presets.load') }}</el-button>
-      <el-button size="small" :icon="Delete" @click="remove(p.name)">{{ t('presets.delete') }}</el-button>
+      <el-button :icon="RefreshRight" @click="load(p)">{{ t('presets.load') }}</el-button>
+      <el-button :icon="Delete" @click="remove(p.name)">{{ t('presets.delete') }}</el-button>
     </div>
 
     <div class="preset-save">
-      <el-input v-model="name" size="small" :placeholder="t('presets.savePrompt')" />
-      <el-button size="small" type="primary" :icon="Plus" @click="save">{{ t('form.savePreset') }}</el-button>
+      <el-input v-model="name" size="large" :placeholder="t('presets.savePrompt')" />
+      <el-button size="large" type="primary" :icon="Plus" @click="save">{{ t('form.savePreset') }}</el-button>
     </div>
 
     <div v-if="notice" class="preset-notice" role="status">{{ notice }}</div>
@@ -91,8 +91,9 @@ function remove(nameToDelete: string) {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: center;
-  gap: 8px;
-  padding: 8px 0;
+  gap: 10px;
+  min-height: 48px;
+  padding: 9px 0;
   border-bottom: 1px solid var(--surface-border-subtle);
 }
 
@@ -107,13 +108,14 @@ function remove(nameToDelete: string) {
 
 .preset-save {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 8px;
-  margin-top: 12px;
+  grid-template-columns: minmax(0, 1fr) minmax(118px, auto);
+  gap: 10px;
+  margin-top: 14px;
 }
 
 .preset-save :deep(.el-button) {
   margin-left: 0;
+  min-height: 40px;
 }
 
 .preset-notice {
