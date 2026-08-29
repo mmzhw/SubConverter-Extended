@@ -137,6 +137,8 @@ SET(SUBCONVERTER_RUNTIME_SOURCES
     src/handler/ruleset_output.cpp
     src/handler/settings.cpp
     src/handler/settings_view.cpp
+    src/handler/short_link_storage.cpp
+    src/handler/short_links.cpp
     src/handler/sub_request_key.cpp
     src/parser/infoparser.cpp
     src/parser/mieru_uri.cpp
@@ -620,6 +622,19 @@ IF(BUILD_TESTS)
     ADD_TEST(NAME cache_storage COMMAND cache_storage_test)
     SET_TESTS_PROPERTIES(cache_storage PROPERTIES LABELS fast)
 
+    ADD_EXECUTABLE(short_link_storage_test
+        tests/short_link_storage_test.cpp
+        src/handler/short_link_storage.cpp
+        src/utils/file.cpp
+        src/utils/md5/md5.cpp
+        src/utils/string.cpp
+        src/utils/urlencode.cpp)
+    TARGET_INCLUDE_DIRECTORIES(short_link_storage_test PRIVATE src)
+    TARGET_COMPILE_DEFINITIONS(short_link_storage_test PRIVATE FILE_IO_TESTING)
+    ADD_TEST(NAME short_link_storage COMMAND short_link_storage_test)
+    SET_TESTS_PROPERTIES(short_link_storage PROPERTIES LABELS fast
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+
     ADD_EXECUTABLE(upload_persistence_test
         tests/upload_persistence_test.cpp
         src/handler/upload.cpp
@@ -658,6 +673,7 @@ IF(BUILD_TESTS)
         file_scope_test
         preference_file_test
         cache_storage_test
+        short_link_storage_test
         upload_persistence_test)
     FOREACH(TEST_TARGET IN LISTS SUBCONVERTER_ASSERTING_TEST_TARGETS)
         IF(MSVC)

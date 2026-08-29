@@ -13,7 +13,7 @@ export default {
     backendBaseHelp: 'Choose the SubConverter backend to call. Leave blank to generate a full subscription URL from the current page protocol, host, and port; enter another backend URL for local or remote debugging.',
     groups: { node: 'Node Options', rule: 'Rule Options', advanced: 'Advanced Options' },
   },
-  preview: { title: 'Generated Subscription URL', kicker: 'Generated result', ready: 'Copy ready', emptyState: 'Empty', generate: 'Generate', copy: 'Copy', copied: 'Copied!', copyFailed: 'Copy failed', qr: 'QR Code', qrEmpty: 'Click Generate to create a QR code' },
+  preview: { title: 'Generated Subscription URL', kicker: 'Generated result', ready: 'Copy ready', emptyState: 'Empty', generate: 'Generate', shortLink: 'Shorten', copyShortLink: 'Copy short link', shortLinkFailed: 'Short link failed', copy: 'Copy', copied: 'Copied!', copyFailed: 'Copy failed', qr: 'QR Code', qrEmpty: 'Click Generate to create a QR code' },
   presets: { title: 'Presets', empty: 'No presets yet', load: 'Load', delete: 'Delete', savePrompt: 'Preset name', saved: 'Preset saved', storageUnavailable: 'Presets cannot be saved: browser storage is unavailable' },
   history: { title: 'Generated history', empty: 'No generated links yet', clear: 'Clear' },
   import: { title: 'Import from link', placeholder: 'Paste an existing /sub?... link', invalid: 'Not a valid subconverter link', unknownKept: 'Unknown parameters kept' },

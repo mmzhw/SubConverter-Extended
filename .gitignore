@@ -3,6 +3,7 @@ subconverter.exe
 cmake-build-debug
 .idea
 base/cache
+short-links.json
 scripts/quickjspp
 scripts/yaml-cpp
 .DS_Store

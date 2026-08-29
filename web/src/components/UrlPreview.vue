@@ -6,10 +6,12 @@ import QRCode from 'qrcode';
 import { useCopy } from '../composables/useCopy';
 import { GeneratedLink } from '../composables/useGeneratedLinks';
 import { useGenerateSubscription } from '../composables/useGenerateSubscription';
+import { useShortLink } from '../composables/useShortLink';
 import ImportDialog from './ImportDialog.vue';
 
 const { t } = useI18n();
 const { form, generated, generate } = useGenerateSubscription();
+const shortLink = useShortLink();
 const { state: copyState, copy } = useCopy();
 const qrDataUrl = ref('');
 const importVisible = ref(false);
@@ -17,6 +19,7 @@ const importVisible = ref(false);
 watch(
   () => form.builtUrl.value,
   async (url) => {
+    shortLink.reset();
     if (!url) { qrDataUrl.value = ''; return; }
     try {
       const data = await QRCode.toDataURL(url, { margin: 1, width: 240 });
@@ -38,6 +41,10 @@ const isCopying = computed(() => copyState.value === 'loading');
 
 function loadGenerated(item: GeneratedLink) {
   form.applyGenerated(item.state, item.url);
+}
+
+async function createShortLink() {
+  await shortLink.create(form.builtUrl.value, form.state.subscriptionName);
 }
 
 function generatedTime(item: GeneratedLink) {
@@ -66,7 +73,26 @@ function generatedTime(item: GeneratedLink) {
       <el-button :icon="CopyDocument" :loading="isCopying" :disabled="!form.builtUrl.value" @click="copy(form.builtUrl.value)">
         {{ copyLabel }}
       </el-button>
+      <el-button :loading="shortLink.status.value === 'loading'" :disabled="!form.builtUrl.value" @click="createShortLink">
+        {{ t('preview.shortLink') }}
+      </el-button>
       <el-button :icon="Upload" @click="importVisible = true">{{ t('form.importLink') }}</el-button>
+    </div>
+
+    <div v-if="shortLink.url.value || shortLink.status.value === 'error'" class="short-link-box">
+      <code v-if="shortLink.url.value" class="short-code">{{ shortLink.url.value }}</code>
+      <span v-else class="short-error">{{ t('preview.shortLinkFailed') }}</span>
+      <el-button v-if="shortLink.url.value" link :icon="CopyDocument" @click="copy(shortLink.url.value)">
+        {{ t('preview.copyShortLink') }}
+      </el-button>
+    </div>
+
+    <div id="qr-target" class="qr-wrap" :class="{ visible: !!qrDataUrl }">
+      <img v-if="qrDataUrl" :src="qrDataUrl" :alt="t('preview.qr')" width="240" height="240" />
+      <div v-else class="qr-empty">
+        <el-icon><Download /></el-icon>
+        <span>{{ t('preview.qrEmpty') }}</span>
+      </div>
     </div>
 
     <div class="generated-history">
@@ -93,14 +119,6 @@ function generatedTime(item: GeneratedLink) {
           <span>{{ generatedTime(item) }}</span>
         </span>
       </button>
-    </div>
-
-    <div id="qr-target" class="qr-wrap" :class="{ visible: !!qrDataUrl }">
-      <img v-if="qrDataUrl" :src="qrDataUrl" :alt="t('preview.qr')" width="240" height="240" />
-      <div v-else class="qr-empty">
-        <el-icon><Download /></el-icon>
-        <span>{{ t('preview.qrEmpty') }}</span>
-      </div>
     </div>
 
     <ImportDialog v-model="importVisible" />
@@ -164,7 +182,7 @@ function generatedTime(item: GeneratedLink) {
 
 .preview-actions {
   display: grid;
-  grid-template-columns: 1.15fr 1fr 1fr;
+  grid-template-columns: 1.1fr 1fr 1fr 1fr;
   gap: 10px;
   margin-top: 14px;
 }
@@ -172,6 +190,34 @@ function generatedTime(item: GeneratedLink) {
 .preview-actions :deep(.el-button) {
   min-height: 42px;
   margin-left: 0;
+}
+
+.short-link-box {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--surface-border);
+  border-radius: 12px;
+  background: var(--control-bg);
+}
+
+.short-code {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-primary);
+  font-size: 0.82rem;
+  font-weight: 720;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.short-error {
+  color: var(--danger);
+  font-size: 0.84rem;
+  font-weight: 700;
 }
 
 .generated-history {
@@ -297,6 +343,10 @@ function generatedTime(item: GeneratedLink) {
   }
 
   .preview-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .short-link-box {
     grid-template-columns: 1fr;
   }
 }

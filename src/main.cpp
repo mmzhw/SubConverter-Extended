@@ -21,6 +21,7 @@
 #include "handler/multithread.h"
 #include "handler/settings.h"
 #include "handler/settings_view.h"
+#include "handler/short_links.h"
 #include "handler/statistics.h"
 #include "handler/version_page.h"
 #include "script/cron.h"
@@ -391,6 +392,11 @@ int main(int argc, char *argv[]) {
                             [](RESPONSE_CALLBACK_ARGS) -> std::string {
                               return "ok\n";
                             });
+
+  webServer.append_response("POST", "/short", "application/json; charset=utf-8",
+                            createShortLinkEndpoint);
+  webServer.append_response("GET", "/s", "text/plain;charset=utf-8",
+                            resolveShortLinkEndpoint);
 
   if (global.resourceControlEffective == "compat") {
     webServer.append_response(
