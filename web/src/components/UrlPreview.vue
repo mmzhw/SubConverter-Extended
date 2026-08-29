@@ -18,9 +18,11 @@ watch(
   async (url) => {
     if (!url) { qrDataUrl.value = ''; return; }
     try {
-      qrDataUrl.value = await QRCode.toDataURL(url, { margin: 1, width: 240 });
+      const data = await QRCode.toDataURL(url, { margin: 1, width: 240 });
+      // 丢弃过期响应：URL 已在生成期间变化时不覆盖当前结果
+      if (url === form.builtUrl.value) qrDataUrl.value = data;
     } catch {
-      qrDataUrl.value = '';
+      if (url === form.builtUrl.value) qrDataUrl.value = '';
     }
   },
   { immediate: true },

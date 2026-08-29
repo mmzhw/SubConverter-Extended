@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { nextTick, ref } from 'vue';
+import { nextTick, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { parseSubUrl } from '../lib/url-parser';
 import { useFormState } from '../composables/useFormState';
@@ -11,6 +11,14 @@ const input = ref('');
 const error = ref('');
 const errorEl = ref<HTMLElement | null>(null);
 const kept = ref<Record<string, string>>({});
+
+// 关闭对话框或输入变化时清空未知参数标签，避免上次成功导入的标签残留
+watch(visible, (v) => {
+  if (!v) kept.value = {};
+});
+watch(input, () => {
+  kept.value = {};
+});
 
 function submit() {
   error.value = '';
