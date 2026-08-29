@@ -30,7 +30,7 @@
 ## 5. Docker / nginx 部署形态
 
 - [ ] 5.1 编写 nginx 配置模板（`envsubst` 渲染 `WEB_PORT`；任务 1.1 清单内路径反代 `127.0.0.1:25500` 并设置 `X-Real-IP`/`X-Forwarded-For`/`Host`；SPA `try_files` 回退；`/assets/` 长缓存、`index.html` 不缓存）；验证：`nginx -t` 校验通过
-- [ ] 5.2 编写 s6-overlay 服务定义（nginx 前台运行 + subconverter），启动脚本按 D5 默认导出 dashboard 客户端 IP 环境变量（用户显式设置时尊重）；验证：本地容器内 kill 任一进程后容器停止（规格：进程监督与健康检查）
+- [ ] 5.2 编写 s6-overlay 服务定义（nginx 前台运行 + subconverter，oneshot `up` 为 execlineb 单行、shell 逻辑放独立脚本），启动脚本按 D5 默认导出 dashboard 客户端 IP 环境变量（用户显式设置时尊重）；验证：s6 服务树静态校验（sh -n、up 单行、COPY 目标在 s6-rc.d 之外）+ 容器运行时冒烟（longrun 崩溃由 s6 重启、HEALTHCHECK 转不健康，见 5.5 端到端）
 - [ ] 5.3 修改 Dockerfile：新增 `web-builder` 阶段（node:20-alpine，`npm ci` + `npm run build`）；最终阶段安装 nginx/s6-overlay、拷贝 dist 与配置、镜像内 `pref.example.toml` 副本 listen 改为 `127.0.0.1`、`EXPOSE 8080`、HEALTHCHECK 同时探测 `/` 与 `/version`；验证：`docker build` 成功且 `docker inspect` 见 HEALTHCHECK 与 EXPOSE 8080
 - [ ] 5.4 更新 `docker-compose.yml`：端口映射改为 `"${WEB_PORT:-8080}:8080/tcp"`、补充 WEB_PORT 环境变量与注释（BREAKING 说明）；验证：`docker compose up` 后经 8080 可打开前端并完成一次转换，外部无法直连 25500（规格：单镜像单端口部署）
 - [ ] 5.5 端到端验证反代行为：经 8080 访问 `/sub`、`/dashboard`、`/version` 行为与直连一致；验证：dashboard 防爆破按真实客户端 IP 区分（容器日志中 peer 为原始客户端地址，规格：反向代理转换接口、subconverter 自有页面兼容）
