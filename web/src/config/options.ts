@@ -32,6 +32,7 @@ export const OPTION_DEFS: OptionDef[] = [
   { key: 'udp', type: 'boolean', label: { en: 'UDP', zh: 'UDP 支持' }, group: 'node', defaultValue: true },
   { key: 'scv', type: 'boolean', label: { en: 'Skip cert verify', zh: '跳过证书校验' }, group: 'node', defaultValue: false },
   { key: 'sort', type: 'boolean', label: { en: 'Sort nodes', zh: '节点排序' }, group: 'node', defaultValue: false },
+  { key: 'fdn', type: 'boolean', label: { en: 'Filter deprecated nodes', zh: '过滤废弃节点' }, group: 'node', defaultValue: false },
   { key: 'rename', type: 'string', label: { en: 'Rename', zh: '节点重命名' }, group: 'node', defaultValue: '' },
   { key: 'ruleset', type: 'string', label: { en: 'External ruleset URL', zh: '外部规则集' }, group: 'rule', defaultValue: '' },
   { key: 'list', type: 'boolean', label: { en: 'Plain node list', zh: '纯节点列表' }, group: 'advanced', defaultValue: false },

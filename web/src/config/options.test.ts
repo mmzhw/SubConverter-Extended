@@ -26,7 +26,12 @@ describe('OPTION_DEFS', () => {
       expect(['node', 'rule', 'advanced']).toContain(def.group);
       expect(['boolean', 'string', 'enum', 'number']).toContain(def.type);
       if (def.type === 'enum') expect(def.enumValues?.length).toBeGreaterThan(0);
+      expect(def.defaultValue !== undefined).toBe(true);
+      if (def.type === 'boolean') expect(typeof def.defaultValue).toBe('boolean');
     }
+  });
+  it('includes the deprecated-node filter option', () => {
+    expect(OPTION_DEFS.map((d) => d.key)).toContain('fdn');
   });
   it('includes the project provider override', () => {
     expect(OPTION_DEFS.map((d) => d.key)).toContain('provider');

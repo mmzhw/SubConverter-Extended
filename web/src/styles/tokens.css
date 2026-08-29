@@ -6,7 +6,9 @@
   --text-primary: #1a202c; --text-secondary: #4a5568;
   --control-bg: rgba(255, 255, 255, 0.72);
   --bg-gradient: linear-gradient(135deg, #f8fafc 0%, #eef2f7 48%, #e2e8f0 100%);
+  --danger: #dc2626;
   --el-color-primary: #2563eb;
+  --el-border-radius-base: 14px;
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -16,7 +18,8 @@
     --text-primary: #f8f9fa; --text-secondary: #a0aec0;
     --control-bg: rgba(20, 24, 33, 0.7);
     --bg-gradient: linear-gradient(135deg, #05070b 0%, #0d111a 46%, #111827 100%);
-    --el-color-primary: #38bdf8;
+    --danger: #f87171;
+    --el-color-primary: #2563eb;
   }
 }
 body {

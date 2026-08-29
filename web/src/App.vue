@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n';
 import { setLang } from './i18n';
+import ConfigForm from './components/ConfigForm.vue';
 
 const { t, locale } = useI18n();
 function toggleLang() {
@@ -18,7 +19,7 @@ function toggleLang() {
       <el-button @click="toggleLang">{{ t('common.lang') }}</el-button>
     </div>
     <div class="layout">
-      <section class="form-col" aria-label="form"><slot name="form" /></section>
+      <section class="form-col" aria-label="form"><ConfigForm /></section>
       <aside class="preview-col" aria-label="preview"><slot name="preview" /></aside>
     </div>
   </main>
