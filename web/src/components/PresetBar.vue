@@ -16,8 +16,8 @@ function save() {
   const trimmed = name.value.trim();
   if (!trimmed) return;
   const res = savePreset(trimmed, { ...form.state, options: { ...form.state.options } });
-  result.value = res;
   if (res.ok) {
+    result.value = res;
     notice.value = t('presets.saved');
     name.value = '';
   } else {

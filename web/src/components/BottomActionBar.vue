@@ -14,10 +14,10 @@ function scrollToQr() {
 
 <template>
   <div class="bottom-bar">
-    <el-button class="grow" type="primary" :loading="copyState === 'loading'" @click="copy(form.builtUrl.value)">
-      {{ copyState === 'copied' ? t('preview.copied') : t('preview.copy') }}
+    <el-button class="grow" type="primary" size="large" :loading="copyState === 'loading'" @click="copy(form.builtUrl.value)">
+      {{ copyState === 'copied' ? t('preview.copied') : copyState === 'error' ? t('preview.copyFailed') : t('preview.copy') }}
     </el-button>
-    <el-button @click="scrollToQr">{{ t('preview.qr') }}</el-button>
+    <el-button size="large" @click="scrollToQr">{{ t('preview.qr') }}</el-button>
   </div>
 </template>
 
@@ -30,5 +30,6 @@ function scrollToQr() {
     background: var(--surface-strong); border-top: 1px solid var(--surface-border); z-index: 100;
   }
   .grow { flex: 1; }
+  .bottom-bar :deep(.el-button) { min-height: 44px; }
 }
 </style>
