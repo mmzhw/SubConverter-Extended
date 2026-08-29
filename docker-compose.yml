@@ -17,6 +17,9 @@ services:
     environment:
       TZ: Asia/Shanghai
       WEB_PORT: "8080"
+      # 此值只改容器内 nginx 监听端口；对外端口由上面 ports 的 ${WEB_PORT:-8080} 控制（容器侧固定映射 :8080），改端口请改 ports 行而非此值。
+      # This only changes nginx's in-container listen port; the host port is set
+      # by ${WEB_PORT:-8080} in ports above (container side is fixed at :8080).
       # 按需取消注释并修改；环境变量会覆盖 pref.toml 中的对应配置。
       # Uncomment and edit as needed; environment variables override pref.toml.
       # MANAGED_CONFIG_PREFIX: "http://your-domain-or-ip:8080"
