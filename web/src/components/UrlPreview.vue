@@ -1,23 +1,33 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { CopyDocument, Download, Upload } from '@element-plus/icons-vue';
+import { Clock, Close, CopyDocument, Download, Upload } from '@element-plus/icons-vue';
 import QRCode from 'qrcode';
 import { useFormState } from '../composables/useFormState';
 import { useCopy } from '../composables/useCopy';
+import { GeneratedLink, useGeneratedLinks } from '../composables/useGeneratedLinks';
 import ImportDialog from './ImportDialog.vue';
 import PresetBar from './PresetBar.vue';
 
 const { t } = useI18n();
 const form = useFormState();
+const generated = useGeneratedLinks();
 const { state: copyState, copy } = useCopy();
 const qrDataUrl = ref('');
 const importVisible = ref(false);
+let historyTimer: number | undefined;
+let suppressNextHistoryRecord = false;
 
 watch(
   () => form.builtUrl.value,
   async (url) => {
+    if (historyTimer !== undefined) window.clearTimeout(historyTimer);
     if (!url) { qrDataUrl.value = ''; return; }
+    if (suppressNextHistoryRecord) {
+      suppressNextHistoryRecord = false;
+    } else {
+      historyTimer = window.setTimeout(() => generated.record(url, form.state), 900);
+    }
     try {
       const data = await QRCode.toDataURL(url, { margin: 1, width: 240 });
       // 丢弃过期响应：URL 已在生成期间变化时不覆盖当前结果
@@ -35,6 +45,15 @@ const copyLabel = computed(() => {
   return t('preview.copy');
 });
 const isCopying = computed(() => copyState.value === 'loading');
+
+function loadGenerated(item: GeneratedLink) {
+  suppressNextHistoryRecord = true;
+  form.applyParsed(item.state);
+}
+
+function generatedTime(item: GeneratedLink) {
+  return new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit' }).format(item.createdAt);
+}
 </script>
 
 <template>
@@ -56,6 +75,32 @@ const isCopying = computed(() => copyState.value === 'loading');
         {{ copyLabel }}
       </el-button>
       <el-button :icon="Upload" @click="importVisible = true">{{ t('form.importLink') }}</el-button>
+    </div>
+
+    <div class="generated-history">
+      <div class="history-head">
+        <span>
+          <el-icon><Clock /></el-icon>
+          {{ t('history.title') }}
+        </span>
+        <el-button v-if="generated.links.value.length" link :icon="Close" @click="generated.clear">
+          {{ t('history.clear') }}
+        </el-button>
+      </div>
+      <div v-if="!generated.links.value.length" class="history-empty">{{ t('history.empty') }}</div>
+      <button
+        v-for="item in generated.links.value"
+        :key="item.id"
+        class="history-row"
+        type="button"
+        @click="loadGenerated(item)"
+      >
+        <span class="history-title">{{ item.title }}</span>
+        <span class="history-meta">
+          <span>{{ item.target }}</span>
+          <span>{{ generatedTime(item) }}</span>
+        </span>
+      </button>
     </div>
 
     <div id="qr-target" class="qr-wrap" :class="{ visible: !!qrDataUrl }">
@@ -138,11 +183,88 @@ const isCopying = computed(() => copyState.value === 'loading');
   margin-left: 0;
 }
 
+.generated-history {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--surface-border);
+}
+
+.history-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  font-weight: 850;
+}
+
+.history-head > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.history-empty {
+  padding: 10px 0 2px;
+  color: var(--text-muted);
+  font-size: 0.86rem;
+  font-weight: 650;
+}
+
+.history-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 42px;
+  padding: 8px 0;
+  border: 0;
+  border-bottom: 1px solid var(--surface-border-subtle);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.history-row:hover .history-title,
+.history-row:focus-visible .history-title {
+  color: var(--accent);
+}
+
+.history-row:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.history-title {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  font-weight: 760;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.history-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
 .qr-wrap {
   display: grid;
   place-items: center;
   min-height: 168px;
-  margin: 18px 0;
+  margin: 16px 0 18px;
   border: 1px dashed var(--surface-border);
   border-radius: 18px;
   background: var(--control-bg);

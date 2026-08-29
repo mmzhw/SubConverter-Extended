@@ -1,20 +1,18 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { Link, MoonNight, Operation, SwitchButton } from '@element-plus/icons-vue';
+import { Clock, Link, Operation, SwitchButton } from '@element-plus/icons-vue';
 import { setLang } from './i18n';
-import { OPTION_DEFS } from './config/options';
 import { useFormState } from './composables/useFormState';
+import { useGeneratedLinks } from './composables/useGeneratedLinks';
 import ConfigForm from './components/ConfigForm.vue';
 import UrlPreview from './components/UrlPreview.vue';
 import BottomActionBar from './components/BottomActionBar.vue';
 
 const { t, locale } = useI18n();
 const form = useFormState();
-
-const enabledOptions = computed(() => {
-  return OPTION_DEFS.filter((def) => form.state.options[def.key] === true).length;
-});
+const generated = useGeneratedLinks();
+const generatedCount = computed(() => generated.links.value.length);
 
 function toggleLang() {
   setLang(locale.value.startsWith('zh') ? 'en' : 'zh-CN');
@@ -39,8 +37,8 @@ function toggleLang() {
             {{ form.state.target }}
           </span>
           <span class="status-item">
-            <el-icon><MoonNight /></el-icon>
-            {{ enabledOptions }}
+            <el-icon><Clock /></el-icon>
+            {{ t('app.generatedCount', { count: generatedCount }) }}
           </span>
           <span class="status-item" :class="{ active: !!form.builtUrl.value }">
             <el-icon><Link /></el-icon>

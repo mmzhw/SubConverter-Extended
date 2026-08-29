@@ -1,5 +1,5 @@
 export default {
-  app: { title: 'SubConverter Config Builder', subtitle: 'Assemble your subscription URL visually', kicker: 'Subscription conversion workspace', ready: 'Ready', waiting: 'Waiting' },
+  app: { title: 'SubConverter Config Builder', subtitle: 'Assemble your subscription URL visually', kicker: 'Subscription conversion workspace', ready: 'Ready', waiting: 'Waiting', generatedCount: 'Generated {count}' },
   form: {
     target: 'Node Type', sourceUrl: 'Subscription Source URL',
     sourceUrlPlaceholder: 'https://sub.example.com/...', sourceUrlInvalid: 'Enter a valid http(s) URL',
@@ -15,6 +15,7 @@ export default {
   },
   preview: { title: 'Generated Subscription URL', kicker: 'Live preview', ready: 'Copy ready', emptyState: 'Empty', copy: 'Copy', copied: 'Copied!', copyFailed: 'Copy failed', qr: 'QR Code', qrEmpty: 'Enter a source URL to create a QR code' },
   presets: { title: 'Presets', empty: 'No presets yet', load: 'Load', delete: 'Delete', savePrompt: 'Preset name', saved: 'Preset saved', storageUnavailable: 'Presets cannot be saved: browser storage is unavailable' },
+  history: { title: 'Generated history', empty: 'No generated links yet', clear: 'Clear' },
   import: { title: 'Import from link', placeholder: 'Paste an existing /sub?... link', invalid: 'Not a valid subconverter link', unknownKept: 'Unknown parameters kept' },
   common: { lang: '中', cancel: 'Cancel', confirm: 'Confirm' },
 };
