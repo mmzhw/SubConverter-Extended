@@ -5,16 +5,13 @@ services:
     container_name: SubConverter-Extended
     image: aethersailor/subconverter-extended:latest
     ports:
-      # 保留既有的全接口端口发布，方便局域网设备直接访问；这表示“可能被外部访问”，
-      # 但不能单凭该行判断服务已暴露公网，还需结合宿主防火墙、云安全组、NAT 和反代判断。
-      # 若只允许宿主机访问，可手动改为 "127.0.0.1:25500:25500/tcp"。
-      # Keep the existing all-interface publication for LAN compatibility. It
-      # indicates possible exposure, not proven Internet reachability. For
-      # host-only access, manually use "127.0.0.1:25500:25500/tcp" instead.
-      - "25500:25500/tcp"
+      # 单一对外端口：nginx 托管前端并反代 subconverter（BREAKING：原 25500 直连已取消，
+      # 25500 仅容器内回环可用）。可用 WEB_PORT 覆盖宿主机侧端口。
+      - "${WEB_PORT:-8080}:8080/tcp"
     restart: unless-stopped
     environment:
       TZ: Asia/Shanghai
+      WEB_PORT: "8080"
       # 按需取消注释并修改；环境变量会覆盖 pref.toml 中的对应配置。
       # Uncomment and edit as needed; environment variables override pref.toml.
       # MANAGED_CONFIG_PREFIX: "http://your-domain-or-ip:25500"
