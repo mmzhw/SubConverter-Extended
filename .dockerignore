@@ -11,3 +11,5 @@ base/Custom_OpenClash_Rules/
 *.log
 build-metadata-*.json
 subconverter.exe
+web/node_modules
+web/dist
