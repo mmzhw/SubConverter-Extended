@@ -15,7 +15,7 @@
 [![License](https://img.shields.io/badge/license-GPL--3.0-orange?style=flat)](LICENSE)
 [![Wiki](https://img.shields.io/badge/Wiki-完整用户手册-2f81f7?style=flat&logo=github)](https://github.com/Aethersailor/SubConverter-Extended/wiki)
 
-[🧭 按任务开始](#按任务开始) · [🔗 相关项目](#与相关项目的关系) · [💡 立项原因](#立项原因) · [🚀 快速开始](#快速开始) · [📚 完整 Wiki](https://github.com/Aethersailor/SubConverter-Extended/wiki)
+[🧭 按任务开始](#按任务开始) · [🔗 相关项目](#与相关项目的关系) · [💡 立项原因](#立项原因) · [🚀 快速开始](#快速开始) · [🖥️ Web UI](#web-配置界面--web-config-ui) · [📚 完整 Wiki](https://github.com/Aethersailor/SubConverter-Extended/wiki)
 
 </div>
 
@@ -39,6 +39,7 @@ SubConverter-Extended 基于 [asdlokj1qpi233/subconverter](https://github.com/as
 | 想完成的任务 | 入口 |
 | :--- | :--- |
 | 使用公共实例生成第一份配置 | [快速开始](https://github.com/Aethersailor/SubConverter-Extended/wiki/Getting-Started) |
+| 使用可视化界面组装和管理订阅链接 | [Web 配置界面](#web-配置界面--web-config-ui) |
 | 确认客户端应使用哪个 `target` | [客户端与目标格式](https://github.com/Aethersailor/SubConverter-Extended/wiki/Compatibility) |
 | 自行部署服务 | [Docker 部署](https://github.com/Aethersailor/SubConverter-Extended/wiki/Docker-Deployment) · [原生部署](https://github.com/Aethersailor/SubConverter-Extended/wiki/Native-Deployment) |
 | 使用 OpenClash 模板和规则 | [Custom_OpenClash_Rules](https://github.com/Aethersailor/Custom_OpenClash_Rules) |
@@ -51,6 +52,7 @@ SubConverter-Extended 基于 [asdlokj1qpi233/subconverter](https://github.com/as
 | 项目 | 用户可见职责 | 与 SubConverter-Extended 的关系 |
 | :--- | :--- | :--- |
 | [Custom_OpenClash_Rules](https://github.com/Aethersailor/Custom_OpenClash_Rules) | 提供 OpenClash 模板、规则和使用教程 | 可作为转换模板和规则来源；也可直接供 OpenClash 使用。 |
+| [ACL4SSR/ACL4SSR](https://github.com/ACL4SSR/ACL4SSR) | 提供社区常用的 Clash 远程配置模板 | Web 配置界面借鉴其公开模板预设思路，并内置常用 Clash config 入口供选择。 |
 | **SubConverter-Extended** | 转换订阅、模板和规则，生成目标客户端配置 | 不负责收集 Mihomo `MATCH` 域名，也不供应订阅或节点。 |
 | [Rule-Bot Client](https://github.com/Aethersailor/Rule-Bot-Client) | 从 Mihomo `MATCH` 连接中收集域名，默认保存在本地，可选发送 | 可用于发现需要补充的规则；不是订阅转换的必需组件。 |
 | [Rule-Bot](https://github.com/Aethersailor/Rule-Bot) | 检查域名并按策略提交到目标规则仓库 | 项目公共实例的目标是 Custom_OpenClash_Rules；自建服务可维护其他仓库。 |
@@ -156,9 +158,13 @@ subconverter 的节点解析器需要人工跟进协议、传输方式和参数�
 | 独立目标生成 | 为 Stash、Shadowrocket、v2rayN、v2rayNG 等目标提供独立输出和能力过滤；无法表示的节点会按目标能力过滤或返回明确错误。 |
 | 请求诊断 | `explain=true` 返回脱敏 JSON 诊断；`/inspect` 提供可视化诊断台；响应和日志使用服务端生成的 `X-Request-ID` 关联。 |
 | 运行统计 | 可选 `/dashboard` 与 `/dashboard/data`，支持持久化、时间窗口统计、地区分布和可选 Basic Auth。 |
+| Web 配置界面 | 内置 Vue 3 配置工作台，支持显式生成、导入回显、二维码、生成历史、服务端短链和短链管理。 |
+| 远程配置预设 | Web UI 内置 Aethersailor Custom_OpenClash_Rules 与 ACL4SSR 常用模板，也支持粘贴公开 `.ini` 地址。 |
+| 短链服务 | 支持把很长的 `/sub?...` 链接保存为 `/s?id=...`，并提供列表、复制、载入和删除管理接口。 |
 | 部署安全 | 提供 `lan`、`public`、`strict` 安全档位，并区分请求方可控抓取、可信本地配置和上传权限。 |
 | 出站访问 | `proxy_config`、`proxy_ruleset`、`proxy_subscription` 使用明确的 Direct、System、Explicit、Cors 策略，并支持 `proxy_bypass`。 |
 | 规则扩展 | 支持外部 Clash 完整规则的 `ruleprepend` / `ruleappend`，以及 `clash-ipcidr` 的 `no-resolve` 选项。 |
+| 单端口 Docker | 容器默认对外发布 `25500`，由 nginx 托管 Web UI 并反向代理 `/sub`、`/short`、`/s` 等后端接口。 |
 | 交付形式 | 同时提供 Docker Hub、GHCR、多架构 Linux 便携包、Windows 便携包和 OpenWrt APK，并发布校验清单。 |
 | 运行可靠性 | 增加请求合并、响应微缓存、有界规则任务、连接复用、优雅停机、敏感日志脱敏和可配置资源限制。 |
 
@@ -180,6 +186,21 @@ proxy_direct:false,https://example.com/sub
 
 # 关闭整条请求的 proxy-provider 模式（后端代抓订阅、节点内联输出）
 &provider=false
+
+# 设置订阅配置文件名；这不是节点重命名
+&filename=MyProfile
+
+# 按正则包含或排除节点名称
+&include=HK|Hong%20Kong&exclude=流量|官网|套餐
+
+# 只输出节点列表，不生成完整规则和策略组
+&list=true
+
+# 展开远程规则集为具体规则行
+&expand=true
+
+# 在节点名称中追加协议类型标记
+&append_type=true
 
 # 返回脱敏诊断报告，不返回配置文件
 &explain=true
@@ -222,7 +243,8 @@ https://api.asailor.org
 ```bash
 docker run -d \
   --name SubConverter-Extended \
-  -p 8080:8080 \
+  -p 25500:25500 \
+  -e TZ=Asia/Shanghai \
   --restart unless-stopped \
   aethersailor/subconverter-extended:latest
 ```
@@ -230,24 +252,33 @@ docker run -d \
 检查服务：
 
 ```text
-http://localhost:8080/version
-http://localhost:8080/healthz
+http://localhost:25500/
+http://localhost:25500/version
+http://localhost:25500/healthz
 ```
 
 > [!NOTE]
-> 上述命令是最小启动示例，不会持久化自定义配置和统计数据。`-p 8080:8080` 还会把端口发布到宿主机全部接口。需要保留配置或统计数据时，请按照 Wiki 的 [Docker 部署](https://github.com/Aethersailor/SubConverter-Extended/wiki/Docker-Deployment)配置持久化目录，并根据实际网络范围选择安全档位。
+> 上述命令是最小启动示例，不会持久化自定义配置、统计数据和短链映射。`-p 25500:25500` 会把端口发布到宿主机全部接口。需要保留配置、统计或短链时，请按照 Wiki 的 [Docker 部署](https://github.com/Aethersailor/SubConverter-Extended/wiki/Docker-Deployment)配置持久化目录，并根据实际网络范围选择安全档位。
+
+`docker-compose.yml` 示例已包含推荐默认值：`WEB_PORT=25500`、`SUBCONVERTER_LISTEN_PORT=25501`、`TZ=Asia/Shanghai`，并将短链映射持久化到 `./short-links:/base/short-links`。短链数量可通过 `SUBCONVERTER_SHORT_LINK_MAX_ENTRIES` 调整，默认保留 `500` 条。
 
 ### Web 配置界面 / Web Config UI
 
-镜像内置 Vue 3 可视化配置界面：打开发布端口根路径即可组装订阅 URL、
-导入现有链接、保存预设、复制或扫码使用。nginx 同时将 `/sub`、
-`/getprofile`、`/getruleset` 等接口反向代理到容器内 subconverter。
+镜像内置 Vue 3 可视化配置界面：打开发布端口根路径即可组装真实可复制的订阅 URL。界面使用显式“生成”按钮，避免输入一个字符就更新链接；生成后可复制长链接、生成二维码，也可创建服务端短链。
 
-> **BREAKING**：自本版本起镜像只发布一个端口（默认 `8080`，可用
-> `WEB_PORT` 覆盖）。原 `25500` 直连已取消，仅容器内回环可用。
-> 迁移：把宿主端口映射从 `25500:25500` 改为 `${WEB_PORT:-8080}:8080`，
-> 订阅 URL 中的 `:25500` 改为新端口或域名。回滚：pin 回上一版本镜像
-> 并恢复旧端口映射。
+Web UI 目前覆盖这些高频流程：
+
+- 选择目标客户端、填写订阅源地址和订阅名称，生成 `/sub?...` URL；
+- 导入已有 `/sub?...` 链接并回显到表单，便于继续调整；
+- 节点选项、规则选项和高级选项默认展开，开关项带详细 Tooltip；
+- “包含节点”和“排除节点”使用标签输入，最终以 `|` 拼接为后端正则参数；
+- “更新间隔”按天填写，生成 URL 时自动换算为 `interval=<秒数>`；
+- 远程配置可选择 Aethersailor 或 ACL4SSR 预设，也可粘贴公开 `.ini` URL；
+- GitHub Proxy 选择和延迟测试用于改善远程配置模板访问，只改写 `config=`，不会改写 `url=` 订阅源；
+- 生成历史保存在浏览器本地，点击可回显；
+- 服务端短链可在“短链管理”中刷新、复制、载入和删除。
+
+nginx 同时将 `/sub`、`/getprofile`、`/getruleset`、`/short`、`/short/list`、`/s` 等接口反向代理到容器内 subconverter。容器默认只发布一个端口：`25500`。`WEB_PORT` 控制 nginx 的公开入口，`SUBCONVERTER_LISTEN_PORT` 控制容器内后端回环端口，两者应保持不同。
 
 ### 📦 可用交付形式
 
@@ -290,6 +321,7 @@ http://localhost:8080/healthz
 - 自行部署者需要自行管理 TLS、访问控制、防火墙、日志、备份和更新。
 - `lan` 是兼容旧部署的默认安全档位，不代表服务可以安全地直接暴露到公网。
 - 项目日志会对已知敏感字段进行脱敏，但这不是通用数据防泄漏系统。
+- 短链和短链管理接口会保存并展示原始订阅 URL；公开部署时请使用防火墙、反向代理鉴权或其他访问控制保护服务。
 - 未修复的安全漏洞请按 [安全策略](SECURITY.md) 私密报告，不要在公开 Issue 中披露利用细节。
 
 > [!WARNING]
@@ -317,7 +349,8 @@ http://localhost:8080/healthz
 
 - [asdlokj1qpi233/subconverter](https://github.com/asdlokj1qpi233/subconverter)：本项目的上游基础；
 - [MetaCubeX/mihomo](https://github.com/MetaCubeX/mihomo)：提供 Mihomo 节点解析能力；
-- [Aethersailor/Custom_OpenClash_Rules](https://github.com/Aethersailor/Custom_OpenClash_Rules)：提供 OpenClash 模板、规则和用户教程。
+- [Aethersailor/Custom_OpenClash_Rules](https://github.com/Aethersailor/Custom_OpenClash_Rules)：提供 OpenClash 模板、规则和用户教程，Web UI 也内置其常用远程配置预设；
+- [ACL4SSR/ACL4SSR](https://github.com/ACL4SSR/ACL4SSR)：Web UI 远程配置预设参考其公开 Clash config 模板和预设组织方式。
 
 SubConverter-Extended 按 [GPL-3.0](LICENSE) 发布。Mihomo 解析桥使用的 Mihomo 依赖同样遵循 GPL-3.0；具体依赖版本以 `bridge/go.mod` 为准。
 
