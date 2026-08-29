@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { CopyDocument, Grid } from '@element-plus/icons-vue';
-import { useFormState } from '../composables/useFormState';
+import { CopyDocument, Grid, MagicStick } from '@element-plus/icons-vue';
 import { useCopy } from '../composables/useCopy';
+import { useGenerateSubscription } from '../composables/useGenerateSubscription';
 
 const { t } = useI18n();
-const form = useFormState();
+const { form, generate } = useGenerateSubscription();
 const { state: copyState, copy } = useCopy();
 const copyLabel = computed(() => {
   if (copyState.value === 'copied') return t('preview.copied');
@@ -23,10 +23,13 @@ function scrollToQr() {
 
 <template>
   <div class="bottom-bar">
-    <el-button class="grow" type="primary" size="large" :icon="CopyDocument" :loading="isCopying" @click="copy(form.builtUrl.value)">
+    <el-button class="grow" type="primary" size="large" :icon="MagicStick" @click="generate">
+      {{ t('preview.generate') }}
+    </el-button>
+    <el-button size="large" :icon="CopyDocument" :loading="isCopying" :disabled="!form.builtUrl.value" @click="copy(form.builtUrl.value)">
       {{ copyLabel }}
     </el-button>
-    <el-button size="large" :icon="Grid" @click="scrollToQr">{{ t('preview.qr') }}</el-button>
+    <el-button size="large" :icon="Grid" :disabled="!form.builtUrl.value" @click="scrollToQr">{{ t('preview.qr') }}</el-button>
   </div>
 </template>
 

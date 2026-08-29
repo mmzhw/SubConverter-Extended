@@ -42,6 +42,23 @@ function titleFor(state: FormState): string {
   return host || state.target;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === 'object';
+}
+
+function isFormState(value: unknown): value is FormState {
+  if (!isRecord(value)) return false;
+  return (
+    typeof value.target === 'string' &&
+    typeof value.sourceUrl === 'string' &&
+    typeof value.subscriptionName === 'string' &&
+    typeof value.backendBase === 'string' &&
+    (value.githubProxy === undefined || typeof value.githubProxy === 'string') &&
+    (value.customGithubProxy === undefined || typeof value.customGithubProxy === 'string') &&
+    isRecord(value.options)
+  );
+}
+
 function normalizeParsed(value: unknown): GeneratedLink[] {
   if (!Array.isArray(value)) return [];
   return value.filter((item): item is GeneratedLink => (
@@ -51,8 +68,7 @@ function normalizeParsed(value: unknown): GeneratedLink[] {
     typeof (item as GeneratedLink).url === 'string' &&
     typeof (item as GeneratedLink).title === 'string' &&
     typeof (item as GeneratedLink).createdAt === 'number' &&
-    !!(item as GeneratedLink).state &&
-    typeof (item as GeneratedLink).state === 'object'
+    isFormState((item as GeneratedLink).state)
   )).slice(0, MAX_GENERATED_LINKS);
 }
 

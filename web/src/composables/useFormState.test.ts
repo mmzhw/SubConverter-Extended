@@ -1,13 +1,20 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { DEFAULT_EXCLUDE_REMARKS } from '../config/options';
-import { useFormState } from './useFormState';
+
+async function freshFormState() {
+  vi.resetModules();
+  return import('./useFormState');
+}
 
 describe('useFormState', () => {
-  it('builds the URL reactively from state', () => {
+  it('generates the URL only when requested', async () => {
+    const { useFormState } = await freshFormState();
     const form = useFormState();
     expect(form.builtUrl.value).toBe('');
     form.state.sourceUrl = 'https://sub.example.com/';
     form.state.subscriptionName = '我的订阅';
+    expect(form.builtUrl.value).toBe('');
+    expect(form.generateUrl()).toBe(true);
     expect(form.builtUrl.value).toContain('/sub?target=clash&url=https%3A%2F%2Fsub.example.com%2F');
     expect(form.builtUrl.value).toContain('filename=%E6%88%91%E7%9A%84%E8%AE%A2%E9%98%85');
     expect(decodeURIComponent(form.builtUrl.value)).toContain(`exclude=${DEFAULT_EXCLUDE_REMARKS}`);
@@ -18,7 +25,8 @@ describe('useFormState', () => {
     expect(form.builtUrl.value).toContain('append_type=true');
   });
 
-  it('validates the source URL on demand', () => {
+  it('validates the source URL on demand', async () => {
+    const { useFormState } = await freshFormState();
     const form = useFormState();
     form.state.sourceUrl = 'not a url';
     expect(form.validateSource()).toBe(false);
@@ -28,7 +36,8 @@ describe('useFormState', () => {
     expect(form.sourceError.value).toBe('');
   });
 
-  it('applyParsed overwrites state and clears sourceError', () => {
+  it('applyParsed overwrites state, clears sourceError, and generates from the parsed link', async () => {
+    const { useFormState } = await freshFormState();
     const form = useFormState();
     form.state.sourceUrl = 'not a url';
     form.validateSource();
@@ -42,7 +51,28 @@ describe('useFormState', () => {
     expect(form.builtUrl.value).toBe('http://localhost:3000/sub?target=clashr&url=https%3A%2F%2Fparsed.example.com&filename=Parsed+Name&emoji=true');
   });
 
-  it('validateSource on an empty source returns true and clears a pre-existing error', () => {
+  it('applyGenerated restores a historical state and its exact generated URL', async () => {
+    const { useFormState } = await freshFormState();
+    const form = useFormState();
+    form.state.sourceUrl = 'https://current.example.com';
+    form.generateUrl();
+
+    form.applyGenerated({
+      target: 'singbox',
+      sourceUrl: 'https://history.example.com',
+      subscriptionName: 'History',
+      backendBase: 'https://backend.example.com',
+      options: { sort: true },
+    }, 'https://backend.example.com/sub?target=singbox&url=https%3A%2F%2Fhistory.example.com&filename=History&sort=true');
+
+    expect(form.state.target).toBe('singbox');
+    expect(form.state.sourceUrl).toBe('https://history.example.com');
+    expect(form.state.subscriptionName).toBe('History');
+    expect(form.builtUrl.value).toBe('https://backend.example.com/sub?target=singbox&url=https%3A%2F%2Fhistory.example.com&filename=History&sort=true');
+  });
+
+  it('validateSource on an empty source returns true and clears a pre-existing error', async () => {
+    const { useFormState } = await freshFormState();
     const form = useFormState();
     form.state.sourceUrl = 'not a url';
     form.validateSource();
@@ -52,28 +82,58 @@ describe('useFormState', () => {
     expect(form.sourceError.value).toBe('');
   });
 
-  it('validateSource rejects a non-http(s) protocol', () => {
+  it('validateSource rejects a non-http(s) protocol', async () => {
+    const { useFormState } = await freshFormState();
     const form = useFormState();
     form.state.sourceUrl = 'ftp://example.com/x';
     expect(form.validateSource()).toBe(false);
     expect(form.sourceError.value).toBe('invalid');
   });
 
-  it('prepends a custom backend base reactively', () => {
+  it('prepends a custom backend base when generating', async () => {
+    const { useFormState } = await freshFormState();
     const form = useFormState();
     form.state.target = 'clash';
     form.state.options = {};
     form.state.sourceUrl = 'https://s';
     form.state.subscriptionName = '';
     form.state.backendBase = 'http://127.0.0.1:25500/';
+    expect(form.builtUrl.value).toBe('');
+    expect(form.generateUrl()).toBe(true);
     expect(form.builtUrl.value).toBe('http://127.0.0.1:25500/sub?target=clash&url=https%3A%2F%2Fs');
   });
 
-  it('is a module-level singleton: two calls share the same state', () => {
+  it('clears the generated URL when the current form changes', async () => {
+    const { useFormState } = await freshFormState();
+    const form = useFormState();
+    form.state.sourceUrl = 'https://valid.example.com';
+    expect(form.generateUrl()).toBe(true);
+
+    form.state.sourceUrl = 'https://changed.example.com';
+
+    expect(form.builtUrl.value).toBe('');
+  });
+
+  it('clears the generated URL when validation fails', async () => {
+    const { useFormState } = await freshFormState();
+    const form = useFormState();
+    form.state.sourceUrl = 'https://valid.example.com';
+    expect(form.generateUrl()).toBe(true);
+
+    form.state.sourceUrl = 'not a url';
+    expect(form.generateUrl()).toBe(false);
+
+    expect(form.sourceError.value).toBe('invalid');
+    expect(form.builtUrl.value).toBe('');
+  });
+
+  it('is a module-level singleton: two calls share the same state', async () => {
+    const { useFormState } = await freshFormState();
     const a = useFormState();
     const b = useFormState();
     expect(a.state).toBe(b.state);
     a.state.sourceUrl = 'https://shared.example.com';
+    a.generateUrl();
     expect(b.builtUrl.value).toContain('https%3A%2F%2Fshared.example.com');
   });
 });

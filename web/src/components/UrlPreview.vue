@@ -1,33 +1,23 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { Clock, Close, CopyDocument, Download, Upload } from '@element-plus/icons-vue';
+import { Clock, Close, CopyDocument, Download, MagicStick, Upload } from '@element-plus/icons-vue';
 import QRCode from 'qrcode';
-import { useFormState } from '../composables/useFormState';
 import { useCopy } from '../composables/useCopy';
-import { GeneratedLink, useGeneratedLinks } from '../composables/useGeneratedLinks';
+import { GeneratedLink } from '../composables/useGeneratedLinks';
+import { useGenerateSubscription } from '../composables/useGenerateSubscription';
 import ImportDialog from './ImportDialog.vue';
-import PresetBar from './PresetBar.vue';
 
 const { t } = useI18n();
-const form = useFormState();
-const generated = useGeneratedLinks();
+const { form, generated, generate } = useGenerateSubscription();
 const { state: copyState, copy } = useCopy();
 const qrDataUrl = ref('');
 const importVisible = ref(false);
-let historyTimer: number | undefined;
-let suppressNextHistoryRecord = false;
 
 watch(
   () => form.builtUrl.value,
   async (url) => {
-    if (historyTimer !== undefined) window.clearTimeout(historyTimer);
     if (!url) { qrDataUrl.value = ''; return; }
-    if (suppressNextHistoryRecord) {
-      suppressNextHistoryRecord = false;
-    } else {
-      historyTimer = window.setTimeout(() => generated.record(url, form.state), 900);
-    }
     try {
       const data = await QRCode.toDataURL(url, { margin: 1, width: 240 });
       // 丢弃过期响应：URL 已在生成期间变化时不覆盖当前结果
@@ -47,8 +37,7 @@ const copyLabel = computed(() => {
 const isCopying = computed(() => copyState.value === 'loading');
 
 function loadGenerated(item: GeneratedLink) {
-  suppressNextHistoryRecord = true;
-  form.applyParsed(item.state);
+  form.applyGenerated(item.state, item.url);
 }
 
 function generatedTime(item: GeneratedLink) {
@@ -71,7 +60,10 @@ function generatedTime(item: GeneratedLink) {
     <code class="url-code" :class="{ empty: !form.builtUrl.value }">{{ form.builtUrl.value || '-' }}</code>
 
     <div class="preview-actions">
-      <el-button type="primary" :icon="CopyDocument" :loading="isCopying" @click="copy(form.builtUrl.value)">
+      <el-button type="primary" :icon="MagicStick" @click="generate">
+        {{ t('preview.generate') }}
+      </el-button>
+      <el-button :icon="CopyDocument" :loading="isCopying" :disabled="!form.builtUrl.value" @click="copy(form.builtUrl.value)">
         {{ copyLabel }}
       </el-button>
       <el-button :icon="Upload" @click="importVisible = true">{{ t('form.importLink') }}</el-button>
@@ -111,7 +103,6 @@ function generatedTime(item: GeneratedLink) {
       </div>
     </div>
 
-    <PresetBar />
     <ImportDialog v-model="importVisible" />
   </div>
 </template>
@@ -173,7 +164,7 @@ function generatedTime(item: GeneratedLink) {
 
 .preview-actions {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1.15fr 1fr 1fr;
   gap: 10px;
   margin-top: 14px;
 }

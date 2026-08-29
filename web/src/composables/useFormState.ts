@@ -1,6 +1,6 @@
 import { computed, reactive, ref } from 'vue';
 import { OPTION_DEFS } from '../config/options';
-import { buildSubUrl, FormState } from '../lib/url-builder';
+import { buildSubUrl, type FormState } from '../lib/url-builder';
 
 function defaultOptions(): FormState['options'] {
   return Object.fromEntries(
@@ -19,9 +19,12 @@ const state = reactive<FormState>({
   customGithubProxy: '',
   options: defaultOptions(),
 });
-const builtUrl = computed(() => {
-  if (!state.sourceUrl) return '';
-  return buildSubUrl({
+
+const generatedUrl = ref('');
+const generatedSignature = ref('');
+
+function currentState(): FormState {
+  return {
     target: state.target,
     sourceUrl: state.sourceUrl,
     subscriptionName: state.subscriptionName,
@@ -29,8 +32,19 @@ const builtUrl = computed(() => {
     githubProxy: state.githubProxy,
     customGithubProxy: state.customGithubProxy,
     options: { ...state.options },
-  });
+  };
+}
+
+function signatureFor(next: FormState) {
+  return JSON.stringify(next);
+}
+
+const builtUrl = computed(() => {
+  const snapshot = currentState();
+  if (!generatedUrl.value || generatedSignature.value !== signatureFor(snapshot)) return '';
+  return generatedUrl.value;
 });
+
 const sourceError = ref('');
 
 function validateSource(): boolean {
@@ -55,8 +69,42 @@ function applyParsed(next: FormState) {
   state.githubProxy = next.githubProxy || '';
   state.customGithubProxy = next.customGithubProxy || '';
   state.options = { ...next.options };
+  const snapshot = currentState();
+  generatedUrl.value = next.sourceUrl ? buildSubUrl(snapshot) : '';
+  generatedSignature.value = generatedUrl.value ? signatureFor(snapshot) : '';
+}
+
+function applyGenerated(next: FormState, url: string) {
+  sourceError.value = '';
+  state.target = next.target;
+  state.sourceUrl = next.sourceUrl;
+  state.subscriptionName = next.subscriptionName || '';
+  state.backendBase = next.backendBase;
+  state.githubProxy = next.githubProxy || '';
+  state.customGithubProxy = next.customGithubProxy || '';
+  state.options = { ...next.options };
+  generatedUrl.value = url;
+  generatedSignature.value = signatureFor(currentState());
+}
+
+function generateUrl(): boolean {
+  if (!state.sourceUrl.trim()) {
+    sourceError.value = '';
+    generatedUrl.value = '';
+    generatedSignature.value = '';
+    return false;
+  }
+  if (!validateSource()) {
+    generatedUrl.value = '';
+    generatedSignature.value = '';
+    return false;
+  }
+  const snapshot = currentState();
+  generatedUrl.value = buildSubUrl(snapshot);
+  generatedSignature.value = signatureFor(snapshot);
+  return true;
 }
 
 export function useFormState() {
-  return { state, builtUrl, sourceError, validateSource, applyParsed };
+  return { state, builtUrl, sourceError, validateSource, applyParsed, applyGenerated, generateUrl };
 }

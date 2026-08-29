@@ -102,6 +102,26 @@ describe('useGeneratedLinks', () => {
     expect(useGeneratedLinks().links.value[0].title).toBe('Saved');
   });
 
+  it('drops stored records with invalid state shape', async () => {
+    const { GENERATED_LINKS_KEY } = await freshGeneratedLinks();
+    localStorage.setItem(GENERATED_LINKS_KEY, JSON.stringify([
+      {
+        id: 'broken',
+        url: 'http://localhost:5173/sub?target=clash',
+        title: 'Broken',
+        target: 'clash',
+        sourceUrl: 'https://sub.example.com/a',
+        subscriptionName: 'Broken',
+        createdAt: 1,
+        state: { target: undefined, sourceUrl: undefined, options: undefined },
+      },
+    ]));
+
+    const { useGeneratedLinks } = await freshGeneratedLinks();
+
+    expect(useGeneratedLinks().links.value).toHaveLength(0);
+  });
+
   it('can clear stored records', async () => {
     const { GENERATED_LINKS_KEY, useGeneratedLinks } = await freshGeneratedLinks();
     const generated = useGeneratedLinks();
