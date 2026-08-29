@@ -36,7 +36,7 @@ describe('useFormState', () => {
     expect(form.state.target).toBe('clashr');
     expect(form.state.sourceUrl).toBe('https://parsed.example.com');
     expect(form.state.options).toEqual({ emoji: true });
-    expect(form.builtUrl.value).toBe('/sub?target=clashr&url=https%3A%2F%2Fparsed.example.com&emoji=true');
+    expect(form.builtUrl.value).toBe('http://localhost:3000/sub?target=clashr&url=https%3A%2F%2Fparsed.example.com&emoji=true');
   });
 
   it('validateSource on an empty source returns true and clears a pre-existing error', () => {

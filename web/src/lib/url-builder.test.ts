@@ -8,9 +8,9 @@ const base = (over: Partial<FormState> = {}): FormState => ({
 });
 
 describe('buildSubUrl', () => {
-  it('builds a relative URL with target and percent-encoded source', () => {
+  it('builds an absolute same-origin URL with target and percent-encoded source', () => {
     const url = buildSubUrl(base({ sourceUrl: 'https://sub.example.com/a?token=x&y=1' }));
-    expect(url).toBe('/sub?target=clash&url=https%3A%2F%2Fsub.example.com%2Fa%3Ftoken%3Dx%26y%3D1');
+    expect(url).toBe('http://localhost:3000/sub?target=clash&url=https%3A%2F%2Fsub.example.com%2Fa%3Ftoken%3Dx%26y%3D1');
   });
 
   it('serializes true options as true and drops falsy options', () => {

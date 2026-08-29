@@ -14,6 +14,15 @@ const explicitFalseKeys = new Set(
   OPTION_DEFS.filter((def) => def.type === 'boolean' && def.defaultValue === true).map((def) => def.key),
 );
 
+function defaultBackendBase(): string {
+  if (typeof window === 'undefined') return '';
+  return window.location.origin === 'null' ? '' : window.location.origin;
+}
+
+function normalizeBackendBase(value: string): string {
+  return value.replace(/\/+$/, '');
+}
+
 export function buildSubUrl(state: FormState): string {
   const params = new URLSearchParams();
   const githubProxyPrefix = githubProxyPrefixFor(state.githubProxy, state.customGithubProxy);
@@ -32,6 +41,6 @@ export function buildSubUrl(state: FormState): string {
     }
     params.set(key, value === true ? 'true' : String(value));
   }
-  const base = state.backendBase ? state.backendBase.replace(/\/+$/, '') : '';
+  const base = normalizeBackendBase(state.backendBase || defaultBackendBase());
   return `${base}/sub?${params.toString()}`;
 }
