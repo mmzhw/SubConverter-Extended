@@ -1,0 +1,42 @@
+# Web Config UI nginx template.
+# Rendered at container start with envsubst; the call MUST restrict substitution
+# to the WEB_PORT variable (pass a variable list to envsubst), otherwise the
+# nginx variables below ($host, $uri, ...) would be clobbered by empty values.
+server {
+    listen ${WEB_PORT};
+    server_name _;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # subconverter conversion API and built-in pages.
+    # Single source of truth for the path list: docker/nginx/subconverter-paths.txt.
+    # NOTE: the list includes alias paths that only exist in the shipped ini/yml
+    # profile defaults (e.g. "v" -> /version), not code-registered routes — do NOT
+    # "clean them up" here. Custom [aliases] added by operators beyond the shipped
+    # defaults are not in the regex and fall through to the SPA; they must be
+    # proxied by editing the inventory and this regex together.
+    location ~ ^/(sub|getruleset|version|inspect|dashboard|healthz|robots\.txt|clash|clashr|loon|mellow|quan|quanx|singbox|ss|ssd|ssr|sssub|surfboard|surge|trojan|v|v2ray)(/|$) {
+        proxy_pass http://127.0.0.1:25500;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 300s;
+        proxy_send_timeout 300s;
+    }
+
+    location /assets/ {
+        expires 30d;
+        add_header Cache-Control "public, immutable";
+    }
+
+    location = /index.html {
+        add_header Cache-Control "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0";
+    }
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
