@@ -5,8 +5,8 @@ import { buildSubUrl, FormState } from '../lib/url-builder';
 function defaultOptions(): FormState['options'] {
   return Object.fromEntries(
     OPTION_DEFS
-      .filter((def) => def.type !== 'boolean' && def.defaultValue !== undefined && def.defaultValue !== '')
-      .map((def) => [def.key, def.defaultValue]),
+      .filter((def) => def.initialValue !== undefined || (def.type !== 'boolean' && def.defaultValue !== undefined && def.defaultValue !== ''))
+      .map((def) => [def.key, def.initialValue ?? def.defaultValue]),
   );
 }
 

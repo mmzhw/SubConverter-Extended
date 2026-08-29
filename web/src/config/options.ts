@@ -10,6 +10,7 @@ export interface OptionDef {
   description: BilingualText;
   group: OptionGroup;
   defaultValue?: string | number | boolean;
+  initialValue?: string | number | boolean;
   enumValues?: { value: string; label: BilingualText }[];
   allowCustom?: boolean;
   placeholder?: BilingualText;
@@ -330,5 +331,6 @@ export const OPTION_DEFS: OptionDef[] = [
     },
     group: 'advanced',
     defaultValue: true,
+    initialValue: false,
   },
 ];

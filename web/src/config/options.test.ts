@@ -54,6 +54,7 @@ describe('OPTION_DEFS', () => {
     const provider = OPTION_DEFS.find((d) => d.key === 'provider');
     expect(provider?.type).toBe('boolean');
     expect(provider?.defaultValue).toBe(true);
+    expect(provider?.initialValue).toBe(false);
   });
   it('includes the README-documented list param', () => {
     expect(OPTION_DEFS.map((d) => d.key)).toContain('list');
