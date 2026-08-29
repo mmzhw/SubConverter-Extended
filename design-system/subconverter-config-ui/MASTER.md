@@ -18,7 +18,7 @@
 | `--text-secondary` | `#4a5568` | `#a0aec0` |
 | `--danger` | `#dc2626` | `#f87171` |
 
-Element Plus 主题映射：`--el-color-primary` → `--accent`；`--el-border-radius-base` 向 dashboard 圆角（16–28px 卡片、999px 按钮）靠拢；表单控件背景用 `--control-bg` 玻璃感。
+Element Plus 主题映射：`--el-color-primary` → `--accent`（浅色模式）；深色模式有意分叉——`--el-color-primary: #2563eb`（按钮 4.5:1 对比度），`--accent` 保持 `#38bdf8` 用于文字/强调；`--el-border-radius-base` 向 dashboard 圆角（16–28px 卡片、999px 按钮）靠拢；表单控件背景用 `--control-bg` 玻璃感。
 
 ## 2. 字体配对
 

@@ -44,7 +44,7 @@
 
 ### D3: Docker 运行时双进程监督 — s6-overlay
 
-- 最终 Alpine 阶段 `apk add nginx s6-overlay`，用两个 s6 service 定义 nginx（前台 `daemon off`）与 subconverter；任一进程退出 s6 按策略终止容器，满足规格「进程监督」要求。
+- 最终 Alpine 阶段 `apk add nginx s6-overlay`，用两个 s6 service 定义 nginx（前台 `daemon off`）与 subconverter；longrun 进程异常退出由 s6-overlay 自动重启（容器保持运行），规格「停止或不健康」的结果由 HEALTHCHECK 探测失败标记不健康交付，满足「进程监督与健康检查」要求。
 - 备选：`bash -n wait` + trap 的轻量脚本（被否：alpine 默认 ash 不支持 `wait -n`，信号处理边界多，可靠性不如 s6-overlay；体积差异可接受）。
 
 ### D4: nginx 路由策略 — 显式 API 前缀代理 + SPA 回退

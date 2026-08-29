@@ -1,0 +1,33 @@
+:root {
+  --accent: #2563eb; --accent-2: #0ea5e9;
+  --accent-gradient: linear-gradient(135deg, #0ea5e9 0%, #2563eb 58%, #1d4ed8 100%);
+  --surface: rgba(255, 255, 255, 0.82); --surface-strong: rgba(255, 255, 255, 0.92);
+  --surface-border: rgba(15, 23, 42, 0.1);
+  --text-primary: #1a202c; --text-secondary: #4a5568;
+  --control-bg: rgba(255, 255, 255, 0.72);
+  --bg-gradient: linear-gradient(135deg, #f8fafc 0%, #eef2f7 48%, #e2e8f0 100%);
+  --danger: #dc2626;
+  --el-color-primary: #2563eb;
+  --el-border-radius-base: 14px;
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --accent: #38bdf8; --accent-2: #60a5fa;
+    --surface: rgba(15, 23, 42, 0.72); --surface-strong: rgba(21, 29, 43, 0.9);
+    --surface-border: rgba(148, 163, 184, 0.18);
+    --text-primary: #f8f9fa; --text-secondary: #a0aec0;
+    --control-bg: rgba(20, 24, 33, 0.7);
+    --bg-gradient: linear-gradient(135deg, #05070b 0%, #0d111a 46%, #111827 100%);
+    --danger: #f87171;
+    --el-color-primary: #2563eb;
+  }
+}
+body {
+  margin: 0; min-height: 100vh;
+  font-family: 'Outfit', system-ui, -apple-system, "Segoe UI", "Microsoft YaHei", "PingFang SC", sans-serif;
+  color: var(--text-primary); background: var(--bg-gradient); background-attachment: fixed;
+}
+code, .url-code { font-family: 'JetBrains Mono', ui-monospace, monospace; }

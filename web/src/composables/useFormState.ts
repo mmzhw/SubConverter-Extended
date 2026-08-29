@@ -1,0 +1,34 @@
+import { computed, reactive, ref } from 'vue';
+import { buildSubUrl, FormState } from '../lib/url-builder';
+
+const state = reactive<FormState>({ target: 'clash', sourceUrl: '', backendBase: '', options: {} });
+const builtUrl = computed(() => {
+  if (!state.sourceUrl) return '';
+  return buildSubUrl({ target: state.target, sourceUrl: state.sourceUrl, backendBase: state.backendBase, options: { ...state.options } });
+});
+const sourceError = ref('');
+
+function validateSource(): boolean {
+  if (!state.sourceUrl) { sourceError.value = ''; return true; }
+  try {
+    const u = new URL(state.sourceUrl);
+    const valid = u.protocol === 'http:' || u.protocol === 'https:';
+    sourceError.value = valid ? '' : 'invalid';
+    return valid;
+  } catch {
+    sourceError.value = 'invalid';
+    return false;
+  }
+}
+
+function applyParsed(next: FormState) {
+  sourceError.value = '';
+  state.target = next.target;
+  state.sourceUrl = next.sourceUrl;
+  state.backendBase = next.backendBase;
+  state.options = { ...next.options };
+}
+
+export function useFormState() {
+  return { state, builtUrl, sourceError, validateSource, applyParsed };
+}

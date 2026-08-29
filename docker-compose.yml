@@ -5,19 +5,24 @@ services:
     container_name: SubConverter-Extended
     image: aethersailor/subconverter-extended:latest
     ports:
-      # 保留既有的全接口端口发布，方便局域网设备直接访问；这表示“可能被外部访问”，
-      # 但不能单凭该行判断服务已暴露公网，还需结合宿主防火墙、云安全组、NAT 和反代判断。
-      # 若只允许宿主机访问，可手动改为 "127.0.0.1:25500:25500/tcp"。
-      # Keep the existing all-interface publication for LAN compatibility. It
-      # indicates possible exposure, not proven Internet reachability. For
-      # host-only access, manually use "127.0.0.1:25500:25500/tcp" instead.
-      - "25500:25500/tcp"
+      # 单一对外端口：nginx 托管前端并反代 subconverter（BREAKING：原 25500 直连已取消，
+      # 25500 仅容器内回环可用）。可用 WEB_PORT 覆盖宿主机侧端口。
+      # 迁移：现有订阅 URL 中指向 :25500 的端口需改为 :8080（或 WEB_PORT 值），否则连接失败。
+      # 回滚：恢复 "25500:25500/tcp" 映射并删除 WEB_PORT 环境变量项。
+      # Migration: change the port in existing subscription URLs from :25500 to :8080
+      # (or the WEB_PORT value); otherwise connections fail.
+      # Rollback: restore the "25500:25500/tcp" mapping and remove the WEB_PORT env entry.
+      - "${WEB_PORT:-8080}:8080/tcp"
     restart: unless-stopped
     environment:
       TZ: Asia/Shanghai
+      WEB_PORT: "8080"
+      # 此值只改容器内 nginx 监听端口；对外端口由上面 ports 的 ${WEB_PORT:-8080} 控制（容器侧固定映射 :8080），改端口请改 ports 行而非此值。
+      # This only changes nginx's in-container listen port; the host port is set
+      # by ${WEB_PORT:-8080} in ports above (container side is fixed at :8080).
       # 按需取消注释并修改；环境变量会覆盖 pref.toml 中的对应配置。
       # Uncomment and edit as needed; environment variables override pref.toml.
-      # MANAGED_CONFIG_PREFIX: "http://your-domain-or-ip:25500"
+      # MANAGED_CONFIG_PREFIX: "http://your-domain-or-ip:8080"
       # 默认 lan 保持既有内网行为；确认公网可达的部署请显式选择 public 或 strict。
       # Default lan preserves existing LAN behavior. If Internet reachability is
       # confirmed, explicitly select public or strict.

@@ -3,6 +3,7 @@
 ARG GO_IMAGE=mirror.gcr.io/library/golang:latest
 ARG DEBIAN_IMAGE=mirror.gcr.io/library/debian:latest
 ARG ALPINE_IMAGE=mirror.gcr.io/library/alpine:latest
+ARG NODE_IMAGE=mirror.gcr.io/library/node:24-alpine
 ARG DEBIAN_TRIXIE_IMAGE=mirror.gcr.io/library/debian:trixie
 ARG DEBIAN_TRIXIE_SLIM_IMAGE=mirror.gcr.io/library/debian:trixie-slim
 FROM ${GO_IMAGE} AS go-builder
@@ -112,6 +113,18 @@ RUN set -eux; \
           .); \
       test -x /build/test-tools/mihomo; \
     fi
+
+# ========== WEB UI BUILD STAGE ==========
+FROM ${NODE_IMAGE} AS web-builder
+
+WORKDIR /build/web
+
+# 先复制依赖清单，充分利用层缓存
+COPY web/package.json web/package-lock.json ./
+RUN npm ci
+
+COPY web/ ./
+RUN npm run build
 
 # ========== C++ BUILD STAGE ==========
 # 使用 Debian (glibc) 编译，运行时再搬运依赖到 Alpine
@@ -354,13 +367,17 @@ LABEL \
   maintainer="Aethersailor"
 
 ENV TZ=Asia/Shanghai
-RUN apk add --no-cache ca-certificates tzdata && \
+RUN apk add --no-cache ca-certificates tzdata nginx gettext s6-overlay && \
     ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && \
     echo $TZ > /etc/timezone
 
 COPY --from=builder --chmod=0755 /src/subconverter /usr/bin/subconverter
 COPY --from=builder /src/base /base/
 COPY --from=builder /runtime-libs/ /
+COPY --from=web-builder /build/web/dist /usr/share/nginx/html/
+COPY docker/nginx/nginx.conf.tmpl /etc/nginx/nginx.conf.tmpl
+COPY docker/s6/ /etc/s6-overlay/s6-rc.d/
+COPY --chmod=0755 docker/s6-scripts/nginx-config /etc/s6-overlay/scripts/nginx-config
 
 ENV LD_LIBRARY_PATH="/lib/x86_64-linux-gnu:/usr/lib/x86_64-linux-gnu:/lib/aarch64-linux-gnu:/usr/lib/aarch64-linux-gnu:/lib64:/usr/lib"
 
@@ -387,5 +404,11 @@ RUN set -e && \
       'exec /usr/bin/subconverter -f "$CONF"' \
       > /usr/local/bin/start-subconverter && \
     chmod +x /usr/local/bin/start-subconverter
-CMD ["/usr/local/bin/start-subconverter"]
-EXPOSE 25500/tcp
+# 仅修改镜像内副本：subconverter 只监听回环，由 nginx 统一对外
+RUN sed -i 's/^listen = "0.0.0.0"/listen = "127.0.0.1"/' /base/pref.example.toml
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+  CMD wget -q -O /dev/null "http://127.0.0.1:${WEB_PORT:-8080}/" && \
+      wget -q -O /dev/null "http://127.0.0.1:${WEB_PORT:-8080}/version" || exit 1
+
+ENTRYPOINT ["/init"]
+EXPOSE 8080/tcp
