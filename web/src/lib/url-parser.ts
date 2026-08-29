@@ -15,12 +15,13 @@ export function parseSubUrl(input: string): ParsedSubLink {
   }
   const target = url.searchParams.get('target');
   const sourceUrl = url.searchParams.get('url');
+  const subscriptionName = url.searchParams.get('filename') || '';
   if (!target || !sourceUrl) throw new Error('invalid-link');
 
   const options: FormState['options'] = {};
   const unknown: Record<string, string> = {};
   for (const [key, value] of url.searchParams.entries()) {
-    if (key === 'target' || key === 'url') continue;
+    if (key === 'target' || key === 'url' || key === 'filename') continue;
     const def = OPTION_DEFS.find((d) => d.key === key);
     if (def) {
       if (def.type === 'boolean') {
@@ -35,5 +36,5 @@ export function parseSubUrl(input: string): ParsedSubLink {
       unknown[key] = value;
     }
   }
-  return { state: { target, sourceUrl, backendBase: '', options }, unknown };
+  return { state: { target, sourceUrl, subscriptionName, backendBase: '', options }, unknown };
 }

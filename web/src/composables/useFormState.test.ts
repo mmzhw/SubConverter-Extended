@@ -7,7 +7,9 @@ describe('useFormState', () => {
     const form = useFormState();
     expect(form.builtUrl.value).toBe('');
     form.state.sourceUrl = 'https://sub.example.com/';
+    form.state.subscriptionName = '良心云';
     expect(form.builtUrl.value).toContain('/sub?target=clash&url=https%3A%2F%2Fsub.example.com%2F');
+    expect(form.builtUrl.value).toContain('filename=%E8%89%AF%E5%BF%83%E4%BA%91');
     expect(decodeURIComponent(form.builtUrl.value)).toContain(`exclude=${DEFAULT_EXCLUDE_REMARKS}`);
     expect(form.builtUrl.value).toContain('provider=false');
     expect(form.builtUrl.value).toContain('emoji=true');
@@ -31,12 +33,13 @@ describe('useFormState', () => {
     form.state.sourceUrl = 'not a url';
     form.validateSource();
     expect(form.sourceError.value).toBe('invalid');
-    form.applyParsed({ target: 'clashr', sourceUrl: 'https://parsed.example.com', backendBase: '', options: { emoji: true } });
+    form.applyParsed({ target: 'clashr', sourceUrl: 'https://parsed.example.com', subscriptionName: 'Parsed Name', backendBase: '', options: { emoji: true } });
     expect(form.sourceError.value).toBe('');
     expect(form.state.target).toBe('clashr');
     expect(form.state.sourceUrl).toBe('https://parsed.example.com');
+    expect(form.state.subscriptionName).toBe('Parsed Name');
     expect(form.state.options).toEqual({ emoji: true });
-    expect(form.builtUrl.value).toBe('http://localhost:3000/sub?target=clashr&url=https%3A%2F%2Fparsed.example.com&emoji=true');
+    expect(form.builtUrl.value).toBe('http://localhost:3000/sub?target=clashr&url=https%3A%2F%2Fparsed.example.com&filename=Parsed+Name&emoji=true');
   });
 
   it('validateSource on an empty source returns true and clears a pre-existing error', () => {
@@ -61,6 +64,7 @@ describe('useFormState', () => {
     form.state.target = 'clash';
     form.state.options = {};
     form.state.sourceUrl = 'https://s';
+    form.state.subscriptionName = '';
     form.state.backendBase = 'http://127.0.0.1:25500/';
     expect(form.builtUrl.value).toBe('http://127.0.0.1:25500/sub?target=clash&url=https%3A%2F%2Fs');
   });

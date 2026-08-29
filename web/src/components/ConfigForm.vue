@@ -196,6 +196,24 @@ function updateSourceUrl(value: string) {
           </template>
         </el-input>
       </el-form-item>
+
+      <el-form-item class="subscription-name-field">
+        <template #label>
+          <span class="field-label">
+            <span>{{ t('form.subscriptionName') }}</span>
+            <el-tooltip :content="t('form.subscriptionNameHelp')" placement="top-start" popper-class="option-tooltip">
+              <el-icon class="help-icon"><QuestionFilled /></el-icon>
+            </el-tooltip>
+          </span>
+        </template>
+        <el-input
+          :model-value="form.state.subscriptionName"
+          :placeholder="t('form.subscriptionNamePlaceholder')"
+          size="large"
+          clearable
+          @update:model-value="(v: string) => (form.state.subscriptionName = v)"
+        />
+      </el-form-item>
     </section>
 
     <el-collapse v-model="openGroups" class="option-groups">
@@ -383,8 +401,13 @@ h2 {
   margin-bottom: 20px;
 }
 
-.source-field {
+.source-field,
+.subscription-name-field {
   margin-bottom: 0;
+}
+
+.source-field {
+  margin-bottom: 14px;
 }
 
 .option-groups {

@@ -4,6 +4,7 @@ import { applyGitHubProxy, githubProxyPrefixFor } from './github-proxy';
 export interface FormState {
   target: string;
   sourceUrl: string;
+  subscriptionName: string;
   backendBase: string;
   githubProxy?: string;
   customGithubProxy?: string;
@@ -28,6 +29,9 @@ export function buildSubUrl(state: FormState): string {
   const githubProxyPrefix = githubProxyPrefixFor(state.githubProxy, state.customGithubProxy);
   params.set('target', state.target);
   params.set('url', state.sourceUrl);
+  if (state.subscriptionName.trim()) {
+    params.set('filename', state.subscriptionName.trim());
+  }
   for (const [key, value] of Object.entries(state.options)) {
     if (key === 'provider' && state.target !== 'clash' && state.target !== 'clashr') continue;
     if (value === undefined || value === '') continue;

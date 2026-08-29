@@ -4,7 +4,7 @@ import { GITHUB_PROXY_CUSTOM } from './github-proxy';
 import { buildSubUrl, FormState } from './url-builder';
 
 const base = (over: Partial<FormState> = {}): FormState => ({
-  target: 'clash', sourceUrl: '', backendBase: '', options: {}, ...over,
+  target: 'clash', sourceUrl: '', subscriptionName: '', backendBase: '', options: {}, ...over,
 });
 
 describe('buildSubUrl', () => {
@@ -22,6 +22,14 @@ describe('buildSubUrl', () => {
     expect(url).toContain('rename=abc');
     expect(url).not.toContain('tfo');
     expect(url).not.toContain('empty');
+  });
+
+  it('serializes a subscription filename when a subscription name is provided', () => {
+    const url = buildSubUrl(base({
+      sourceUrl: 'https://s',
+      subscriptionName: '良心云',
+    }));
+    expect(url).toContain('filename=%E8%89%AF%E5%BF%83%E4%BA%91');
   });
 
   it('serializes false when disabling default-on options', () => {

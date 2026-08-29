@@ -221,13 +221,14 @@ export const OPTION_DEFS: OptionDef[] = [
   {
     key: 'rename',
     type: 'string',
-    label: { en: 'Rename', zh: '节点重命名' },
+    label: { en: 'Node rename rules', zh: '节点重命名规则' },
     description: {
-      en: 'Passes a rename rule to the backend to rewrite node names. Leave it blank if you do not know the rename syntax; an incorrect rule may produce unexpected names.',
-      zh: '把节点重命名规则传给后端，用来改写节点名称。不熟悉重命名语法时建议留空，规则写错可能导致名称不符合预期。',
+      en: 'Rewrites generated node names with backend rename rules in regex@replacement format. This does not change the subscription profile name; use Subscription name for that.',
+      zh: '用后端重命名规则改写生成后的节点名称，格式是 正则@替换文本。它不会修改 Clash 里的订阅配置名；要改订阅名请填写上面的“订阅名称”。',
     },
     group: 'node',
     defaultValue: '',
+    placeholder: { en: 'For example HK@(Hong Kong)', zh: '例如 HK@香港' },
   },
   {
     key: 'include',

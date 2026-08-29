@@ -19,7 +19,7 @@ const throwingStorage = {
   setItem: () => { throw new Error('denied'); },
 } as unknown as Storage;
 
-const state = { target: 'clash', sourceUrl: 'https://s', backendBase: '', options: { emoji: true } };
+const state = { target: 'clash', sourceUrl: 'https://s', subscriptionName: '', backendBase: '', options: { emoji: true } };
 
 describe('presets', () => {
   it('saves and loads a preset round trip', () => {

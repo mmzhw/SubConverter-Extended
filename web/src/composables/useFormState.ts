@@ -13,6 +13,7 @@ function defaultOptions(): FormState['options'] {
 const state = reactive<FormState>({
   target: 'clash',
   sourceUrl: '',
+  subscriptionName: '',
   backendBase: '',
   githubProxy: '',
   customGithubProxy: '',
@@ -23,6 +24,7 @@ const builtUrl = computed(() => {
   return buildSubUrl({
     target: state.target,
     sourceUrl: state.sourceUrl,
+    subscriptionName: state.subscriptionName,
     backendBase: state.backendBase,
     githubProxy: state.githubProxy,
     customGithubProxy: state.customGithubProxy,
@@ -48,6 +50,7 @@ function applyParsed(next: FormState) {
   sourceError.value = '';
   state.target = next.target;
   state.sourceUrl = next.sourceUrl;
+  state.subscriptionName = next.subscriptionName || '';
   state.backendBase = next.backendBase;
   state.githubProxy = next.githubProxy || '';
   state.customGithubProxy = next.customGithubProxy || '';
