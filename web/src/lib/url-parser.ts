@@ -23,7 +23,14 @@ export function parseSubUrl(input: string): ParsedSubLink {
     if (key === 'target' || key === 'url') continue;
     const def = OPTION_DEFS.find((d) => d.key === key);
     if (def) {
-      options[key] = def.type === 'boolean' ? value !== 'false' && value !== '0' : value;
+      if (def.type === 'boolean') {
+        options[key] = value !== 'false' && value !== '0';
+      } else if (def.type === 'number') {
+        const numeric = Number(value);
+        options[key] = Number.isFinite(numeric) ? numeric : value;
+      } else {
+        options[key] = value;
+      }
     } else {
       unknown[key] = value;
     }

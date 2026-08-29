@@ -35,6 +35,18 @@ describe('OPTION_DEFS', () => {
   it('includes the deprecated-node filter option', () => {
     expect(OPTION_DEFS.map((d) => d.key)).toContain('fdn');
   });
+  it('includes request-level node filters and update interval', () => {
+    const include = OPTION_DEFS.find((d) => d.key === 'include');
+    const exclude = OPTION_DEFS.find((d) => d.key === 'exclude');
+    const interval = OPTION_DEFS.find((d) => d.key === 'interval');
+    expect(include?.type).toBe('string');
+    expect(exclude?.type).toBe('string');
+    expect(include?.placeholder?.zh).toContain('正则');
+    expect(exclude?.description.zh).toContain('排除');
+    expect(interval?.type).toBe('number');
+    expect(interval?.min).toBe(0);
+    expect(interval?.step).toBe(3600);
+  });
   it('includes the project provider override', () => {
     const provider = OPTION_DEFS.find((d) => d.key === 'provider');
     expect(provider?.type).toBe('boolean');

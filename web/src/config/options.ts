@@ -13,6 +13,8 @@ export interface OptionDef {
   enumValues?: { value: string; label: BilingualText }[];
   allowCustom?: boolean;
   placeholder?: BilingualText;
+  min?: number;
+  step?: number;
 }
 
 export interface TargetFormat { value: string; label: BilingualText; }
@@ -209,6 +211,36 @@ export const OPTION_DEFS: OptionDef[] = [
     defaultValue: '',
   },
   {
+    key: 'include',
+    type: 'string',
+    label: { en: 'Include nodes', zh: '包含节点' },
+    description: {
+      en: 'Keeps only nodes whose names match this regular expression. For example, HK|Hong Kong keeps Hong Kong nodes; leave blank to keep all nodes unless excluded below.',
+      zh: '只保留名称命中这个正则表达式的节点。例如 HK|Hong Kong 会只保留香港相关节点；留空表示不过滤，除非下面的“排除节点”命中。',
+    },
+    group: 'node',
+    defaultValue: '',
+    placeholder: {
+      en: 'Regex, for example: HK|Hong Kong',
+      zh: '输入正则，例如：香港|HK|Hong Kong',
+    },
+  },
+  {
+    key: 'exclude',
+    type: 'string',
+    label: { en: 'Exclude nodes', zh: '排除节点' },
+    description: {
+      en: 'Removes nodes whose names match this regular expression. It is useful for filtering expired, traffic, website, or low-quality nodes before generating the final config.',
+      zh: '排除名称命中这个正则表达式的节点。常用于过滤“到期、剩余流量、官网、套餐、测试”等不想出现在客户端里的节点。',
+    },
+    group: 'node',
+    defaultValue: '',
+    placeholder: {
+      en: 'Regex, for example: Expired|Traffic|Website',
+      zh: '输入正则，例如：到期|剩余流量|官网|套餐',
+    },
+  },
+  {
     key: 'config',
     type: 'enum',
     label: { en: 'Remote config', zh: '远程配置' },
@@ -239,13 +271,30 @@ export const OPTION_DEFS: OptionDef[] = [
   {
     key: 'list',
     type: 'boolean',
-    label: { en: 'Plain node list', zh: '纯节点列表' },
+    label: { en: 'Output node list only', zh: '只输出节点列表' },
     description: {
-      en: 'Outputs a plain node list instead of a full rule/profile config when the target supports it. Use it when another app will manage rules separately.',
-      zh: '目标格式支持时，只输出节点列表而不是完整规则配置。适合由其他应用或配置文件单独管理规则的场景。',
+      en: 'Generates only converted proxy nodes, without remote config templates, rules, or proxy groups. Keep it off if you want a ready-to-import Clash/Mihomo profile.',
+      zh: '只输出转换后的节点，不生成远程配置模板、规则和策略组。如果你想得到可直接导入 Clash/Mihomo 的完整配置，通常保持关闭。',
     },
     group: 'advanced',
     defaultValue: false,
+  },
+  {
+    key: 'interval',
+    type: 'number',
+    label: { en: 'Update interval', zh: '更新间隔' },
+    description: {
+      en: 'Sets the generated subscription profile refresh interval in seconds. For Clash/Mihomo proxy-provider node refresh, use the source URL prefix format interval:21600,https://example.com/sub.',
+      zh: '设置生成订阅配置的刷新间隔，单位为秒。注意 Clash/Mihomo 的 proxy-provider 节点刷新间隔通常写在订阅源前缀里，例如 interval:21600,https://example.com/sub。',
+    },
+    group: 'advanced',
+    defaultValue: '',
+    placeholder: {
+      en: 'Seconds, for example: 86400',
+      zh: '单位秒，例如：86400',
+    },
+    min: 0,
+    step: 3600,
   },
   {
     key: 'expand',

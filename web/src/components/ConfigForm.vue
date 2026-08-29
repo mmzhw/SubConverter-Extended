@@ -27,13 +27,18 @@ function descriptionOf(def: OptionDef) { return isZh() ? def.description.zh : de
 function placeholderOf(def: OptionDef) {
   return def.placeholder ? (isZh() ? def.placeholder.zh : def.placeholder.en) : '';
 }
-function optionValue(key: string): string | number | boolean {
+function optionValue(key: string): string | number | boolean | undefined {
   const def = OPTION_DEFS.find((d) => d.key === key);
   const v = form.state.options[key];
   if (def?.type === 'boolean') return v === undefined ? def.defaultValue === true : v === true;
-  return v === undefined ? (def?.type === 'number' ? 0 : '') : v;
+  if (def?.type === 'number') {
+    if (v === undefined || v === '') return undefined;
+    const next = Number(v);
+    return Number.isFinite(next) ? next : undefined;
+  }
+  return v === undefined ? '' : v;
 }
-function setOption(key: string, value: string | number | boolean) {
+function setOption(key: string, value: string | number | boolean | undefined) {
   form.state.options[key] = value;
 }
 function defsOf(group: string) { return OPTION_DEFS.filter((d) => d.group === group); }
@@ -137,10 +142,20 @@ function updateSourceUrl(value: string) {
                          :label="isZh() ? opt.label.zh : opt.label.en" />
             </el-select>
             <el-input
-              v-else
+              v-else-if="def.type === 'string'"
               :model-value="String(optionValue(def.key))"
+              :placeholder="placeholderOf(def)"
               clearable
               @update:model-value="(v: string) => setOption(def.key, v)"
+            />
+            <el-input-number
+              v-else
+              :model-value="optionValue(def.key) as number | undefined"
+              :placeholder="placeholderOf(def)"
+              :min="def.min"
+              :step="def.step || 1"
+              controls-position="right"
+              @update:model-value="(v: number | undefined) => setOption(def.key, v)"
             />
           </div>
         </div>
@@ -332,7 +347,8 @@ h2 {
 }
 
 .option-row :deep(.el-input),
-.option-row :deep(.el-select) {
+.option-row :deep(.el-select),
+.option-row :deep(.el-input-number) {
   width: 100%;
 }
 
