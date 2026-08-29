@@ -18,6 +18,12 @@ describe('parseSubUrl', () => {
     expect(unknown.weird_param).toBe('abc&x');
   });
 
+  it('treats ignored compatibility ruleset parameters as unknown to the form', () => {
+    const { state, unknown } = parseSubUrl('http://host/sub?target=clash&url=https%3A%2F%2Fs&ruleset=abc');
+    expect(state.options.ruleset).toBeUndefined();
+    expect(unknown.ruleset).toBe('abc');
+  });
+
   it('throws invalid-link for non-subconverter URLs', () => {
     expect(() => parseSubUrl('https://example.com/not-a-sub-link')).toThrow('invalid-link');
     expect(() => parseSubUrl('http://host/sub?target=clash')).toThrow('invalid-link');

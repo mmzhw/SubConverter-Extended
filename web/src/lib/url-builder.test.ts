@@ -35,11 +35,23 @@ describe('buildSubUrl', () => {
   it('serializes false when disabling default-on options', () => {
     const url = buildSubUrl(base({
       target: 'clashr', sourceUrl: 'https://s',
-      options: { provider: false, expand: false, udp: false },
+      options: { provider: false, udp: false },
     }));
     expect(url).toContain('provider=false');
-    expect(url).toContain('expand=false');
     expect(url).toContain('udp=false');
+  });
+
+  it('serializes ruleset expansion only when explicitly enabled', () => {
+    const defaultUrl = buildSubUrl(base({
+      target: 'clashr', sourceUrl: 'https://s',
+    }));
+    expect(defaultUrl).not.toContain('expand=');
+
+    const expandedUrl = buildSubUrl(base({
+      target: 'clashr', sourceUrl: 'https://s',
+      options: { expand: true },
+    }));
+    expect(expandedUrl).toContain('expand=true');
   });
 
   it('omits provider mode for non-Clash targets', () => {

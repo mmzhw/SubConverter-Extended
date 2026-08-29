@@ -90,6 +90,9 @@ describe('OPTION_DEFS', () => {
   it('includes the README-documented list param', () => {
     expect(OPTION_DEFS.map((d) => d.key)).toContain('list');
   });
+  it('does not expose ignored request compatibility parameters', () => {
+    expect(OPTION_DEFS.map((d) => d.key)).not.toContain('ruleset');
+  });
   it('describes protocol tagging and ruleset expansion clearly', () => {
     const appendType = OPTION_DEFS.find((d) => d.key === 'append_type');
     const expand = OPTION_DEFS.find((d) => d.key === 'expand');
@@ -99,6 +102,7 @@ describe('OPTION_DEFS', () => {
     expect(expand?.label.zh).toBe('规则展开');
     expect(expand?.description.zh).toContain('远程规则集');
     expect(expand?.description.zh).not.toContain('短链');
+    expect(expand?.defaultValue).toBe(false);
   });
   it('includes remote config presets that can accept custom URLs', () => {
     const config = OPTION_DEFS.find((d) => d.key === 'config');

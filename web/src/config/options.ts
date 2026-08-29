@@ -278,17 +278,6 @@ export const OPTION_DEFS: OptionDef[] = [
     },
   },
   {
-    key: 'ruleset',
-    type: 'string',
-    label: { en: 'Ruleset parameter', zh: '规则集参数' },
-    description: {
-      en: 'Compatibility field for ruleset=... strings. Current /sub explain marks request ruleset as not consumed, so prefer Remote config for real rule presets. Use only when you are testing backend compatibility.',
-      zh: '兼容保留的 ruleset=... 字段。当前 /sub 的 explain 标记请求 ruleset 为 not consumed，因此真正要套规则预设请优先使用“远程配置”。仅在测试后端兼容行为时使用。',
-    },
-    group: 'rule',
-    defaultValue: '',
-  },
-  {
     key: 'list',
     type: 'boolean',
     label: { en: 'Output node list only', zh: '只输出节点列表' },
@@ -325,7 +314,7 @@ export const OPTION_DEFS: OptionDef[] = [
       zh: '控制“规则”怎么输出，不控制节点。开启后把远程规则集展开成一条条具体规则写进最终配置；关闭时，在目标客户端支持的情况下保留 rule-provider/rule-set 这类规则引用。',
     },
     group: 'advanced',
-    defaultValue: true,
+    defaultValue: false,
   },
   {
     key: 'append_type',

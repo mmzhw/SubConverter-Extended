@@ -6143,6 +6143,7 @@ static std::string assembleSubResponse(
   tribool &argGenClassicalRuleProvider =
       parsed.generate_classical_rule_provider;
   tribool &argProviderProxyDirect = parsed.provider_proxy_direct;
+  tribool &argProviderEnabled = parsed.provider_enabled;
   string_array &lIncludeRemarks = policy.include_remarks;
   string_array &lExcludeRemarks = policy.exclude_remarks;
   extra_settings &ext = policy.generator;
@@ -6369,6 +6370,11 @@ static std::string assembleSubResponse(
     addSwitchParameter("tls13", ext.tls13.get(false), ext.tls13);
     addSwitchParameter("provider_proxy_direct", ext.provider_proxy_direct,
                        argProviderProxyDirect);
+    addSwitchParameter("provider",
+                       argProviderEnabled.get(settings.proxyProviderEnabled),
+                       argProviderEnabled,
+                       "Controls whether Clash/Mihomo output may use "
+                       "proxy-provider mode.");
     std::string profile_effective = "not used";
     std::string profile_status = "ignored";
     std::string profile_source = "request";
@@ -6400,8 +6406,8 @@ static std::string assembleSubResponse(
         "upload", "emoji", "add_emoji", "remove_emoji", "append_type",
         "tfo", "udp", "list", "sort", "sort_script", "script", "insert",
         "scv", "fdn", "expand", "append_info", "prepend", "classic",
-        "tls13", "provider_proxy_direct", "provider_headers", "explain",
-        "profile_data", "token"};
+        "tls13", "provider_proxy_direct", "provider", "provider_headers",
+        "explain", "profile_data", "token"};
     for (const auto &arg : argument) {
       if (known_parameters.find(arg.first) != known_parameters.end())
         continue;
