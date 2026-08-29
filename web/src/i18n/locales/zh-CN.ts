@@ -1,10 +1,10 @@
 export default {
   app: { title: 'SubConverter 配置组装', subtitle: '可视化组装你的订阅链接', kicker: '订阅转换工作台', ready: '已生成', waiting: '待输入' },
   form: {
-    target: '目标格式', sourceUrl: '订阅源地址',
+    target: '节点类型', sourceUrl: '订阅源地址',
     sourceUrlPlaceholder: 'https://订阅地址/...', sourceUrlInvalid: '请输入合法的 http(s) 地址',
     sourceUrlHelp: '填写原始机场订阅或节点订阅地址。也可以使用支持的前缀，例如 provider:HK,interval:21600,https://example.com/sub 来指定 Provider 名称和更新间隔。',
-    primaryTitle: '转换目标与订阅源',
+    primaryTitle: '节点类型与订阅源',
     savePreset: '保存为预设', importLink: '导入现有链接',
     backendBase: '自定义后端地址', backendBasePlaceholder: '如 http://127.0.0.1:25500，留空为同源',
     backendBaseHelp: '指定要请求的 SubConverter 后端地址。留空时生成相对路径 /sub，适合同源部署；本地或远程调试时可填完整后端地址。',

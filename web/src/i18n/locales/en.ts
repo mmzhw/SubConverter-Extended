@@ -1,10 +1,10 @@
 export default {
   app: { title: 'SubConverter Config Builder', subtitle: 'Assemble your subscription URL visually', kicker: 'Subscription conversion workspace', ready: 'Ready', waiting: 'Waiting' },
   form: {
-    target: 'Target Format', sourceUrl: 'Subscription Source URL',
+    target: 'Node Type', sourceUrl: 'Subscription Source URL',
     sourceUrlPlaceholder: 'https://sub.example.com/...', sourceUrlInvalid: 'Enter a valid http(s) URL',
     sourceUrlHelp: 'Enter the original provider or node subscription URL. Supported prefixes can be used here, such as provider:HK,interval:21600,https://example.com/sub for provider name and refresh interval.',
-    primaryTitle: 'Format and source',
+    primaryTitle: 'Node type and source',
     savePreset: 'Save as preset', importLink: 'Import from link',
     backendBase: 'Custom backend', backendBasePlaceholder: 'https://your-backend:8080 (blank = same origin)',
     backendBaseHelp: 'Choose the SubConverter backend to call. Leave blank to generate a relative /sub path for same-origin deployment; use a full backend URL for local or remote debugging.',

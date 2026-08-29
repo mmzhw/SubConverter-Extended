@@ -43,7 +43,10 @@ function optionValue(key: string): string | number | boolean | undefined {
 function setOption(key: string, value: string | number | boolean | undefined) {
   form.state.options[key] = value;
 }
-function defsOf(group: string) { return OPTION_DEFS.filter((d) => d.group === group); }
+function isOptionVisible(def: OptionDef) {
+  return def.key !== 'provider' || form.state.target === 'clash' || form.state.target === 'clashr';
+}
+function defsOf(group: string) { return OPTION_DEFS.filter((d) => d.group === group && isOptionVisible(d)); }
 function isTagInput(def: OptionDef) { return def.key === 'include' || def.key === 'exclude'; }
 function regexTags(key: string): string[] {
   const value = optionValue(key);
@@ -86,15 +89,15 @@ function updateSourceUrl(value: string) {
         </div>
       </div>
 
-      <el-radio-group
+      <el-select
         class="target-control"
         :model-value="form.state.target"
+        filterable
+        size="large"
         @update:model-value="(v: string | number | boolean) => (form.state.target = String(v))"
       >
-        <el-radio-button v-for="option in targetOptions" :key="option.value" :value="option.value">
-          {{ option.label }}
-        </el-radio-button>
-      </el-radio-group>
+        <el-option v-for="option in targetOptions" :key="option.value" :value="option.value" :label="option.label" />
+      </el-select>
 
       <el-form-item class="source-field" :error="sourceErrorMessage">
         <template #label>
@@ -248,50 +251,6 @@ h2 {
   margin-bottom: 20px;
 }
 
-.target-control :deep(.el-radio-button__original-radio) {
-  position: absolute;
-}
-
-.target-control :deep(.el-radio-button) {
-  min-width: 0;
-}
-
-.target-control :deep(.el-radio-button__inner) {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  min-height: 42px;
-  border: 1px solid var(--surface-border);
-  border-radius: 12px;
-  background: var(--control-bg);
-  color: var(--text-secondary);
-  font-weight: 750;
-  box-shadow: none;
-  white-space: nowrap;
-}
-
-.target-control :deep(.el-radio-button__inner:hover) {
-  color: var(--accent);
-}
-
-.target-control :deep(.el-radio-button.is-active .el-radio-button__inner) {
-  border-color: var(--accent);
-  background: var(--accent);
-  color: #fff;
-  box-shadow: none;
-}
-
-.target-control :deep(.el-radio-group) {
-  display: grid;
-}
-
-.target-control {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 6px;
-}
-
 .source-field {
   margin-bottom: 0;
 }
@@ -416,10 +375,6 @@ h2 {
   .config-section {
     padding: 18px;
     border-radius: 20px;
-  }
-
-  .target-control {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .option-row {

@@ -16,6 +16,7 @@ export function buildSubUrl(state: FormState): string {
   params.set('target', state.target);
   params.set('url', state.sourceUrl);
   for (const [key, value] of Object.entries(state.options)) {
+    if (key === 'provider' && state.target !== 'clash' && state.target !== 'clashr') continue;
     if (value === undefined || value === '') continue;
     if (value === false) {
       if (explicitFalseKeys.has(key)) params.set(key, 'false');

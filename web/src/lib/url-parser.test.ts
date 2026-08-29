@@ -3,8 +3,8 @@ import { parseSubUrl } from './url-parser';
 
 describe('parseSubUrl', () => {
   it('parses target, url and known options back into form state', () => {
-    const { state } = parseSubUrl('http://host/sub?target=mihomo&url=https%3A%2F%2Fsub.example.com%2F&emoji=true&tfo=false&include=HK%7C%E9%A6%99%E6%B8%AF&interval=86400');
-    expect(state.target).toBe('mihomo');
+    const { state } = parseSubUrl('http://host/sub?target=clashr&url=https%3A%2F%2Fsub.example.com%2F&emoji=true&tfo=false&include=HK%7C%E9%A6%99%E6%B8%AF&interval=86400');
+    expect(state.target).toBe('clashr');
     expect(state.sourceUrl).toBe('https://sub.example.com/');
     expect(state.options.emoji).toBe(true);
     expect(state.options.tfo).toBe(false);

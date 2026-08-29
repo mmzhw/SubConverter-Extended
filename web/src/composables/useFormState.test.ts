@@ -30,12 +30,12 @@ describe('useFormState', () => {
     form.state.sourceUrl = 'not a url';
     form.validateSource();
     expect(form.sourceError.value).toBe('invalid');
-    form.applyParsed({ target: 'mihomo', sourceUrl: 'https://parsed.example.com', backendBase: '', options: { emoji: true } });
+    form.applyParsed({ target: 'clashr', sourceUrl: 'https://parsed.example.com', backendBase: '', options: { emoji: true } });
     expect(form.sourceError.value).toBe('');
-    expect(form.state.target).toBe('mihomo');
+    expect(form.state.target).toBe('clashr');
     expect(form.state.sourceUrl).toBe('https://parsed.example.com');
     expect(form.state.options).toEqual({ emoji: true });
-    expect(form.builtUrl.value).toBe('/sub?target=mihomo&url=https%3A%2F%2Fparsed.example.com&emoji=true');
+    expect(form.builtUrl.value).toBe('/sub?target=clashr&url=https%3A%2F%2Fparsed.example.com&emoji=true');
   });
 
   it('validateSource on an empty source returns true and clears a pre-existing error', () => {

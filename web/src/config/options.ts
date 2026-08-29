@@ -23,14 +23,27 @@ export interface TargetFormat { value: string; label: BilingualText; }
 export const DEFAULT_EXCLUDE_REMARKS = '流量|官网|TG群|套餐|剩余|测试|官网|更新|代表|永久|地址|订阅|com';
 
 export const TARGET_FORMATS: TargetFormat[] = [
-  { value: 'clash', label: { en: 'Clash', zh: 'Clash' } },
-  { value: 'mihomo', label: { en: 'Mihomo', zh: 'Mihomo' } },
-  { value: 'singbox', label: { en: 'sing-box', zh: 'sing-box' } },
+  { value: 'clash', label: { en: 'Clash / Mihomo', zh: 'Clash / Mihomo' } },
+  { value: 'clashr', label: { en: 'ClashR', zh: 'ClashR' } },
   { value: 'surge', label: { en: 'Surge', zh: 'Surge' } },
-  { value: 'surfboard', label: { en: 'Surfboard', zh: 'Surfboard' } },
-  { value: 'loon', label: { en: 'Loon', zh: 'Loon' } },
+  { value: 'quan', label: { en: 'Quantumult', zh: 'Quantumult' } },
   { value: 'quanx', label: { en: 'Quantumult X', zh: 'Quantumult X' } },
+  { value: 'loon', label: { en: 'Loon', zh: 'Loon' } },
+  { value: 'surfboard', label: { en: 'Surfboard', zh: 'Surfboard' } },
+  { value: 'stash', label: { en: 'Stash', zh: 'Stash' } },
+  { value: 'mellow', label: { en: 'Mellow', zh: 'Mellow' } },
+  { value: 'singbox', label: { en: 'sing-box', zh: 'sing-box' } },
+  { value: 'ss', label: { en: 'Shadowsocks', zh: 'Shadowsocks' } },
+  { value: 'ssd', label: { en: 'SSD', zh: 'SSD' } },
+  { value: 'ssr', label: { en: 'ShadowsocksR', zh: 'ShadowsocksR' } },
+  { value: 'sssub', label: { en: 'SSSub', zh: 'SSSub' } },
   { value: 'v2ray', label: { en: 'V2Ray', zh: 'V2Ray' } },
+  { value: 'v2rayn', label: { en: 'v2rayN', zh: 'v2rayN' } },
+  { value: 'v2rayng', label: { en: 'v2rayNG', zh: 'v2rayNG' } },
+  { value: 'shadowrocket', label: { en: 'Shadowrocket', zh: 'Shadowrocket' } },
+  { value: 'trojan', label: { en: 'Trojan', zh: 'Trojan' } },
+  { value: 'vless', label: { en: 'VLESS', zh: 'VLESS' } },
+  { value: 'hysteria2', label: { en: 'Hysteria2', zh: 'Hysteria2' } },
   { value: 'mixed', label: { en: 'Mixed', zh: '混合' } },
 ];
 

@@ -14,7 +14,7 @@ describe('buildSubUrl', () => {
 
   it('serializes true options as true and drops falsy options', () => {
     const url = buildSubUrl(base({
-      target: 'mihomo', sourceUrl: 'https://s',
+      target: 'clashr', sourceUrl: 'https://s',
       options: { emoji: true, tfo: false, rename: 'abc', empty: '' },
     }));
     expect(url).toContain('emoji=true');
@@ -25,12 +25,21 @@ describe('buildSubUrl', () => {
 
   it('serializes false when disabling default-on options', () => {
     const url = buildSubUrl(base({
-      target: 'clash', sourceUrl: 'https://s',
+      target: 'clashr', sourceUrl: 'https://s',
       options: { provider: false, expand: false, udp: false },
     }));
     expect(url).toContain('provider=false');
     expect(url).toContain('expand=false');
     expect(url).toContain('udp=false');
+  });
+
+  it('omits provider mode for non-Clash targets', () => {
+    const url = buildSubUrl(base({
+      target: 'stash',
+      sourceUrl: 'https://s',
+      options: { provider: false },
+    }));
+    expect(url).not.toContain('provider=');
   });
 
   it('serializes an external remote config URL', () => {
@@ -46,7 +55,7 @@ describe('buildSubUrl', () => {
 
   it('serializes node filters and update interval', () => {
     const url = buildSubUrl(base({
-      target: 'mihomo',
+      target: 'clashr',
       sourceUrl: 'https://s',
       options: { include: '香港|HK', exclude: DEFAULT_EXCLUDE_REMARKS, interval: 86400 },
     }));

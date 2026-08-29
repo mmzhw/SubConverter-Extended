@@ -2,9 +2,32 @@ import { describe, it, expect } from 'vitest';
 import { DEFAULT_EXCLUDE_REMARKS, OPTION_DEFS, REMOTE_CONFIG_PRESETS, TARGET_FORMATS } from './options';
 
 describe('TARGET_FORMATS', () => {
-  it('contains clash, mihomo and singbox', () => {
+  it('contains all backend-supported target values', () => {
     const values = TARGET_FORMATS.map((t) => t.value);
-    expect(values).toEqual(expect.arrayContaining(['clash', 'mihomo', 'singbox']));
+    expect(values).toEqual([
+      'clash',
+      'clashr',
+      'surge',
+      'quan',
+      'quanx',
+      'loon',
+      'surfboard',
+      'stash',
+      'mellow',
+      'singbox',
+      'ss',
+      'ssd',
+      'ssr',
+      'sssub',
+      'v2ray',
+      'v2rayn',
+      'v2rayng',
+      'shadowrocket',
+      'trojan',
+      'vless',
+      'hysteria2',
+      'mixed',
+    ]);
   });
   it('has unique values with bilingual labels', () => {
     const values = TARGET_FORMATS.map((t) => t.value);
