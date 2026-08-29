@@ -8,6 +8,7 @@
 
 #include "handler/settings.h"
 #include "handler/settings_view.h"
+#include "handler/user_agent.h"
 #include "handler/webget.h"
 #include "nodemanip.h"
 #include "parser/config/proxy.h"
@@ -172,6 +173,29 @@ static bool isBrowserUA(const std::string &ua) {
       return true;
   }
   return false;
+}
+
+static void normalizeSubscriptionFetchHeaders(string_icase_map *request_headers) {
+  if (!request_headers)
+    return;
+
+  auto ua_it = request_headers->find("User-Agent");
+  if (ua_it == request_headers->end())
+    return;
+
+  if (isBrowserUA(ua_it->second)) {
+    writeLog(LOG_LEVEL_VERBOSE,
+             "检测到浏览器 UA，已替换为 clash.meta UA 以避免被拦截");
+    ua_it->second = "clash.meta";
+    return;
+  }
+
+  std::string fetch_user_agent = subscriptionFetchUserAgent(ua_it->second);
+  if (fetch_user_agent != ua_it->second) {
+    writeLog(LOG_LEVEL_VERBOSE,
+             "检测到 Mihomo UA，已替换上游订阅抓取 UA 以兼容源站流量信息");
+    ua_it->second = std::move(fetch_user_agent);
+  }
 }
 
 int addNodes(std::string link, std::vector<Proxy> &allNodes, int groupID,
@@ -391,15 +415,7 @@ int addNodes(std::string link, std::vector<Proxy> &allNodes, int groupID,
       if (startsWith(link, "surge:///install-config"))
         link = urlDecode(getUrlArg(link, "url"));
 
-      // Replace browser UA with clash.meta to avoid subscription-side blocks.
-      if (request_headers) {
-        auto ua_it = request_headers->find("User-Agent");
-        if (ua_it != request_headers->end() && isBrowserUA(ua_it->second)) {
-          writeLog(LOG_LEVEL_VERBOSE,
-                   "检测到浏览器 UA，已替换为 clash.meta UA 以避免被拦截");
-          ua_it->second = "clash.meta";
-        }
-      }
+      normalizeSubscriptionFetchHeaders(request_headers);
 
       strSub = webGet(link, proxy, effectiveSettings().cacheSubscription,
                       &extra_headers, request_headers, parse_set.fetch_context);
@@ -413,15 +429,7 @@ int addNodes(std::string link, std::vector<Proxy> &allNodes, int groupID,
       if (startsWith(link, "surge:///install-config")) // surge config link
         link = urlDecode(getUrlArg(link, "url"));
 
-      // Replace browser UA with clash.meta
-      if (request_headers) {
-        auto ua_it = request_headers->find("User-Agent");
-        if (ua_it != request_headers->end() && isBrowserUA(ua_it->second)) {
-          writeLog(LOG_LEVEL_VERBOSE,
-                   "检测到浏览器 UA，已替换为 clash.meta UA 以避免被拦截");
-          ua_it->second = "clash.meta";
-        }
-      }
+      normalizeSubscriptionFetchHeaders(request_headers);
 
       strSub = webGet(link, proxy, effectiveSettings().cacheSubscription,
                       &extra_headers, request_headers, parse_set.fetch_context);

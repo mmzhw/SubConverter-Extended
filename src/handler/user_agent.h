@@ -15,4 +15,6 @@ UserAgentMatch matchUserAgent(const std::string &user_agent,
                               tribool &clash_new_name,
                               int &surge_ver);
 
+std::string subscriptionFetchUserAgent(const std::string &user_agent);
+
 #endif // USER_AGENT_H_INCLUDED

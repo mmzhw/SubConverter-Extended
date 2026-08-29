@@ -81,6 +81,10 @@ bool hasPrefix(const std::string &value, const std::string &prefix) {
          value.compare(0, prefix.size(), prefix) == 0;
 }
 
+bool containsToken(const std::string &value, const std::string &token) {
+  return value.find(token) != std::string::npos;
+}
+
 bool verGreaterEqual(const std::string &src_ver,
                      const std::string &target_ver) {
   std::istringstream src_stream(src_ver), target_stream(target_ver);
@@ -132,4 +136,11 @@ UserAgentMatch matchUserAgent(const std::string &user_agent,
     return {true, profile.family ? profile.family : profile.head};
   }
   return {};
+}
+
+std::string subscriptionFetchUserAgent(const std::string &user_agent) {
+  const std::string normalized_user_agent = lowerAscii(user_agent);
+  if (containsToken(normalized_user_agent, "mihomo"))
+    return "clash.meta";
+  return user_agent;
 }

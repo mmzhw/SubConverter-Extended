@@ -110,6 +110,16 @@ int main() {
     return 1;
   }
 
+  if (subscriptionFetchUserAgent("mihomo") != "clash.meta" ||
+      subscriptionFetchUserAgent("mihomo/1.19.29") != "clash.meta" ||
+      subscriptionFetchUserAgent("mihomo.party/v2.0.0 (clash.meta)") !=
+          "clash.meta" ||
+      subscriptionFetchUserAgent("ClashMetaForAndroid/2.11.32.Meta") !=
+          "ClashMetaForAndroid/2.11.32.Meta") {
+    std::cerr << "subscription fetch UA normalization changed\n";
+    return 1;
+  }
+
   CompiledRegex search("^(US|HK)-[0-9]+$", CompiledRegexMode::Search);
   if (!search.valid() || !search.matches("US-1") ||
       !search.matches("HK-200") || search.matches("JP-1")) {
