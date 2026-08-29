@@ -146,6 +146,7 @@ export const OPTION_DEFS: OptionDef[] = [
     },
     group: 'node',
     defaultValue: false,
+    initialValue: true,
   },
   {
     key: 'tfo',
@@ -190,6 +191,7 @@ export const OPTION_DEFS: OptionDef[] = [
     },
     group: 'node',
     defaultValue: false,
+    initialValue: true,
   },
   {
     key: 'fdn',
@@ -201,6 +203,7 @@ export const OPTION_DEFS: OptionDef[] = [
     },
     group: 'node',
     defaultValue: false,
+    initialValue: true,
   },
   {
     key: 'rename',

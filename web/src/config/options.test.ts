@@ -33,7 +33,15 @@ describe('OPTION_DEFS', () => {
     }
   });
   it('includes the deprecated-node filter option', () => {
-    expect(OPTION_DEFS.map((d) => d.key)).toContain('fdn');
+    const fdn = OPTION_DEFS.find((d) => d.key === 'fdn');
+    expect(fdn?.type).toBe('boolean');
+    expect(fdn?.initialValue).toBe(true);
+  });
+  it('enables recommended node cleanup options initially', () => {
+    const emoji = OPTION_DEFS.find((d) => d.key === 'emoji');
+    const sort = OPTION_DEFS.find((d) => d.key === 'sort');
+    expect(emoji?.initialValue).toBe(true);
+    expect(sort?.initialValue).toBe(true);
   });
   it('includes request-level node filters and update interval', () => {
     const include = OPTION_DEFS.find((d) => d.key === 'include');

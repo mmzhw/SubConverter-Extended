@@ -10,8 +10,9 @@ describe('useFormState', () => {
     expect(form.builtUrl.value).toContain('/sub?target=clash&url=https%3A%2F%2Fsub.example.com%2F');
     expect(decodeURIComponent(form.builtUrl.value)).toContain(`exclude=${DEFAULT_EXCLUDE_REMARKS}`);
     expect(form.builtUrl.value).toContain('provider=false');
-    form.state.options.emoji = true;
     expect(form.builtUrl.value).toContain('emoji=true');
+    expect(form.builtUrl.value).toContain('sort=true');
+    expect(form.builtUrl.value).toContain('fdn=true');
   });
 
   it('validates the source URL on demand', () => {
