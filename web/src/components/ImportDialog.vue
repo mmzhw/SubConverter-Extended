@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { nextTick, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { parseSubUrl } from '../lib/url-parser';
 import { useFormState } from '../composables/useFormState';
@@ -9,6 +9,7 @@ const form = useFormState();
 const visible = defineModel<boolean>('visible', { default: false });
 const input = ref('');
 const error = ref('');
+const errorEl = ref<HTMLElement | null>(null);
 const kept = ref<Record<string, string>>({});
 
 function submit() {
@@ -22,6 +23,7 @@ function submit() {
     visible.value = false;
   } catch {
     error.value = t('import.invalid');
+    void nextTick(() => errorEl.value?.focus());
   }
 }
 </script>
@@ -30,7 +32,7 @@ function submit() {
   <el-dialog :model-value="visible" @update:model-value="(v: boolean) => (visible = v)"
              :title="t('import.title')" width="min(520px, 92vw)">
     <el-input v-model="input" type="textarea" :rows="3" :placeholder="t('import.placeholder')" />
-    <div v-if="error" role="alert" tabindex="-1" class="import-error">{{ error }}</div>
+    <div v-if="error" ref="errorEl" role="alert" tabindex="-1" class="import-error">{{ error }}</div>
     <div v-if="Object.keys(kept).length" class="import-kept">
       {{ t('import.unknownKept') }}：
       <el-tag v-for="(v, k) in kept" :key="k" size="small" class="kept-tag">{{ k }}={{ v }}</el-tag>

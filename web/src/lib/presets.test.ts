@@ -56,4 +56,8 @@ describe('presets', () => {
     expect(savePreset('a', state, throwingStorage)).toEqual({ ok: false, error: 'storage-unavailable' });
     expect(loadPresets(throwingStorage)).toEqual({ ok: false, error: 'storage-unavailable' });
   });
+
+  it('reports storage-unavailable when deleting from throwing storage', () => {
+    expect(deletePreset('a', throwingStorage)).toEqual({ ok: false, error: 'storage-unavailable' });
+  });
 });

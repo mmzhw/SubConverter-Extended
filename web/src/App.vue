@@ -2,6 +2,8 @@
 import { useI18n } from 'vue-i18n';
 import { setLang } from './i18n';
 import ConfigForm from './components/ConfigForm.vue';
+import UrlPreview from './components/UrlPreview.vue';
+import BottomActionBar from './components/BottomActionBar.vue';
 
 const { t, locale } = useI18n();
 function toggleLang() {
@@ -20,9 +22,10 @@ function toggleLang() {
     </div>
     <div class="layout">
       <section class="form-col" aria-label="form"><ConfigForm /></section>
-      <aside class="preview-col" aria-label="preview"><slot name="preview" /></aside>
+      <aside class="preview-col" aria-label="preview"><UrlPreview /></aside>
     </div>
   </main>
+  <BottomActionBar />
 </template>
 
 <style scoped>

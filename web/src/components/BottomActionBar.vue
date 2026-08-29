@@ -1,7 +1,23 @@
+<script setup lang="ts">
+import { useI18n } from 'vue-i18n';
+import { useFormState } from '../composables/useFormState';
+import { useCopy } from '../composables/useCopy';
+
+const { t } = useI18n();
+const form = useFormState();
+const { state: copyState, copy } = useCopy();
+
+function scrollToQr() {
+  document.getElementById('qr-target')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+</script>
+
 <template>
   <div class="bottom-bar">
-    <el-button class="grow" type="primary">…</el-button>
-    <el-button>…</el-button>
+    <el-button class="grow" type="primary" :loading="copyState === 'loading'" @click="copy(form.builtUrl.value)">
+      {{ copyState === 'copied' ? t('preview.copied') : t('preview.copy') }}
+    </el-button>
+    <el-button @click="scrollToQr">{{ t('preview.qr') }}</el-button>
   </div>
 </template>
 

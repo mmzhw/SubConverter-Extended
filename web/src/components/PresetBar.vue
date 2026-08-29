@@ -6,9 +6,10 @@ import { useFormState } from '../composables/useFormState';
 
 const { t } = useI18n();
 const form = useFormState();
-const result = ref<PresetsResult>(loadPresets());
+const initial = loadPresets();
+const result = ref<PresetsResult>(initial);
 const name = ref('');
-const notice = ref('');
+const notice = ref(initial.ok ? '' : t('presets.storageUnavailable'));
 
 function presets(): Preset[] { return result.value.ok ? result.value.presets : []; }
 function save() {
@@ -16,13 +17,22 @@ function save() {
   if (!trimmed) return;
   const res = savePreset(trimmed, { ...form.state, options: { ...form.state.options } });
   result.value = res;
-  notice.value = res.ok ? t('presets.saved') : t('presets.storageUnavailable');
-  name.value = '';
+  if (res.ok) {
+    notice.value = t('presets.saved');
+    name.value = '';
+  } else {
+    notice.value = t('presets.storageUnavailable');
+  }
 }
 function load(p: Preset) { form.applyParsed(p.state); }
 function remove(nameToDelete: string) {
-  result.value = deletePreset(nameToDelete);
-  notice.value = '';
+  const res = deletePreset(nameToDelete);
+  if (res.ok) {
+    result.value = res;
+    notice.value = '';
+  } else {
+    notice.value = t('presets.storageUnavailable');
+  }
 }
 </script>
 
