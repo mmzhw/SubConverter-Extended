@@ -19,6 +19,8 @@ export interface OptionDef {
 
 export interface TargetFormat { value: string; label: BilingualText; }
 
+export const DEFAULT_EXCLUDE_REMARKS = '流量|官网|TG群|套餐|剩余|测试|官网|更新|代表|永久|地址|订阅|com';
+
 export const TARGET_FORMATS: TargetFormat[] = [
   { value: 'clash', label: { en: 'Clash', zh: 'Clash' } },
   { value: 'mihomo', label: { en: 'Mihomo', zh: 'Mihomo' } },
@@ -221,8 +223,8 @@ export const OPTION_DEFS: OptionDef[] = [
     group: 'node',
     defaultValue: '',
     placeholder: {
-      en: 'Regex, for example: HK|Hong Kong',
-      zh: '输入正则，例如：香港|HK|Hong Kong',
+      en: 'Add keywords, for example: HK',
+      zh: '添加关键词，例如：香港',
     },
   },
   {
@@ -234,10 +236,10 @@ export const OPTION_DEFS: OptionDef[] = [
       zh: '排除名称命中这个正则表达式的节点。常用于过滤“到期、剩余流量、官网、套餐、测试”等不想出现在客户端里的节点。',
     },
     group: 'node',
-    defaultValue: '',
+    defaultValue: DEFAULT_EXCLUDE_REMARKS,
     placeholder: {
-      en: 'Regex, for example: Expired|Traffic|Website',
-      zh: '输入正则，例如：到期|剩余流量|官网|套餐',
+      en: 'Add keywords, for example: Expired',
+      zh: '添加关键词，例如：到期',
     },
   },
   {

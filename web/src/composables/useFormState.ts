@@ -1,7 +1,16 @@
 import { computed, reactive, ref } from 'vue';
+import { OPTION_DEFS } from '../config/options';
 import { buildSubUrl, FormState } from '../lib/url-builder';
 
-const state = reactive<FormState>({ target: 'clash', sourceUrl: '', backendBase: '', options: {} });
+function defaultOptions(): FormState['options'] {
+  return Object.fromEntries(
+    OPTION_DEFS
+      .filter((def) => def.type !== 'boolean' && def.defaultValue !== undefined && def.defaultValue !== '')
+      .map((def) => [def.key, def.defaultValue]),
+  );
+}
+
+const state = reactive<FormState>({ target: 'clash', sourceUrl: '', backendBase: '', options: defaultOptions() });
 const builtUrl = computed(() => {
   if (!state.sourceUrl) return '';
   return buildSubUrl({ target: state.target, sourceUrl: state.sourceUrl, backendBase: state.backendBase, options: { ...state.options } });

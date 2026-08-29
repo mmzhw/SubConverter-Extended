@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { OPTION_DEFS, REMOTE_CONFIG_PRESETS, TARGET_FORMATS } from './options';
+import { DEFAULT_EXCLUDE_REMARKS, OPTION_DEFS, REMOTE_CONFIG_PRESETS, TARGET_FORMATS } from './options';
 
 describe('TARGET_FORMATS', () => {
   it('contains clash, mihomo and singbox', () => {
@@ -41,8 +41,9 @@ describe('OPTION_DEFS', () => {
     const interval = OPTION_DEFS.find((d) => d.key === 'interval');
     expect(include?.type).toBe('string');
     expect(exclude?.type).toBe('string');
-    expect(include?.placeholder?.zh).toContain('正则');
+    expect(include?.placeholder?.zh).toContain('添加关键词');
     expect(exclude?.description.zh).toContain('排除');
+    expect(exclude?.defaultValue).toBe(DEFAULT_EXCLUDE_REMARKS);
     expect(interval?.type).toBe('number');
     expect(interval?.min).toBe(0);
     expect(interval?.step).toBe(3600);

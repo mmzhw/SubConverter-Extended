@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { DEFAULT_EXCLUDE_REMARKS } from '../config/options';
 import { useFormState } from './useFormState';
 
 describe('useFormState', () => {
@@ -6,7 +7,8 @@ describe('useFormState', () => {
     const form = useFormState();
     expect(form.builtUrl.value).toBe('');
     form.state.sourceUrl = 'https://sub.example.com/';
-    expect(form.builtUrl.value).toBe('/sub?target=clash&url=https%3A%2F%2Fsub.example.com%2F');
+    expect(form.builtUrl.value).toContain('/sub?target=clash&url=https%3A%2F%2Fsub.example.com%2F');
+    expect(decodeURIComponent(form.builtUrl.value)).toContain(`exclude=${DEFAULT_EXCLUDE_REMARKS}`);
     form.state.options.emoji = true;
     expect(form.builtUrl.value).toContain('emoji=true');
   });

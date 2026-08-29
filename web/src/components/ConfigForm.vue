@@ -8,6 +8,7 @@ import { useFormState } from '../composables/useFormState';
 const { t, locale } = useI18n();
 const form = useFormState();
 const openGroups = ref(['node']);
+const tagDelimiter = /[|,，\s]+/;
 
 const groups = [
   { key: 'node', labelKey: 'form.groups.node', icon: Connection },
@@ -42,6 +43,16 @@ function setOption(key: string, value: string | number | boolean | undefined) {
   form.state.options[key] = value;
 }
 function defsOf(group: string) { return OPTION_DEFS.filter((d) => d.group === group); }
+function isTagInput(def: OptionDef) { return def.key === 'include' || def.key === 'exclude'; }
+function regexTags(key: string): string[] {
+  const value = optionValue(key);
+  if (typeof value !== 'string' || !value) return [];
+  return value.split('|').map((item) => item.trim()).filter(Boolean);
+}
+function setRegexTags(key: string, values?: string[]) {
+  const next = [...new Set((values || []).map((item) => item.trim()).filter(Boolean))];
+  setOption(key, next.join('|'));
+}
 function updateSourceUrl(value: string) {
   form.state.sourceUrl = value;
   if (!value || form.sourceError.value) form.validateSource();
@@ -141,6 +152,15 @@ function updateSourceUrl(value: string) {
               <el-option v-for="opt in def.enumValues" :key="opt.value" :value="opt.value"
                          :label="isZh() ? opt.label.zh : opt.label.en" />
             </el-select>
+            <el-input-tag
+              v-else-if="isTagInput(def)"
+              :model-value="regexTags(def.key)"
+              :placeholder="placeholderOf(def)"
+              :delimiter="tagDelimiter"
+              clearable
+              tag-type="info"
+              @update:model-value="(v?: string[]) => setRegexTags(def.key, v)"
+            />
             <el-input
               v-else-if="def.type === 'string'"
               :model-value="String(optionValue(def.key))"
@@ -348,7 +368,8 @@ h2 {
 
 .option-row :deep(.el-input),
 .option-row :deep(.el-select),
-.option-row :deep(.el-input-number) {
+.option-row :deep(.el-input-number),
+.option-row :deep(.el-input-tag) {
   width: 100%;
 }
 

@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { DEFAULT_EXCLUDE_REMARKS } from '../config/options';
 import { buildSubUrl, FormState } from './url-builder';
 
 const base = (over: Partial<FormState> = {}): FormState => ({
@@ -47,10 +48,10 @@ describe('buildSubUrl', () => {
     const url = buildSubUrl(base({
       target: 'mihomo',
       sourceUrl: 'https://s',
-      options: { include: '香港|HK', exclude: '到期|剩余流量', interval: 86400 },
+      options: { include: '香港|HK', exclude: DEFAULT_EXCLUDE_REMARKS, interval: 86400 },
     }));
     expect(url).toContain('include=%E9%A6%99%E6%B8%AF%7CHK');
-    expect(url).toContain('exclude=%E5%88%B0%E6%9C%9F%7C%E5%89%A9%E4%BD%99%E6%B5%81%E9%87%8F');
+    expect(decodeURIComponent(url)).toContain(`exclude=${DEFAULT_EXCLUDE_REMARKS}`);
     expect(url).toContain('interval=86400');
   });
 
