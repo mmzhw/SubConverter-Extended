@@ -8,6 +8,21 @@ const base = (over: Partial<FormState> = {}): FormState => ({
 });
 
 describe('buildSubUrl', () => {
+  it('uses the Vite default backend base before falling back to the page origin', () => {
+    const previous = import.meta.env.VITE_DEFAULT_BACKEND_BASE;
+    import.meta.env.VITE_DEFAULT_BACKEND_BASE = 'http://192.168.40.128:25500/';
+    try {
+      const url = buildSubUrl(base({ sourceUrl: 'https://s' }));
+      expect(url).toBe('http://192.168.40.128:25500/sub?target=clash&url=https%3A%2F%2Fs');
+    } finally {
+      if (previous === undefined) {
+        delete import.meta.env.VITE_DEFAULT_BACKEND_BASE;
+      } else {
+        import.meta.env.VITE_DEFAULT_BACKEND_BASE = previous;
+      }
+    }
+  });
+
   it('builds an absolute same-origin URL with target and percent-encoded source', () => {
     const url = buildSubUrl(base({ sourceUrl: 'https://sub.example.com/a?token=x&y=1' }));
     expect(url).toBe('http://localhost:3000/sub?target=clash&url=https%3A%2F%2Fsub.example.com%2Fa%3Ftoken%3Dx%26y%3D1');

@@ -2245,8 +2245,12 @@ def deployment_security_defaults_baseline() -> None:
     active_compose = "\n".join(
         line for line in compose.splitlines() if not line.lstrip().startswith("#")
     )
-    if '- "25500:25500/tcp"' not in active_compose:
+    if '- "${WEB_PORT:-25500}:25500/tcp"' not in active_compose:
         raise AssertionError("Compose default port publication changed")
+    if 'TZ: ${TZ:-Asia/Shanghai}' not in active_compose:
+        raise AssertionError("Compose default timezone changed")
+    if 'SUBCONVERTER_LISTEN_PORT: "25501"' not in active_compose:
+        raise AssertionError("Compose backend loopback port changed")
     if re.search(
         r"(?m)^\s*SUBCONVERTER_SECURITY_PROFILE\s*:", active_compose
     ):

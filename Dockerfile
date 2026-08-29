@@ -426,8 +426,8 @@ RUN set -e && \
 # 仅修改镜像内副本：subconverter 只监听回环，由 nginx 统一对外
 RUN sed -i 's/^listen = "0.0.0.0"/listen = "127.0.0.1"/' /base/pref.example.toml
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
-  CMD wget -q -O /dev/null "http://127.0.0.1:${WEB_PORT:-8080}/" && \
-      wget -q -O /dev/null "http://127.0.0.1:${WEB_PORT:-8080}/version" || exit 1
+  CMD wget -q -O /dev/null "http://127.0.0.1:${WEB_PORT:-25500}/" && \
+      wget -q -O /dev/null "http://127.0.0.1:${WEB_PORT:-25500}/version" || exit 1
 
 ENTRYPOINT ["/init"]
-EXPOSE 8080/tcp
+EXPOSE 25500/tcp

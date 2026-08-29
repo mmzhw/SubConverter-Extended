@@ -16,6 +16,8 @@ const explicitFalseKeys = new Set(
 );
 
 function defaultBackendBase(): string {
+  const configured = import.meta.env.VITE_DEFAULT_BACKEND_BASE?.trim();
+  if (configured) return configured;
   if (typeof window === 'undefined') return '';
   return window.location.origin === 'null' ? '' : window.location.origin;
 }
