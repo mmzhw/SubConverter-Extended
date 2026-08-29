@@ -1,4 +1,6 @@
 *.sh text eol=lf
+docker/s6/** text eol=lf
+docker/s6-scripts/** text eol=lf
 resources/dashboard/*.html text eol=lf
 openwrt/apk-scripts/* text eol=lf
 openwrt/root/etc/config/* text eol=lf
