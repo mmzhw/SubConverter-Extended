@@ -395,7 +395,7 @@ h2 {
 }
 
 .option-row :deep(.el-switch) {
-  justify-self: start;
+  justify-self: end;
 }
 
 .number-control {
@@ -429,7 +429,7 @@ h2 {
   }
 
   .option-row :deep(.el-switch) {
-    justify-self: start;
+    justify-self: end;
   }
 }
 
