@@ -13,6 +13,7 @@ describe('useFormState', () => {
     expect(form.builtUrl.value).toContain('emoji=true');
     expect(form.builtUrl.value).toContain('sort=true');
     expect(form.builtUrl.value).toContain('fdn=true');
+    expect(form.builtUrl.value).toContain('append_type=true');
   });
 
   it('validates the source URL on demand', () => {

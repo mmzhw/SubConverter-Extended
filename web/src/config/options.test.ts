@@ -95,6 +95,7 @@ describe('OPTION_DEFS', () => {
     const expand = OPTION_DEFS.find((d) => d.key === 'expand');
     expect(appendType?.label.zh).toBe('节点类型标记');
     expect(appendType?.description.zh).toContain('代理协议类型');
+    expect(appendType?.initialValue).toBe(true);
     expect(expand?.label.zh).toBe('规则展开');
     expect(expand?.description.zh).toContain('远程规则集');
     expect(expand?.description.zh).not.toContain('短链');
