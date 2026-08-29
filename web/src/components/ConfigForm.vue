@@ -335,16 +335,16 @@ h2 {
 }
 
 .group-body {
-  padding: 4px 20px 18px;
+  padding: 2px 20px 8px;
 }
 
 .option-row {
   display: grid;
   grid-template-columns: minmax(112px, 150px) minmax(0, 1fr);
-  align-items: center;
+  align-items: start;
   gap: 16px;
-  min-height: 48px;
-  padding: 10px 0;
+  min-height: 44px;
+  padding: 8px 0;
   border-bottom: 1px solid var(--surface-border-subtle);
 }
 
@@ -357,6 +357,7 @@ h2 {
   align-items: center;
   gap: 6px;
   min-width: 0;
+  padding-top: 6px;
   color: var(--text-secondary);
   font-size: 0.92rem;
   font-weight: 700;
