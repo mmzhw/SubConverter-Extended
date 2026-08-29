@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cstdlib>
 #include <mutex>
 #include <random>
 #include <unordered_map>
@@ -26,8 +27,12 @@ bool loaded = false;
 std::string storage_path_override;
 
 std::string storagePath() {
-  return storage_path_override.empty() ? "short-links.json"
-                                       : storage_path_override;
+  if (!storage_path_override.empty())
+    return storage_path_override;
+  const char *configured_path = std::getenv("SUBCONVERTER_SHORT_LINKS_FILE");
+  if (configured_path && configured_path[0] != '\0')
+    return configured_path;
+  return "short-links.json";
 }
 
 uint64_t valueUint64(const rapidjson::Value &value) {

@@ -4,6 +4,7 @@ cmake-build-debug
 .idea
 base/cache
 short-links.json
+short-links/
 scripts/quickjspp
 scripts/yaml-cpp
 .DS_Store

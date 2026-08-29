@@ -17,6 +17,7 @@ services:
     environment:
       TZ: Asia/Shanghai
       WEB_PORT: "8080"
+      SUBCONVERTER_SHORT_LINKS_FILE: "/base/short-links/links.json"
       # 此值只改容器内 nginx 监听端口；对外端口由上面 ports 的 ${WEB_PORT:-8080} 控制（容器侧固定映射 :8080），改端口请改 ports 行而非此值。
       # This only changes nginx's in-container listen port; the host port is set
       # by ${WEB_PORT:-8080} in ports above (container side is fixed at :8080).
@@ -49,6 +50,9 @@ services:
       # 持久化 /dashboard 统计数据；仅在 pref.toml 中启用 statistics 后写入。
       # Persist /dashboard statistics; data is written only when statistics is enabled.
       - "./stats:/base/stats"
+      # 持久化短链映射数据，避免重建容器后短链失效。
+      # Persist short-link mappings so generated short URLs survive container recreation.
+      - "./short-links:/base/short-links"
     logging:
       driver: "json-file"
       options:

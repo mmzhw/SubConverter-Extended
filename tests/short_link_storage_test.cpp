@@ -1,4 +1,5 @@
 #include <filesystem>
+#include <cstdlib>
 #include <stdexcept>
 #include <string>
 
@@ -31,10 +32,27 @@ struct TemporaryWorkingDirectory {
   }
 };
 
+void setEnvironment(const char *name, const char *value) {
+#ifdef _WIN32
+  _putenv_s(name, value);
+#else
+  setenv(name, value, 1);
+#endif
+}
+
+void clearEnvironment(const char *name) {
+#ifdef _WIN32
+  _putenv_s(name, "");
+#else
+  unsetenv(name);
+#endif
+}
+
 } // namespace
 
 int main() {
   TemporaryWorkingDirectory temporary;
+  clearEnvironment("SUBCONVERTER_SHORT_LINKS_FILE");
   setShortLinkStoragePathForTests("short-links.json");
 
   const std::string url =
@@ -71,5 +89,16 @@ int main() {
   ShortLinkResolveResult missing = resolveShortLink("missing1", 6000);
   require(!missing.ok && missing.error == "not-found",
           "missing code did not report not-found");
+
+  clearShortLinkMemoryForTests();
+  std::filesystem::create_directories("persisted");
+  setShortLinkStoragePathForTests("");
+  setEnvironment("SUBCONVERTER_SHORT_LINKS_FILE", "persisted/links.json");
+  ShortLinkCreateResult configured =
+      createShortLink(url + "&emoji=true", "Configured", 7000);
+  require(configured.ok, "env-configured storage path was not accepted");
+  require(fileExist("persisted/links.json"),
+          "env-configured storage path was not written");
+  clearEnvironment("SUBCONVERTER_SHORT_LINKS_FILE");
   return 0;
 }
