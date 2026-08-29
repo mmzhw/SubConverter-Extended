@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { OPTION_DEFS, TARGET_FORMATS } from './options';
+import { OPTION_DEFS, REMOTE_CONFIG_PRESETS, TARGET_FORMATS } from './options';
 
 describe('TARGET_FORMATS', () => {
   it('contains clash, mihomo and singbox', () => {
@@ -23,6 +23,8 @@ describe('OPTION_DEFS', () => {
     for (const def of OPTION_DEFS) {
       expect(def.label.en.length).toBeGreaterThan(0);
       expect(def.label.zh.length).toBeGreaterThan(0);
+      expect(def.description.en.length).toBeGreaterThan(0);
+      expect(def.description.zh.length).toBeGreaterThan(0);
       expect(['node', 'rule', 'advanced']).toContain(def.group);
       expect(['boolean', 'string', 'enum', 'number']).toContain(def.type);
       if (def.type === 'enum') expect(def.enumValues?.length).toBeGreaterThan(0);
@@ -34,9 +36,25 @@ describe('OPTION_DEFS', () => {
     expect(OPTION_DEFS.map((d) => d.key)).toContain('fdn');
   });
   it('includes the project provider override', () => {
-    expect(OPTION_DEFS.map((d) => d.key)).toContain('provider');
+    const provider = OPTION_DEFS.find((d) => d.key === 'provider');
+    expect(provider?.type).toBe('boolean');
+    expect(provider?.defaultValue).toBe(true);
   });
   it('includes the README-documented list param', () => {
     expect(OPTION_DEFS.map((d) => d.key)).toContain('list');
+  });
+  it('includes remote config presets that can accept custom URLs', () => {
+    const config = OPTION_DEFS.find((d) => d.key === 'config');
+    expect(config?.type).toBe('enum');
+    expect(config?.allowCustom).toBe(true);
+    expect(REMOTE_CONFIG_PRESETS.map((p) => p.value)).toContain(
+      'https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online.ini',
+    );
+    expect(REMOTE_CONFIG_PRESETS.map((p) => p.value)).toContain(
+      'https://raw.githubusercontent.com/Aethersailor/Custom_OpenClash_Rules/refs/heads/main/cfg/Custom_Clash.ini',
+    );
+    expect(REMOTE_CONFIG_PRESETS.map((p) => p.value)).toContain(
+      'https://raw.githubusercontent.com/Aethersailor/Custom_OpenClash_Rules/refs/heads/main/cfg/Custom_Clash_Full_Fallback.ini',
+    );
   });
 });

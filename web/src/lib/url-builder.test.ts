@@ -22,6 +22,27 @@ describe('buildSubUrl', () => {
     expect(url).not.toContain('empty');
   });
 
+  it('serializes false when disabling default-on options', () => {
+    const url = buildSubUrl(base({
+      target: 'clash', sourceUrl: 'https://s',
+      options: { provider: false, expand: false, udp: false },
+    }));
+    expect(url).toContain('provider=false');
+    expect(url).toContain('expand=false');
+    expect(url).toContain('udp=false');
+  });
+
+  it('serializes an external remote config URL', () => {
+    const url = buildSubUrl(base({
+      target: 'clash',
+      sourceUrl: 'https://s',
+      options: { config: 'https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online.ini' },
+    }));
+    expect(url).toContain(
+      'config=https%3A%2F%2Fraw.githubusercontent.com%2FACL4SSR%2FACL4SSR%2Fmaster%2FClash%2Fconfig%2FACL4SSR_Online.ini',
+    );
+  });
+
   it('prepends a custom backend, stripping trailing slashes', () => {
     const url = buildSubUrl(base({ sourceUrl: 'https://s', backendBase: 'http://127.0.0.1:25500/' }));
     expect(url).toBe('http://127.0.0.1:25500/sub?target=clash&url=https%3A%2F%2Fs');

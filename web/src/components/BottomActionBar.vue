@@ -1,11 +1,19 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { CopyDocument, Grid } from '@element-plus/icons-vue';
 import { useFormState } from '../composables/useFormState';
 import { useCopy } from '../composables/useCopy';
 
 const { t } = useI18n();
 const form = useFormState();
 const { state: copyState, copy } = useCopy();
+const copyLabel = computed(() => {
+  if (copyState.value === 'copied') return t('preview.copied');
+  if (copyState.value === 'error') return t('preview.copyFailed');
+  return t('preview.copy');
+});
+const isCopying = computed(() => copyState.value === 'loading');
 
 function scrollToQr() {
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -15,10 +23,10 @@ function scrollToQr() {
 
 <template>
   <div class="bottom-bar">
-    <el-button class="grow" type="primary" size="large" :loading="copyState === 'loading'" @click="copy(form.builtUrl.value)">
-      {{ copyState === 'copied' ? t('preview.copied') : copyState === 'error' ? t('preview.copyFailed') : t('preview.copy') }}
+    <el-button class="grow" type="primary" size="large" :icon="CopyDocument" :loading="isCopying" @click="copy(form.builtUrl.value)">
+      {{ copyLabel }}
     </el-button>
-    <el-button size="large" @click="scrollToQr">{{ t('preview.qr') }}</el-button>
+    <el-button size="large" :icon="Grid" @click="scrollToQr">{{ t('preview.qr') }}</el-button>
   </div>
 </template>
 
@@ -28,9 +36,15 @@ function scrollToQr() {
   .bottom-bar {
     display: flex; gap: 8px; position: fixed; left: 0; right: 0; bottom: 0;
     padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
-    background: var(--surface-strong); border-top: 1px solid var(--surface-border); z-index: 100;
+    background: var(--surface-strong);
+    border-top: 1px solid var(--surface-border);
+    box-shadow: 0 -16px 36px rgba(15, 23, 42, 0.12);
+    z-index: 100;
   }
   .grow { flex: 1; }
-  .bottom-bar :deep(.el-button) { min-height: 44px; }
+  .bottom-bar :deep(.el-button) {
+    min-height: 46px;
+    margin-left: 0;
+  }
 }
 </style>
