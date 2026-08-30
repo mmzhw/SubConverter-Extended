@@ -2,13 +2,14 @@
   <div class="brand-logo" aria-hidden="true">
     <svg viewBox="0 0 64 64" role="img">
       <rect class="logo-plate" x="4" y="4" width="56" height="56" rx="14" />
+      <circle class="logo-cat-base" cx="32" cy="33" r="23" />
       <path
-        class="logo-cat-base"
-        d="M10 36c0-6.4 3.1-13.3 8-18.3.6-5 2.4-10 5.2-10.7 3-.7 7.9 6.5 9.8 9.8a25 25 0 0 1 8 0c1.9-3.3 6.8-10.5 9.8-9.8 2.8.7 4.6 5.7 5.2 10.7 4.9 5 8 11.9 8 18.3 0 13.2-12.1 21.8-27 21.8S10 49.2 10 36z"
+        class="logo-cat-face"
+        d="M16.5 34.5c0-4.2 2-10.1 5.3-14.1.6-4.7 1.9-9.4 4.6-10 2.1-.5 6.8 5.6 8.5 8.9a25 25 0 0 1 6.2 0c1.7-3.3 6.4-9.4 8.5-8.9 2.7.6 4 5.3 4.6 10 3.3 4 5.3 9.9 5.3 14.1 0 12.1-10.4 19.2-21.5 19.2S16.5 46.6 16.5 34.5z"
       />
-      <ellipse class="logo-cat-face" cx="27.5" cy="35.5" rx="4.2" ry="5.4" transform="rotate(-18 27.5 35.5)" />
-      <ellipse class="logo-cat-face" cx="46.5" cy="35.5" rx="4.2" ry="5.4" transform="rotate(18 46.5 35.5)" />
-      <path class="logo-cat-face" d="M34 46c0-1.8 6-1.8 6 0 0 2.6-1.8 4.4-3 4.4s-3-1.8-3-4.4z" />
+      <ellipse class="logo-cat-detail" cx="29" cy="34.2" rx="3.4" ry="4.3" transform="rotate(-20 29 34.2)" />
+      <ellipse class="logo-cat-detail" cx="47" cy="34.2" rx="3.4" ry="4.3" transform="rotate(20 47 34.2)" />
+      <path class="logo-cat-detail" d="M36 43.3c0-1.5 4-1.5 4 0 0 1.9-1.2 3-2 3s-2-1.1-2-3z" />
     </svg>
   </div>
 </template>
@@ -40,6 +41,10 @@
 
 .logo-cat-face {
   fill: var(--surface-strong);
+}
+
+.logo-cat-detail {
+  fill: var(--accent);
 }
 
 @media (max-width: 767px) {

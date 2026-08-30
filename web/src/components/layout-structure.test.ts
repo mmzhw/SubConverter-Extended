@@ -29,17 +29,23 @@ describe('responsive layout structure', () => {
     expect(source).not.toContain('<linearGradient');
     expect(source).not.toContain('logo-route');
     expect(source).not.toContain('accent-2');
+    expect(source).not.toContain('M10 36c0-6.4');
+    expect(source).toContain('<circle class="logo-cat-base" cx="32" cy="33" r="23" />');
     expect(source).toContain('logo-cat-base');
     expect(source).toContain('logo-cat-face');
   });
 
   it('exposes the cat logo as the browser favicon', () => {
     const indexSource = readFileSync(resolve(currentDir, '../../index.html'), 'utf8');
+    const icoPath = resolve(currentDir, '../../public/favicon.ico');
     const faviconPath = resolve(currentDir, '../../public/favicon.svg');
 
+    expect(indexSource).toContain('<link rel="icon" href="/favicon.ico" sizes="any" />');
     expect(indexSource).toContain('<link rel="icon" type="image/svg+xml" href="/favicon.svg" />');
+    expect(existsSync(icoPath)).toBe(true);
     expect(existsSync(faviconPath)).toBe(true);
     expect(readFileSync(faviconPath, 'utf8')).toContain('logo-cat-base');
+    expect(readFileSync(faviconPath, 'utf8')).toContain('<circle class="logo-cat-base" cx="32" cy="33" r="23" />');
   });
 
   it('marks boolean option rows so mobile switch controls can stay inline', () => {
