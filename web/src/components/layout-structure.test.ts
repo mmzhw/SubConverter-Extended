@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 
@@ -31,6 +31,15 @@ describe('responsive layout structure', () => {
     expect(source).not.toContain('accent-2');
     expect(source).toContain('logo-cat-base');
     expect(source).toContain('logo-cat-face');
+  });
+
+  it('exposes the cat logo as the browser favicon', () => {
+    const indexSource = readFileSync(resolve(currentDir, '../../index.html'), 'utf8');
+    const faviconPath = resolve(currentDir, '../../public/favicon.svg');
+
+    expect(indexSource).toContain('<link rel="icon" type="image/svg+xml" href="/favicon.svg" />');
+    expect(existsSync(faviconPath)).toBe(true);
+    expect(readFileSync(faviconPath, 'utf8')).toContain('logo-cat-base');
   });
 
   it('marks boolean option rows so mobile switch controls can stay inline', () => {
