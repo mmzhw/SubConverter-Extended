@@ -35,6 +35,8 @@ SHUTDOWN_DEADLINE_SECONDS = 5.0
 LISTENER_CLOSE_DEADLINE_SECONDS = 2.0
 STARTUP_DEADLINE_SECONDS = 10.0
 HIGH_FD_BACKLOG_CONNECTIONS = 1100
+HIGH_FD_BACKLOG_MARGIN = 128
+MIN_HIGH_FD_BACKLOG_CONNECTIONS = 256
 
 
 class ShutdownFailure(AssertionError):
@@ -323,6 +325,52 @@ def wait_for_process_fd_count(
     )
 
 
+def count_open_file_descriptors() -> int:
+    fd_directory = Path("/proc/self/fd")
+    if not fd_directory.is_dir():
+        return 0
+    try:
+        return sum(1 for _ in fd_directory.iterdir())
+    except OSError:
+        return 0
+
+
+def plan_high_fd_backlog_connections(
+    requested: int = HIGH_FD_BACKLOG_CONNECTIONS,
+    open_fd_count: int | None = None,
+    resource_api: object | None = None,
+) -> int:
+    if open_fd_count is None:
+        open_fd_count = count_open_file_descriptors()
+    if resource_api is None:
+        try:
+            import resource as resource_api  # type: ignore[no-redef]
+        except ImportError as error:
+            raise ShutdownFailure(
+                "high-fd shutdown regression requires POSIX resource limits"
+            ) from error
+
+    soft, hard = resource_api.getrlimit(resource_api.RLIMIT_NOFILE)  # type: ignore[attr-defined]
+    required_soft_limit = requested + open_fd_count + HIGH_FD_BACKLOG_MARGIN
+    hard_is_unlimited = hard == getattr(resource_api, "RLIM_INFINITY", -1)
+    target_soft = required_soft_limit if hard_is_unlimited else min(required_soft_limit, hard)
+    if soft < target_soft:
+        resource_api.setrlimit(  # type: ignore[attr-defined]
+            resource_api.RLIMIT_NOFILE,  # type: ignore[attr-defined]
+            (target_soft, hard),
+        )
+        soft = target_soft
+
+    available = max(0, soft - open_fd_count - HIGH_FD_BACKLOG_MARGIN)
+    planned = min(requested, available)
+    if planned < MIN_HIGH_FD_BACKLOG_CONNECTIONS:
+        raise ShutdownFailure(
+            "high-fd shutdown regression cannot reserve enough client sockets "
+            f"(planned={planned}, open_fds={open_fd_count}, soft_limit={soft})"
+        )
+    return planned
+
+
 def complete_ruleset_request(base_url: str, source_url: str) -> tuple[int, bytes]:
     return request(
         base_url,
@@ -398,7 +446,8 @@ def run_case(binary: Path, signal_value: signal.Signals, scenario: str, round_no
                         )
                 elif scenario in ("inflight-request", "high-fd-shutdown"):
                     if scenario == "high-fd-shutdown":
-                        for _ in range(HIGH_FD_BACKLOG_CONNECTIONS):
+                        backlog_connection_count = plan_high_fd_backlog_connections()
+                        for _ in range(backlog_connection_count):
                             pending = socket.create_connection(
                                 ("127.0.0.1", port), timeout=1
                             )
@@ -408,7 +457,7 @@ def run_case(binary: Path, signal_value: signal.Signals, scenario: str, round_no
                             backlog_sockets.append(pending)
                         wait_for_process_fd_count(
                             process,
-                            HIGH_FD_BACKLOG_CONNECTIONS,
+                            backlog_connection_count,
                             time.monotonic() + 5.0,
                         )
                     source_url = fixture_base + "/inflight-rules.list"
