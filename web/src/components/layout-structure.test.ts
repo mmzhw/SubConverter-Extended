@@ -23,6 +23,16 @@ describe('responsive layout structure', () => {
     expect(source).toContain('<BrandLogo />');
   });
 
+  it('uses a single-color cat mark for the product logo', () => {
+    const source = componentSource('BrandLogo.vue');
+
+    expect(source).not.toContain('<linearGradient');
+    expect(source).not.toContain('logo-route');
+    expect(source).not.toContain('accent-2');
+    expect(source).toContain('logo-cat-base');
+    expect(source).toContain('logo-cat-face');
+  });
+
   it('marks boolean option rows so mobile switch controls can stay inline', () => {
     const source = componentSource('ConfigForm.vue');
 

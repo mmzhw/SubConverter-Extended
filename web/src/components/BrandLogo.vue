@@ -1,17 +1,14 @@
 <template>
   <div class="brand-logo" aria-hidden="true">
     <svg viewBox="0 0 64 64" role="img">
-      <defs>
-        <linearGradient id="logo-blue" x1="8" y1="8" x2="56" y2="56">
-          <stop offset="0" stop-color="#2563eb" />
-          <stop offset="1" stop-color="#0f766e" />
-        </linearGradient>
-      </defs>
       <rect class="logo-plate" x="4" y="4" width="56" height="56" rx="14" />
-      <path class="logo-route" d="M18 20h17c7 0 11 4 11 10s-4 10-11 10H18" />
-      <path class="logo-route accent" d="M46 44H29c-7 0-11-4-11-10s4-10 11-10h17" />
-      <path class="logo-arrow" d="M39 14l7 6-7 6" />
-      <path class="logo-arrow accent" d="M25 50l-7-6 7-6" />
+      <path
+        class="logo-cat-base"
+        d="M10 36c0-6.4 3.1-13.3 8-18.3.6-5 2.4-10 5.2-10.7 3-.7 7.9 6.5 9.8 9.8a25 25 0 0 1 8 0c1.9-3.3 6.8-10.5 9.8-9.8 2.8.7 4.6 5.7 5.2 10.7 4.9 5 8 11.9 8 18.3 0 13.2-12.1 21.8-27 21.8S10 49.2 10 36z"
+      />
+      <ellipse class="logo-cat-face" cx="27.5" cy="35.5" rx="4.2" ry="5.4" transform="rotate(-18 27.5 35.5)" />
+      <ellipse class="logo-cat-face" cx="46.5" cy="35.5" rx="4.2" ry="5.4" transform="rotate(18 46.5 35.5)" />
+      <path class="logo-cat-face" d="M34 46c0-1.8 6-1.8 6 0 0 2.6-1.8 4.4-3 4.4s-3-1.8-3-4.4z" />
     </svg>
   </div>
 </template>
@@ -37,29 +34,12 @@
   stroke-width: 1.5;
 }
 
-.logo-route {
-  fill: none;
-  stroke: url(#logo-blue);
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 7;
+.logo-cat-base {
+  fill: var(--accent);
 }
 
-.logo-route.accent {
-  stroke-width: 5;
-  opacity: 0.62;
-}
-
-.logo-arrow {
-  fill: none;
-  stroke: var(--accent);
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 4.5;
-}
-
-.logo-arrow.accent {
-  stroke: var(--accent-2);
+.logo-cat-face {
+  fill: var(--surface-strong);
 }
 
 @media (max-width: 767px) {
