@@ -16,8 +16,22 @@ class DockerShortLinkPasswordDefaultsTest(unittest.TestCase):
             encoding="utf-8"
         )
 
+        self.assertTrue(
+            script.startswith("#!/command/with-contenv sh"),
+            "s6 service must import Docker/container environment variables",
+        )
         self.assertIn("Short-link management password:", script)
         self.assertIn("$SUBCONVERTER_SHORT_LINK_PASSWORD", script)
+
+    def test_nginx_config_script_imports_container_environment(self):
+        script = (ROOT / "docker" / "s6-scripts" / "nginx-config").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertTrue(
+            script.startswith("#!/command/with-contenv sh"),
+            "nginx config renderer must import Docker/container environment variables",
+        )
 
 
 if __name__ == "__main__":

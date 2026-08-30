@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/command/with-contenv sh
 # 反代场景下默认信任 nginx 一跳，使 dashboard 识别真实客户端 IP；用户显式设置时优先用户值
 export SUBCONVERTER_DASHBOARD_CLIENT_IP_HEADER="${SUBCONVERTER_DASHBOARD_CLIENT_IP_HEADER:-x-forwarded-for}"
 export SUBCONVERTER_DASHBOARD_TRUSTED_PROXY_CIDRS="${SUBCONVERTER_DASHBOARD_TRUSTED_PROXY_CIDRS:-127.0.0.1/32}"

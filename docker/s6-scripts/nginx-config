@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/command/with-contenv sh
 mkdir -p /var/lib/nginx/tmp /run/nginx
 chown -R nginx:nginx /var/lib/nginx /run/nginx
 WEB_PORT="${WEB_PORT:-25500}"
