@@ -253,8 +253,12 @@ RUN set -eux; \
           checksum="${SINGBOX_NEXT_SHA256}"; \
         fi; \
         archive="/tmp/sing-box-${version}-linux-amd64-glibc.tar.gz"; \
+        download_url="https://github.com/SagerNet/sing-box/releases/download/v${version}/sing-box-${version}-linux-amd64-glibc.tar.gz"; \
+        if [ -n "${GITHUB_PROXY_PREFIX}" ]; then \
+          download_url="${GITHUB_PROXY_PREFIX%/}/${download_url}"; \
+        fi; \
         curl --retry 5 --retry-all-errors --retry-delay 5 -fsSL \
-          "https://github.com/SagerNet/sing-box/releases/download/v${version}/sing-box-${version}-linux-amd64-glibc.tar.gz" \
+          "${download_url}" \
           -o "${archive}"; \
         printf '%s  %s\n' "${checksum}" "${archive}" | sha256sum -c -; \
         tar -xzf "${archive}" -C /tmp; \
