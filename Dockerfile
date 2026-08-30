@@ -209,7 +209,7 @@ RUN set -xe && \
     git -C libcron remote add origin https://github.com/PerMalmberg/libcron.git && \
     git -C libcron fetch --depth=1 origin "${LIBCRON_REF}" && \
     git -C libcron checkout --detach FETCH_HEAD && \
-    git -C libcron submodule update --init --recursive --depth=1 && \
+    git -C libcron submodule update --init --recursive --depth=1 libcron/externals/date && \
     cd libcron && \
     cmake -DCMAKE_BUILD_TYPE=Release . && \
     make libcron -j ${THREADS} && \
