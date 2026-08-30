@@ -13,6 +13,7 @@
 #include <yaml-cpp/yaml.h>
 
 #include "handler/settings.h"
+#include "handler/settings_view.h"
 #include "utils/file.h"
 #include "utils/md5/md5_interface.h"
 #include "utils/string.h"
