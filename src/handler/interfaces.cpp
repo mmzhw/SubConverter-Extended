@@ -1673,7 +1673,7 @@ static std::string githubProxyLatencyJson(Response &response,
   return buffer.GetString();
 }
 
-std::string githubProxyLatency(RESPONSE_CALLBACK_ARGS) {
+std::string githubProxyLatencyImpl(RESPONSE_CALLBACK_ARGS) {
   const std::string url = trimWhitespace(getUrlArg(request.argument, "url"),
                                          true, true);
   if (url.empty()) {
@@ -2303,6 +2303,10 @@ static std::string subconverterEntry(Request &request, Response &response,
 }
 
 } // namespace
+
+std::string githubProxyLatency(RESPONSE_CALLBACK_ARGS) {
+  return githubProxyLatencyImpl(request, response);
+}
 
 namespace {
 
