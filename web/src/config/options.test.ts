@@ -76,10 +76,18 @@ describe('OPTION_DEFS', () => {
     expect(exclude?.description.zh).toContain('排除');
     expect(exclude?.defaultValue).toBe(DEFAULT_EXCLUDE_REMARKS);
     expect(interval?.type).toBe('number');
-    expect(interval?.description.zh).toContain('按“天”输入');
-    expect(interval?.placeholder?.zh).toContain('单位天');
+    expect(interval?.description.zh).toContain('天 / 时 / 分 / 秒');
+    expect(interval?.placeholder?.zh).toContain('例如：1');
     expect(interval?.min).toBe(0);
     expect(interval?.step).toBe(1);
+  });
+  it('includes a Clash DNS template switch that explains it is not the airport DNS', () => {
+    const dns = OPTION_DEFS.find((d) => d.key === 'clash.dns');
+    expect(dns?.type).toBe('boolean');
+    expect(dns?.label.zh).toBe('DNS 配置');
+    expect(dns?.description.zh).toContain('内置模板');
+    expect(dns?.description.zh).toContain('不会读取机场订阅里的 DNS');
+    expect(dns?.defaultValue).toBe(false);
   });
   it('includes the project provider override', () => {
     const provider = OPTION_DEFS.find((d) => d.key === 'provider');

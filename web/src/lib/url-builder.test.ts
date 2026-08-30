@@ -69,6 +69,15 @@ describe('buildSubUrl', () => {
     expect(expandedUrl).toContain('expand=true');
   });
 
+  it('serializes the Clash DNS template switch with a dotted backend key', () => {
+    const url = buildSubUrl(base({
+      target: 'clash',
+      sourceUrl: 'https://s',
+      options: { 'clash.dns': true },
+    }));
+    expect(url).toContain('clash.dns=1');
+  });
+
   it('omits provider mode for non-Clash targets', () => {
     const url = buildSubUrl(base({
       target: 'stash',

@@ -29,4 +29,12 @@ describe('responsive layout structure', () => {
     expect(source).toContain("'boolean-option-row': def.type === 'boolean'");
     expect(source).toContain('.boolean-option-row {');
   });
+
+  it('renders update interval as a primary field with an explicit unit selector', () => {
+    const source = componentSource('ConfigForm.vue');
+
+    expect(source).toContain('subscription-interval-field');
+    expect(source).toContain('intervalUnitOptions');
+    expect(source).toContain('setIntervalUnit');
+  });
 });

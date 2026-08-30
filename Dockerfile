@@ -397,7 +397,8 @@ LABEL \
   com.aethersailor.dependency-snapshot.sha256="${DEPENDENCY_SNAPSHOT_SHA}" \
   maintainer="Aethersailor"
 
-ENV TZ=Asia/Shanghai
+ENV TZ=Asia/Shanghai \
+    SUBCONVERTER_SHORT_LINK_PASSWORD=""
 RUN if [ -n "${ALPINE_MIRROR}" ]; then \
       sed -i "s#https://dl-cdn.alpinelinux.org/alpine#${ALPINE_MIRROR%/}#g" \
         /etc/apk/repositories; \

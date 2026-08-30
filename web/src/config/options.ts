@@ -293,17 +293,28 @@ export const OPTION_DEFS: OptionDef[] = [
     type: 'number',
     label: { en: 'Update interval', zh: '更新间隔' },
     description: {
-      en: 'Enter days in the UI; the generated URL converts it to seconds for interval=<seconds>. For Clash/Mihomo proxy-provider node refresh, use the source URL prefix format interval:21600,https://example.com/sub.',
-      zh: '界面按“天”输入，生成链接时会自动换算成 interval=<秒数>。注意 Clash/Mihomo 的 proxy-provider 节点刷新间隔通常写在订阅源前缀里，例如 interval:21600,https://example.com/sub。',
+      en: 'Choose days / hours / minutes / seconds in the UI; the generated URL converts it to interval=<seconds>. For Clash/Mihomo proxy-provider node refresh, use the source URL prefix format interval:21600,https://example.com/sub.',
+      zh: '界面可选择天 / 时 / 分 / 秒，生成链接时会自动换算成 interval=<秒数>。注意 Clash/Mihomo 的 proxy-provider 节点刷新间隔通常写在订阅源前缀里，例如 interval:21600,https://example.com/sub。',
     },
     group: 'advanced',
     defaultValue: '',
     placeholder: {
-      en: 'Days, for example: 1',
-      zh: '单位天，例如：1',
+      en: 'For example: 1',
+      zh: '例如：1',
     },
     min: 0,
     step: 1,
+  },
+  {
+    key: 'clash.dns',
+    type: 'boolean',
+    label: { en: 'DNS config', zh: 'DNS 配置' },
+    description: {
+      en: 'Adds clash.dns=1 and emits the built-in template DNS block for Clash/Mihomo output. It does not read or inherit DNS settings from the airport subscription.',
+      zh: '追加 clash.dns=1，并在 Clash/Mihomo 输出里写入项目内置模板的 DNS 段。它不会读取机场订阅里的 DNS，也不会继承机场原始配置的私有 DNS。',
+    },
+    group: 'advanced',
+    defaultValue: false,
   },
   {
     key: 'append_type',

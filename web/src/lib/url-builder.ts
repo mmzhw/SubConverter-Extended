@@ -14,6 +14,7 @@ export interface FormState {
 const explicitFalseKeys = new Set(
   OPTION_DEFS.filter((def) => def.type === 'boolean' && def.defaultValue === true).map((def) => def.key),
 );
+const trueAsOneKeys = new Set(['clash.dns']);
 
 export function defaultBackendBase(): string {
   const configured = import.meta.env.VITE_DEFAULT_BACKEND_BASE?.trim();
@@ -49,7 +50,7 @@ export function buildSubUrl(state: FormState): string {
       params.set(key, applyGitHubProxy(value, githubProxyPrefix));
       continue;
     }
-    params.set(key, value === true ? 'true' : String(value));
+    params.set(key, value === true ? (trueAsOneKeys.has(key) ? '1' : 'true') : String(value));
   }
   const base = backendBaseForState(state);
   return `${base}/sub?${params.toString()}`;

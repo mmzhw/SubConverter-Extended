@@ -17,10 +17,11 @@ const { t, locale } = useI18n();
 const form = useFormState();
 const openGroups = ref(['node', 'rule', 'advanced']);
 const tagDelimiter = /[|,，\s]+/;
-const secondsPerDay = 86400;
 const latencyTimeoutMs = 6000;
+const intervalUnit = ref<IntervalUnit>('day');
 
 type ProxyLatency = { status: 'idle' | 'testing' | 'ok' | 'timeout' | 'error'; ms?: number };
+type IntervalUnit = 'day' | 'hour' | 'minute' | 'second';
 
 const groups = [
   { key: 'node', labelKey: 'form.groups.node', icon: Connection },
@@ -48,6 +49,18 @@ const customGithubProxyPlaceholder = computed(() => (isZh()
   ? '例如 https://example.com/，也支持 https://example.com/{url}'
   : 'For example https://example.com/, or https://example.com/{url}'));
 const testProxyText = computed(() => (isZh() ? '测速' : 'Test'));
+const intervalDef = computed(() => OPTION_DEFS.find((def) => def.key === 'interval'));
+const intervalUnitOptions = computed(() => [
+  { value: 'day', label: isZh() ? '天' : 'day' },
+  { value: 'hour', label: isZh() ? '时' : 'hour' },
+  { value: 'minute', label: isZh() ? '分' : 'minute' },
+  { value: 'second', label: isZh() ? '秒' : 'second' },
+]);
+const intervalValue = computed(() => {
+  const value = optionValue('interval');
+  if (typeof value !== 'number') return undefined;
+  return value / intervalMultiplier(intervalUnit.value);
+});
 
 function isZh() { return locale.value.startsWith('zh'); }
 function labelOf(def: OptionDef) { return isZh() ? def.label.zh : def.label.en; }
@@ -119,9 +132,14 @@ async function testGithubProxyLatency() {
   ElMessage.success(isZh() ? 'GitHub 加速测速完成' : 'GitHub proxy test complete');
 }
 function isOptionVisible(def: OptionDef) {
-  return def.key !== 'provider' || form.state.target === 'clash' || form.state.target === 'clashr';
+  if (def.key === 'provider' || def.key === 'clash.dns') {
+    return form.state.target === 'clash' || form.state.target === 'clashr';
+  }
+  return true;
 }
-function defsOf(group: string) { return OPTION_DEFS.filter((d) => d.group === group && isOptionVisible(d)); }
+function defsOf(group: string) {
+  return OPTION_DEFS.filter((d) => d.group === group && d.key !== 'interval' && isOptionVisible(d));
+}
 function isTagInput(def: OptionDef) { return def.key === 'include' || def.key === 'exclude'; }
 function regexTags(key: string): string[] {
   const value = optionValue(key);
@@ -135,18 +153,32 @@ function setRegexTags(key: string, values?: string[]) {
 function numberValue(def: OptionDef): number | undefined {
   const value = optionValue(def.key);
   if (typeof value !== 'number') return undefined;
-  return def.key === 'interval' ? value / secondsPerDay : value;
+  return value;
 }
 function setNumberOption(def: OptionDef, value?: number) {
   if (value === undefined) {
     setOption(def.key, undefined);
     return;
   }
-  setOption(def.key, def.key === 'interval' ? Math.round(value * secondsPerDay) : value);
+  setOption(def.key, value);
 }
-function numberUnit(def: OptionDef) {
-  if (def.key !== 'interval') return '';
-  return isZh() ? '天' : 'days';
+function intervalMultiplier(unit: IntervalUnit) {
+  if (unit === 'day') return 86400;
+  if (unit === 'hour') return 3600;
+  if (unit === 'minute') return 60;
+  return 1;
+}
+function setIntervalValue(value?: number) {
+  if (value === undefined || value === null) {
+    setOption('interval', undefined);
+    return;
+  }
+  setOption('interval', Math.round(value * intervalMultiplier(intervalUnit.value)));
+}
+function setIntervalUnit(value: string | number | boolean) {
+  if (value === 'day' || value === 'hour' || value === 'minute' || value === 'second') {
+    intervalUnit.value = value;
+  }
 }
 function updateSourceUrl(value: string) {
   form.state.sourceUrl = value;
@@ -213,6 +245,42 @@ function updateSourceUrl(value: string) {
           clearable
           @update:model-value="(v: string) => (form.state.subscriptionName = v)"
         />
+      </el-form-item>
+
+      <el-form-item v-if="intervalDef" class="subscription-interval-field">
+        <template #label>
+          <span class="field-label">
+            <span>{{ labelOf(intervalDef) }}</span>
+            <el-tooltip :content="descriptionOf(intervalDef)" placement="top-start" popper-class="option-tooltip">
+              <el-icon class="help-icon"><QuestionFilled /></el-icon>
+            </el-tooltip>
+          </span>
+        </template>
+        <div class="interval-control">
+          <el-input-number
+            :model-value="intervalValue"
+            :placeholder="placeholderOf(intervalDef)"
+            :min="intervalDef.min"
+            :step="intervalDef.step || 1"
+            :precision="3"
+            controls-position="right"
+            size="large"
+            @update:model-value="setIntervalValue"
+          />
+          <el-select
+            class="interval-unit-select"
+            :model-value="intervalUnit"
+            size="large"
+            @update:model-value="setIntervalUnit"
+          >
+            <el-option
+              v-for="unit in intervalUnitOptions"
+              :key="unit.value"
+              :value="unit.value"
+              :label="unit.label"
+            />
+          </el-select>
+        </div>
       </el-form-item>
     </section>
 
@@ -352,7 +420,6 @@ function updateSourceUrl(value: string) {
                 controls-position="right"
                 @update:model-value="(v: number | undefined) => setNumberOption(def, v)"
               />
-              <span v-if="numberUnit(def)" class="number-unit">{{ numberUnit(def) }}</span>
             </div>
           </div>
         </div>
@@ -407,12 +474,24 @@ h2 {
 }
 
 .source-field,
-.subscription-name-field {
+.subscription-name-field,
+.subscription-interval-field {
   margin-bottom: 0;
 }
 
-.source-field {
+.source-field,
+.subscription-name-field {
   margin-bottom: 14px;
+}
+
+.interval-control {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 96px;
+  gap: 10px;
+}
+
+.interval-control :deep(.el-input-number) {
+  width: 100%;
 }
 
 .option-groups {
@@ -585,13 +664,6 @@ h2 {
   gap: 8px;
 }
 
-.number-unit {
-  color: var(--text-secondary);
-  font-size: 0.88rem;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
 @media (max-width: 767px) {
   .config-section {
     padding: 18px;
@@ -616,6 +688,10 @@ h2 {
 
   .option-row :deep(.el-switch) {
     justify-self: end;
+  }
+
+  .interval-control {
+    grid-template-columns: minmax(0, 1fr) 82px;
   }
 
   .github-proxy-row {

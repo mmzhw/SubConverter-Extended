@@ -13,10 +13,17 @@ if [ -z "${SUBCONVERTER_SHORT_LINK_PASSWORD:-}" ]; then
     umask 077
     od -An -N24 -tx1 /dev/urandom | tr -d ' \n' > "$password_file"
     printf '\n' >> "$password_file"
+    password_source="generated at $password_file"
+  else
+    password_source="loaded from $password_file"
   fi
   export SUBCONVERTER_SHORT_LINK_PASSWORD="$(head -n 1 "$password_file")"
-  echo "Short-link management password loaded from $password_file"
 else
-  echo "Short-link management password loaded from SUBCONVERTER_SHORT_LINK_PASSWORD"
+  password_source="loaded from SUBCONVERTER_SHORT_LINK_PASSWORD"
 fi
+(
+  sleep "${SUBCONVERTER_SHORT_LINK_PASSWORD_LOG_DELAY:-3}"
+  echo "Short-link management password source: $password_source"
+  echo "Short-link management password: $SUBCONVERTER_SHORT_LINK_PASSWORD"
+) &
 exec /usr/local/bin/start-subconverter
