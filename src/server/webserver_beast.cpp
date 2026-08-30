@@ -98,6 +98,18 @@ bool isHealthTarget(beast::string_view target) {
          (target.size() == path.size() || target[path.size()] == '?');
 }
 
+bool quietSuccessfulCompletionPath(const std::string &path) {
+  return path == "/healthz" || path == "/version";
+}
+
+LogLevel responsePreparedLogLevel(int status, const std::string &path) {
+  if (status >= 500)
+    return LOG_LEVEL_ERROR;
+  if (status < 400 && quietSuccessfulCompletionPath(path))
+    return LOG_LEVEL_DEBUG;
+  return LOG_LEVEL_INFO;
+}
+
 template <class Body>
 void appendExposeHeader(http::response<Body> &response,
                         const std::string &name) {
@@ -473,7 +485,7 @@ void BeastSession::writeHealthResponse() {
   } else {
     response.body() = "ok";
   }
-  writeLog(response.result_int() >= 500 ? LOG_LEVEL_ERROR : LOG_LEVEL_INFO,
+  writeLog(responsePreparedLogLevel(response.result_int(), "/healthz"),
            "HTTP_RESPONSE_PREPARED method=" +
                std::string(incoming.method_string()) +
                " path=/healthz status=" +
@@ -753,11 +765,13 @@ void BeastSession::process() {
       parser_->get().method() == http::verb::head
           ? 0
           : static_cast<uint64_t>(outgoing.body().size());
-  writeLog(outgoing.result_int() >= 500 ? LOG_LEVEL_ERROR : LOG_LEVEL_INFO,
+  const std::string log_path =
+      std::string(parser_->get().target()).substr(
+          0, parser_->get().target().find('?'));
+  writeLog(responsePreparedLogLevel(outgoing.result_int(), log_path),
            "HTTP_RESPONSE_PREPARED method=" +
                std::string(parser_->get().method_string()) + " path=" +
-               requestPathForLog(std::string(parser_->get().target()).substr(
-                   0, parser_->get().target().find('?'))) +
+               requestPathForLog(log_path) +
                " status=" + std::to_string(outgoing.result_int()) +
                " duration_ms=" +
                std::to_string(std::max<int64_t>(0, elapsed.count())) +
@@ -857,11 +871,12 @@ void BeastSession::completeAsyncResponse(Response response,
       incoming.method() == http::verb::head
           ? 0
           : static_cast<uint64_t>(body_size);
-  writeLog(response.status_code >= 500 ? LOG_LEVEL_ERROR : LOG_LEVEL_INFO,
+  const std::string log_path =
+      std::string(incoming.target()).substr(0, incoming.target().find('?'));
+  writeLog(responsePreparedLogLevel(response.status_code, log_path),
            "HTTP_RESPONSE_PREPARED method=" +
                std::string(incoming.method_string()) + " path=" +
-               requestPathForLog(std::string(incoming.target()).substr(
-                   0, incoming.target().find('?'))) +
+               requestPathForLog(log_path) +
                " status=" + std::to_string(response.status_code) +
                " duration_ms=" +
                std::to_string(std::max<int64_t>(0, elapsed.count())) +

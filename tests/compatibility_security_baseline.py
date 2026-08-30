@@ -2634,6 +2634,9 @@ def log_redirection_baseline(binary: Path) -> None:
             if status != 200 or body.strip() != b"ok":
                 raise AssertionError("service failed after log redirection")
             assert_request_id(headers, "redirected log health response")
+            status, body, _ = request(base_url, "/robots.txt")
+            if status != 200 or b"User-agent: *" not in body:
+                raise AssertionError("service failed to emit a stable diagnostics route")
         redirected = redirected_log.read_text(encoding="utf-8", errors="replace")
         if not redirected.startswith("preexisting-log-line\n"):
             raise AssertionError("-l did not preserve existing log content")

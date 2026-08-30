@@ -43,6 +43,18 @@ namespace {
 constexpr const char *kRequestTelemetryKey = "subconverter.request.telemetry";
 std::atomic<uint32_t> request_deadline_ms{15000};
 
+bool quietSuccessfulCompletionPath(const std::string &path) {
+  return path == "/healthz" || path == "/version";
+}
+
+LogLevel responsePreparedLogLevel(int status, const std::string &path) {
+  if (status >= 500)
+    return LOG_LEVEL_ERROR;
+  if (status < 400 && quietSuccessfulCompletionPath(path))
+    return LOG_LEVEL_DEBUG;
+  return LOG_LEVEL_INFO;
+}
+
 class RequestCancellationMonitor {
 public:
   RequestCancellationMonitor() : thread_([this] { run(); }) {}
@@ -875,9 +887,7 @@ int WebServer::start_web_server_multi(listener_args *args) {
       else if (response_bytes == 0 && res.status != 204 && res.status != 304)
         response_bytes_known = false;
     }
-    const LogLevel completion_level =
-        res.status >= 500 ? LOG_LEVEL_ERROR : LOG_LEVEL_INFO;
-    writeLog(completion_level,
+    writeLog(responsePreparedLogLevel(res.status, req.path),
              "HTTP_RESPONSE_PREPARED method=" + req.method +
                  " path=" + requestPathForLog(req.path) +
                  " status=" + std::to_string(res.status) +
