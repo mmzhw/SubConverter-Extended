@@ -12,6 +12,8 @@ import {
   githubProxyPrefixFor,
   isGitHubConfigUrl,
 } from '../lib/github-proxy';
+import { backendBaseForState } from '../lib/url-builder';
+import { measurePreferredProxyLatency, ProxyLatency, ProxyLatencySource } from '../lib/github-proxy-latency';
 
 const { t, locale } = useI18n();
 const form = useFormState();
@@ -20,7 +22,6 @@ const tagDelimiter = /[|,，\s]+/;
 const latencyTimeoutMs = 6000;
 const intervalUnit = ref<IntervalUnit>('day');
 
-type ProxyLatency = { status: 'idle' | 'testing' | 'ok' | 'timeout' | 'error'; ms?: number };
 type IntervalUnit = 'day' | 'hour' | 'minute' | 'second';
 
 const groups = [
@@ -88,10 +89,16 @@ function proxyLatencyKey(value: string) {
 function latencyText(value: string) {
   const latency = proxyLatencies.value[proxyLatencyKey(value)];
   if (!latency || latency.status === 'idle') return '';
+  const source = latency.source || 'server';
+  const sourceLabel = latencySourceLabel(source);
   if (latency.status === 'testing') return isZh() ? ' · 测速中' : ' · testing';
-  if (latency.status === 'ok') return ` · ${latency.ms}ms`;
-  if (latency.status === 'timeout') return isZh() ? ' · 超时' : ' · timeout';
-  return isZh() ? ' · 失败' : ' · failed';
+  if (latency.status === 'ok') return ` · ${sourceLabel} ${latency.ms}ms`;
+  if (latency.status === 'timeout') return isZh() ? ` · ${sourceLabel} 超时` : ` · ${sourceLabel} timeout`;
+  return isZh() ? ` · ${sourceLabel} 失败` : ` · ${sourceLabel} failed`;
+}
+function latencySourceLabel(source: ProxyLatencySource) {
+  if (source === 'server') return isZh() ? '服务端' : 'server';
+  return isZh() ? '浏览器' : 'browser';
 }
 function proxyOptionClass(value: string) {
   return proxyLatencies.value[proxyLatencyKey(value)]?.status || 'idle';
@@ -99,19 +106,6 @@ function proxyOptionClass(value: string) {
 function proxiedConfigUrl(value: string) {
   const prefix = githubProxyPrefixFor(value, form.state.customGithubProxy);
   return applyGitHubProxy(selectedConfigUrl.value, prefix);
-}
-async function measureLatency(url: string): Promise<ProxyLatency> {
-  const start = performance.now();
-  const controller = new AbortController();
-  const timer = window.setTimeout(() => controller.abort(), latencyTimeoutMs);
-  try {
-    await fetch(url, { method: 'GET', mode: 'no-cors', cache: 'no-store', signal: controller.signal });
-    return { status: 'ok', ms: Math.round(performance.now() - start) };
-  } catch (error) {
-    return { status: error instanceof DOMException && error.name === 'AbortError' ? 'timeout' : 'error' };
-  } finally {
-    window.clearTimeout(timer);
-  }
 }
 async function testGithubProxyLatency() {
   if (!configUsesGitHub.value || isTestingProxyLatency.value) return;
@@ -125,7 +119,11 @@ async function testGithubProxyLatency() {
   };
   await Promise.all(candidates.map(async (proxy) => {
     const key = proxyLatencyKey(proxy.value);
-    const result = await measureLatency(proxiedConfigUrl(proxy.value));
+    const result = await measurePreferredProxyLatency({
+      backendBase: backendBaseForState(form.state),
+      url: proxiedConfigUrl(proxy.value),
+      timeoutMs: latencyTimeoutMs,
+    });
     proxyLatencies.value = { ...proxyLatencies.value, [key]: result };
   }));
   isTestingProxyLatency.value = false;

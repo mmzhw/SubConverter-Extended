@@ -22,6 +22,7 @@
 #include <unordered_set>
 #include <vector>
 
+#include <curl/curl.h>
 #include <inja.hpp>
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
@@ -1641,6 +1642,82 @@ struct AgeResponseContext {
 static void applyExplainPrivacyHeaders(Response &response) {
   response.headers["Cache-Control"] = "private, no-store, max-age=0";
   response.headers["Pragma"] = "no-cache";
+}
+
+static std::string githubProxyLatencyJson(Response &response,
+                                          const std::string &status,
+                                          int elapsed_ms,
+                                          int upstream_status,
+                                          int transport_code,
+                                          const std::string &error = "") {
+  response.status_code = 200;
+  response.content_type = "application/json; charset=utf-8";
+  response.headers["Cache-Control"] = "private, no-store";
+  rapidjson::StringBuffer buffer;
+  rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+  writer.StartObject();
+  writeJsonString(writer, "source", "server");
+  writeJsonString(writer, "status", status);
+  if (elapsed_ms >= 0) {
+    writer.Key("ms");
+    writer.Int(elapsed_ms);
+  }
+  writer.Key("http_status");
+  writer.Int(upstream_status);
+  writer.Key("transport_code");
+  writer.Int(transport_code);
+  if (!error.empty())
+    writeJsonString(writer, "error", error);
+  writer.EndObject();
+  return buffer.GetString();
+}
+
+std::string githubProxyLatency(RESPONSE_CALLBACK_ARGS) {
+  const std::string url = trimWhitespace(getUrlArg(request.argument, "url"),
+                                         true, true);
+  if (url.empty()) {
+    response.status_code = 400;
+    response.content_type = "application/json; charset=utf-8";
+    response.headers["Cache-Control"] = "private, no-store";
+    return "{\"error\":\"missing-url\"}";
+  }
+
+  if (!isFetchUrlAllowed(url, FetchContext::PublicRequest)) {
+    response.status_code = 400;
+    response.content_type = "application/json; charset=utf-8";
+    response.headers["Cache-Control"] = "private, no-store";
+    return "{\"error\":\"blocked-url\"}";
+  }
+
+  const int timeout_ms = std::clamp(
+      to_int(getUrlArg(request.argument, "timeout_ms"), 6000), 1000, 10000);
+  const auto started = std::chrono::steady_clock::now();
+  const Settings &settings = effectiveSettings();
+  ProxyPolicy proxy = parseProxy(settings.proxyConfig, settings.proxyBypass);
+  int upstream_status = 0;
+  FetchResult result {&upstream_status, nullptr, nullptr, nullptr};
+  FetchArgument argument {
+      HTTP_GET, url, proxy, nullptr, nullptr, nullptr, 0, true,
+      FetchContext::PublicRequest,
+      started + std::chrono::milliseconds(timeout_ms),
+      request.context ? request.context->cancellationToken()
+                      : RequestCancellationToken {}};
+
+  const int transport_code = webGet(argument, result);
+  const int elapsed_ms = static_cast<int>(
+      std::chrono::duration_cast<std::chrono::milliseconds>(
+          std::chrono::steady_clock::now() - started)
+          .count());
+  if (transport_code == CURLE_OK && upstream_status >= 200 &&
+      upstream_status < 400)
+    return githubProxyLatencyJson(response, "ok", elapsed_ms, upstream_status,
+                                  transport_code);
+  if (transport_code == CURLE_OPERATION_TIMEDOUT)
+    return githubProxyLatencyJson(response, "timeout", elapsed_ms,
+                                  upstream_status, transport_code);
+  return githubProxyLatencyJson(response, "error", elapsed_ms,
+                                upstream_status, transport_code,
+                                "fetch-failed");
 }
 
 static AgeResponseContext consumeAgeResponseContext(Request &request) {

@@ -62,4 +62,13 @@ describe('responsive layout structure', () => {
     expect(source).toContain('intervalUnitOptions');
     expect(source).toContain('setIntervalUnit');
   });
+
+  it('measures GitHub proxy latency from the backend service first', () => {
+    const source = componentSource('ConfigForm.vue');
+
+    expect(source).toContain('measurePreferredProxyLatency');
+    expect(source).toContain('backendBaseForState(form.state)');
+    expect(source).toContain("'server'");
+    expect(source).toContain("'browser'");
+  });
 });

@@ -426,6 +426,9 @@ int main(int argc, char *argv[]) {
 
   webServer.append_response("GET", "/getruleset", "text/plain;charset=utf-8",
                             getRuleset);
+  webServer.append_response("GET", "/api/github-proxy-latency",
+                            "application/json; charset=utf-8",
+                            githubProxyLatency);
 
   std::string env_port = getEnv("PORT");
   if (getEnv("SUBCONVERTER_LISTEN_PORT").empty() && !env_port.empty())
