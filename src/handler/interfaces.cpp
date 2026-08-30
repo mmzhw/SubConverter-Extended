@@ -1649,7 +1649,7 @@ static std::string githubProxyLatencyJson(Response &response,
                                           const std::string &status,
                                           int elapsed_ms,
                                           int upstream_status,
-                                          int transport_code,
+                                          int fetch_status,
                                           const std::string &error = "") {
   response.status_code = 200;
   response.content_type = "application/json; charset=utf-8";
@@ -1665,8 +1665,8 @@ static std::string githubProxyLatencyJson(Response &response,
   }
   writer.Key("http_status");
   writer.Int(upstream_status);
-  writer.Key("transport_code");
-  writer.Int(transport_code);
+  writer.Key("fetch_status");
+  writer.Int(fetch_status);
   if (!error.empty())
     writeJsonString(writer, "error", error);
   writer.EndObject();
@@ -1704,20 +1704,19 @@ std::string githubProxyLatencyImpl(RESPONSE_CALLBACK_ARGS) {
       request.context ? request.context->cancellationToken()
                       : RequestCancellationToken {}};
 
-  const int transport_code = webGet(argument, result);
+  const int fetch_status = webGet(argument, result);
   const int elapsed_ms = static_cast<int>(
       std::chrono::duration_cast<std::chrono::milliseconds>(
           std::chrono::steady_clock::now() - started)
           .count());
-  if (transport_code == CURLE_OK && upstream_status >= 200 &&
-      upstream_status < 400)
+  if (fetch_status >= 200 && fetch_status < 400)
     return githubProxyLatencyJson(response, "ok", elapsed_ms, upstream_status,
-                                  transport_code);
-  if (transport_code == CURLE_OPERATION_TIMEDOUT)
+                                  fetch_status);
+  if (fetch_status == 0 && elapsed_ms >= timeout_ms)
     return githubProxyLatencyJson(response, "timeout", elapsed_ms,
-                                  upstream_status, transport_code);
+                                  upstream_status, fetch_status);
   return githubProxyLatencyJson(response, "error", elapsed_ms,
-                                upstream_status, transport_code,
+                                upstream_status, fetch_status,
                                 "fetch-failed");
 }
 
