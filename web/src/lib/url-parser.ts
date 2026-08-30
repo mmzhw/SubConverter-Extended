@@ -16,12 +16,13 @@ export function parseSubUrl(input: string): ParsedSubLink {
   const target = url.searchParams.get('target');
   const sourceUrl = url.searchParams.get('url');
   const subscriptionName = url.searchParams.get('filename') || '';
+  const dnsTemplateId = url.searchParams.get('dns_template') || '';
   if (!target || !sourceUrl) throw new Error('invalid-link');
 
   const options: FormState['options'] = {};
   const unknown: Record<string, string> = {};
   for (const [key, value] of url.searchParams.entries()) {
-    if (key === 'target' || key === 'url' || key === 'filename') continue;
+    if (key === 'target' || key === 'url' || key === 'filename' || key === 'dns_template') continue;
     const def = OPTION_DEFS.find((d) => d.key === key);
     if (def) {
       if (def.type === 'boolean') {
@@ -36,5 +37,5 @@ export function parseSubUrl(input: string): ParsedSubLink {
       unknown[key] = value;
     }
   }
-  return { state: { target, sourceUrl, subscriptionName, backendBase: '', options }, unknown };
+  return { state: { target, sourceUrl, subscriptionName, dnsTemplateId, backendBase: '', options }, unknown };
 }

@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { ElMessage } from 'element-plus';
-import { Connection, Finished, MagicStick, QuestionFilled, RefreshRight } from '@element-plus/icons-vue';
+import { Connection, EditPen, Finished, MagicStick, QuestionFilled, RefreshRight } from '@element-plus/icons-vue';
 import { TARGET_FORMATS, OPTION_DEFS, OptionDef } from '../config/options';
 import { useFormState } from '../composables/useFormState';
 import {
@@ -14,6 +14,7 @@ import {
 } from '../lib/github-proxy';
 import { backendBaseForState } from '../lib/url-builder';
 import { measurePreferredProxyLatency, ProxyLatency, ProxyLatencySource } from '../lib/github-proxy-latency';
+import { loadDnsTemplate, saveDnsTemplate } from '../lib/dns-template';
 
 const { t, locale } = useI18n();
 const form = useFormState();
@@ -21,6 +22,10 @@ const openGroups = ref(['node', 'rule', 'advanced']);
 const tagDelimiter = /[|,，\s]+/;
 const latencyTimeoutMs = 6000;
 const intervalUnit = ref<IntervalUnit>('day');
+const dnsTemplateDialogVisible = ref(false);
+const dnsTemplateContent = ref('');
+const dnsTemplateLoading = ref(false);
+const dnsTemplateSaving = ref(false);
 
 type IntervalUnit = 'day' | 'hour' | 'minute' | 'second';
 
@@ -62,6 +67,9 @@ const intervalValue = computed(() => {
   if (typeof value !== 'number') return undefined;
   return value / intervalMultiplier(intervalUnit.value);
 });
+const dnsTemplateButtonText = computed(() => (
+  form.state.dnsTemplateId ? t('dnsTemplate.edit') : t('dnsTemplate.configure')
+));
 
 function isZh() { return locale.value.startsWith('zh'); }
 function labelOf(def: OptionDef) { return isZh() ? def.label.zh : def.label.en; }
@@ -128,6 +136,45 @@ async function testGithubProxyLatency() {
   }));
   isTestingProxyLatency.value = false;
   ElMessage.success(isZh() ? 'GitHub 加速测速完成' : 'GitHub proxy test complete');
+}
+async function openDnsTemplateDialog() {
+  setOption('clash.dns', true);
+  dnsTemplateDialogVisible.value = true;
+  dnsTemplateLoading.value = true;
+  try {
+    const loaded = await loadDnsTemplate(backendBaseForState(form.state), form.state.dnsTemplateId || '');
+    dnsTemplateContent.value = loaded.content;
+  } catch {
+    dnsTemplateContent.value = '';
+    ElMessage.error(t('dnsTemplate.loadFailed'));
+  } finally {
+    dnsTemplateLoading.value = false;
+  }
+}
+async function resetDnsTemplateDialog() {
+  dnsTemplateLoading.value = true;
+  try {
+    const loaded = await loadDnsTemplate(backendBaseForState(form.state));
+    dnsTemplateContent.value = loaded.content;
+  } catch {
+    ElMessage.error(t('dnsTemplate.loadFailed'));
+  } finally {
+    dnsTemplateLoading.value = false;
+  }
+}
+async function saveDnsTemplateDialog() {
+  dnsTemplateSaving.value = true;
+  try {
+    const saved = await saveDnsTemplate(backendBaseForState(form.state), dnsTemplateContent.value);
+    form.state.dnsTemplateId = saved.id || '';
+    dnsTemplateContent.value = saved.content;
+    dnsTemplateDialogVisible.value = false;
+    ElMessage.success(t('dnsTemplate.saved'));
+  } catch {
+    ElMessage.error(t('dnsTemplate.saveFailed'));
+  } finally {
+    dnsTemplateSaving.value = false;
+  }
 }
 function isOptionVisible(def: OptionDef) {
   if (def.key === 'provider' || def.key === 'clash.dns') {
@@ -318,11 +365,27 @@ function updateSourceUrl(value: string) {
                 <el-icon class="help-icon"><QuestionFilled /></el-icon>
               </el-tooltip>
             </span>
-            <el-switch
+            <div
               v-if="def.type === 'boolean'"
-              :model-value="optionValue(def.key) === true"
-              @update:model-value="(v: boolean | string | number) => setOption(def.key, !!v)"
-            />
+              class="switch-control"
+              :class="{ 'dns-template-actions': def.key === 'clash.dns' }"
+            >
+              <el-switch
+                :model-value="optionValue(def.key) === true"
+                @update:model-value="(v: boolean | string | number) => setOption(def.key, !!v)"
+              />
+              <template v-if="def.key === 'clash.dns'">
+                <el-button
+                  size="small"
+                  :icon="EditPen"
+                  :disabled="optionValue(def.key) !== true"
+                  @click="openDnsTemplateDialog"
+                >
+                  {{ dnsTemplateButtonText }}
+                </el-button>
+                <el-tag v-if="form.state.dnsTemplateId" size="small" effect="plain">ID {{ form.state.dnsTemplateId }}</el-tag>
+              </template>
+            </div>
             <el-select
               v-else-if="def.type === 'enum' && def.key !== 'config'"
               :model-value="String(optionValue(def.key))"
@@ -423,6 +486,35 @@ function updateSourceUrl(value: string) {
         </div>
       </el-collapse-item>
     </el-collapse>
+
+    <el-dialog
+      v-model="dnsTemplateDialogVisible"
+      class="dns-template-dialog"
+      :title="t('dnsTemplate.title')"
+      width="min(720px, calc(100vw - 32px))"
+      append-to-body
+    >
+      <el-input
+        v-model="dnsTemplateContent"
+        class="dns-template-editor"
+        type="textarea"
+        :rows="16"
+        :disabled="dnsTemplateLoading"
+        resize="vertical"
+        spellcheck="false"
+      />
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button :loading="dnsTemplateLoading" @click="resetDnsTemplateDialog">
+            {{ t('dnsTemplate.reset') }}
+          </el-button>
+          <el-button @click="dnsTemplateDialogVisible = false">{{ t('common.cancel') }}</el-button>
+          <el-button type="primary" :loading="dnsTemplateSaving" @click="saveDnsTemplateDialog">
+            {{ t('dnsTemplate.save') }}
+          </el-button>
+        </div>
+      </template>
+    </el-dialog>
   </el-form>
 </template>
 
@@ -590,8 +682,22 @@ h2 {
   max-width: 100%;
 }
 
+.switch-control {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-self: end;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: 0;
+}
+
 .option-row :deep(.el-switch) {
   justify-self: end;
+}
+
+.dns-template-actions {
+  width: 100%;
 }
 
 .remote-config-control {
@@ -662,6 +768,23 @@ h2 {
   gap: 8px;
 }
 
+.dns-template-editor :deep(textarea) {
+  font-family: 'JetBrains Mono', 'Consolas', monospace;
+  font-size: 0.84rem;
+  line-height: 1.55;
+}
+
+.dialog-footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.dialog-footer :deep(.el-button) {
+  margin-left: 0;
+}
+
 @media (max-width: 767px) {
   .config-section {
     padding: 18px;
@@ -684,6 +807,7 @@ h2 {
     padding-top: 0;
   }
 
+  .switch-control,
   .option-row :deep(.el-switch) {
     justify-self: end;
   }

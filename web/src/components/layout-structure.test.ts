@@ -71,4 +71,13 @@ describe('responsive layout structure', () => {
     expect(source).toContain("'server'");
     expect(source).toContain("'browser'");
   });
+
+  it('offers a per-link DNS template editor beside the DNS switch', () => {
+    const source = componentSource('ConfigForm.vue');
+
+    expect(source).toContain('dns-template-dialog');
+    expect(source).toContain('openDnsTemplateDialog');
+    expect(source).toContain('saveDnsTemplateDialog');
+    expect(source).toContain("def.key === 'clash.dns'");
+  });
 });

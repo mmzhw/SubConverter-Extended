@@ -78,6 +78,24 @@ describe('buildSubUrl', () => {
     expect(url).toContain('clash.dns=1');
   });
 
+  it('serializes a per-link DNS template id only when Clash DNS is enabled', () => {
+    const enabled = buildSubUrl(base({
+      target: 'clash',
+      sourceUrl: 'https://s',
+      dnsTemplateId: 'abc123',
+      options: { 'clash.dns': true },
+    }));
+    const disabled = buildSubUrl(base({
+      target: 'clash',
+      sourceUrl: 'https://s',
+      dnsTemplateId: 'abc123',
+      options: { 'clash.dns': false },
+    }));
+
+    expect(enabled).toContain('dns_template=abc123');
+    expect(disabled).not.toContain('dns_template=');
+  });
+
   it('omits provider mode for non-Clash targets', () => {
     const url = buildSubUrl(base({
       target: 'stash',

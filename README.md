@@ -160,6 +160,7 @@ subconverter 的节点解析器需要人工跟进协议、传输方式和参数�
 | 运行统计 | 可选 `/dashboard` 与 `/dashboard/data`，支持持久化、时间窗口统计、地区分布和可选 Basic Auth。 |
 | Web 配置界面 | 内置 Vue 3 配置工作台，支持显式生成、导入回显、二维码、生成历史、服务端短链和短链管理。 |
 | 远程配置预设 | Web UI 内置 Aethersailor Custom_OpenClash_Rules 与 ACL4SSR 常用模板，也支持粘贴公开 `.ini` 地址。 |
+| 单链接 DNS 模板 | Web UI 可读取默认 Clash/Mihomo DNS 模板，编辑后保存为服务端本地模板，并通过 `dns_template` 只作用于当前订阅链接。 |
 | 短链服务 | 支持把很长的 `/sub?...` 链接保存为 `/s?id=...`，并提供列表、复制、载入和删除管理接口。 |
 | 部署安全 | 提供 `lan`、`public`、`strict` 安全档位，并区分请求方可控抓取、可信本地配置和上传权限。 |
 | 出站访问 | `proxy_config`、`proxy_ruleset`、`proxy_subscription` 使用明确的 Direct、System、Explicit、Cors 策略，并支持 `proxy_bypass`。 |
@@ -201,6 +202,9 @@ proxy_direct:false,https://example.com/sub
 
 # 在节点名称中追加协议类型标记
 &append_type=true
+
+# 启用 Clash/Mihomo DNS，并引用当前链接专用的服务端 DNS 模板
+&clash.dns=1&dns_template=0123456789abcdef
 
 # 返回脱敏诊断报告，不返回配置文件
 &explain=true
@@ -261,7 +265,7 @@ http://localhost:25500/healthz
 > [!NOTE]
 > 上述命令是最小启动示例，不会持久化自定义配置、统计数据和短链映射。`-p 25500:25500` 会把端口发布到宿主机全部接口。需要保留配置、统计或短链时，请按照 Wiki 的 [Docker 部署](https://github.com/Aethersailor/SubConverter-Extended/wiki/Docker-Deployment)配置持久化目录，并根据实际网络范围选择安全档位。
 
-`docker-compose.yml` 示例已包含推荐默认值：`WEB_PORT=25500`、`SUBCONVERTER_LISTEN_PORT=25501`、`TZ=Asia/Shanghai`，并将短链映射持久化到 `./short-links:/base/short-links`。短链数量可通过 `SUBCONVERTER_SHORT_LINK_MAX_ENTRIES` 调整，默认保留 `500` 条。镜像默认声明 `SUBCONVERTER_SHORT_LINK_PASSWORD`，方便 Docker/1Panel 创建容器时直接看到这个环境变量；留空时容器会自动生成随机 token，保存到 `/base/short-links/admin-password`，并在启动日志中明文打印。设置环境变量可覆盖自动生成值。
+`docker-compose.yml` 示例已包含推荐默认值：`WEB_PORT=25500`、`SUBCONVERTER_LISTEN_PORT=25501`、`TZ=Asia/Shanghai`，并将短链映射持久化到 `./short-links:/base/short-links`，将单链接 DNS 模板持久化到 `./dns-templates:/base/dns-templates`。短链数量可通过 `SUBCONVERTER_SHORT_LINK_MAX_ENTRIES` 调整，单链接 DNS 模板数量可通过 `SUBCONVERTER_DNS_TEMPLATE_MAX_ENTRIES` 调整，两者默认都保留 `500` 条。镜像默认声明 `SUBCONVERTER_SHORT_LINK_PASSWORD`，方便 Docker/1Panel 创建容器时直接看到这个环境变量；留空时容器会自动生成随机 token，保存到 `/base/short-links/admin-password`，并在启动日志中明文打印。设置环境变量可覆盖自动生成值。
 
 国内服务器自行构建镜像时，可传入 `--build-arg DEBIAN_MIRROR=http://mirrors.aliyun.com/debian` 与 `--build-arg ALPINE_MIRROR=https://mirrors.aliyun.com/alpine`，降低基础镜像包管理器更新时的网络失败概率。
 
@@ -276,7 +280,7 @@ Web UI 目前覆盖这些高频流程：
 - 节点选项、规则选项和高级选项默认展开，开关项带详细 Tooltip；
 - “包含节点”和“排除节点”使用标签输入，最终以 `|` 拼接为后端正则参数；
 - “更新间隔”位于订阅名称下方，可选择天 / 时 / 分 / 秒，生成 URL 时自动换算为 `interval=<秒数>`；
-- “DNS 配置”会追加 `clash.dns=1`，输出项目内置模板 DNS，不会读取或继承机场订阅里的 DNS；
+- “DNS 配置”会追加 `clash.dns=1`，默认输出项目内置模板 DNS，不会读取或继承机场订阅里的 DNS；开关旁可编辑 DNS 模板，保存后生成 `dns_template=<id>`，只影响当前生成链接；
 - “规则展开”在 Web UI 中默认开启，会把远程规则集获取后写成具体规则行；
 - 远程配置可选择 Aethersailor 或 ACL4SSR 预设，也可粘贴公开 `.ini` URL；
 - GitHub Proxy 选择和延迟测试用于改善远程配置模板访问，并会继承到该配置内的 GitHub 规则集和基础模板地址；不会改写 `url=` 订阅源；
@@ -284,7 +288,7 @@ Web UI 目前覆盖这些高频流程：
 - Web UI 顶部内置项目 Logo，便于从普通表单页中识别当前工具；
 - 服务端短链可在“短链管理”中刷新、复制、载入和删除；列表和删除接口需要短链管理密码。
 
-nginx 同时将 `/sub`、`/getprofile`、`/getruleset`、`/short`、`/short/list`、`/s` 等接口反向代理到容器内 subconverter。容器默认只发布一个端口：`25500`。`WEB_PORT` 控制 nginx 的公开入口，`SUBCONVERTER_LISTEN_PORT` 控制容器内后端回环端口，两者应保持不同。
+nginx 同时将 `/api`、`/sub`、`/getprofile`、`/getruleset`、`/short`、`/short/list`、`/s` 等接口反向代理到容器内 subconverter。容器默认只发布一个端口：`25500`。`WEB_PORT` 控制 nginx 的公开入口，`SUBCONVERTER_LISTEN_PORT` 控制容器内后端回环端口，两者应保持不同。
 
 ### 短链管理密码
 

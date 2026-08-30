@@ -7,6 +7,9 @@ mode: Rule
 log-level: {{ default(global.clash.log_level, "info") }}
 external-controller: {{ default(global.clash.external_controller, "127.0.0.1:9090") }}
 {% if default(request.clash.dns, "") == "1" %}
+{% if default(local.clash.dns_template_content, "") != "" %}
+{{ local.clash.dns_template_content }}
+{% else %}
 dns:
   enable: true
   nameserver:
@@ -22,6 +25,7 @@ dns:
   - tls://119.29.29.29
   - tls://223.5.5.5
 # Fake-IP 模式下，建议不要启用 fallback-server
+{% endif %}
 {% endif %}
 {% if local.clash.new_field_name == "true" %}
 proxy-groups: ~

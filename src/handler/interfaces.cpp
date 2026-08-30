@@ -36,6 +36,7 @@
 #include "generator/config/subexport.h"
 #include "generator/template/templates.h"
 #include "conversion_service.h"
+#include "dns_templates.h"
 #include "github_proxy.h"
 #include "interfaces.h"
 #include "multithread.h"
@@ -3464,6 +3465,7 @@ struct ParsedSubRequest {
   std::string update_strict;
   std::string renames;
   std::string provider_headers;
+  std::string dns_template;
 
   tribool upload;
   tribool emoji;
@@ -3567,6 +3569,7 @@ static std::string parseSubRequestArguments(Request &request,
   parsed.update_strict = getUrlArg(argument, "strict");
   parsed.renames = getUrlArg(argument, "rename");
   parsed.provider_headers = getUrlArg(argument, "provider_headers");
+  parsed.dns_template = getUrlArg(argument, "dns_template");
 
   parsed.upload = getUrlArg(argument, "upload");
   parsed.emoji = getUrlArg(argument, "emoji");
@@ -5771,6 +5774,19 @@ static SubStageResponse dispatchTargetGenerator(
     writeLog(LOG_LEVEL_INFO, target == "clashr" ? "生成目标：ClashR" : "生成目标：Clash");
     template_arguments.local_vars["clash.new_field_name"] =
         ext.clash_new_field_name ? "true" : "false";
+    if (getUrlArg(argument, "clash.dns") == "1" &&
+        !parsed.dns_template.empty()) {
+      const std::string dns_template_content =
+          loadDnsTemplate(parsed.dns_template);
+      if (dns_template_content.empty()) {
+        *status_code = 400;
+        return {true,
+                "Invalid request: DNS template could not be found.\n"
+                "无效请求：找不到指定的 DNS 模板。"};
+      }
+      template_arguments.local_vars["clash.dns_template_content"] =
+          dns_template_content;
+    }
     response.headers["profile-update-interval"] =
         std::to_string(policy.update_interval / 3600);
     if (ext.nodelist) {

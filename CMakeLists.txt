@@ -124,6 +124,7 @@ SET(SUBCONVERTER_RUNTIME_SOURCES
     src/handler/cocr_source_url.cpp
     src/handler/cache_storage.cpp
     src/handler/curl_handle_pool.cpp
+    src/handler/dns_templates.cpp
     src/handler/github_proxy.cpp
     src/handler/inspect_page.cpp
     src/handler/interfaces.cpp

@@ -16,6 +16,7 @@
 #include "handler/dashboard_auth.h"
 #include "handler/conversion_service.h"
 #include "handler/dashboard_page.h"
+#include "handler/dns_templates.h"
 #include "handler/inspect_page.h"
 #include "handler/interfaces.h"
 #include "handler/multithread.h"
@@ -429,6 +430,12 @@ int main(int argc, char *argv[]) {
   webServer.append_response("GET", "/api/github-proxy-latency",
                             "application/json; charset=utf-8",
                             githubProxyLatency);
+  webServer.append_response("GET", "/api/dns-template",
+                            "application/json; charset=utf-8",
+                            dnsTemplateEndpoint);
+  webServer.append_response("POST", "/api/dns-template",
+                            "application/json; charset=utf-8",
+                            dnsTemplateEndpoint);
 
   std::string env_port = getEnv("PORT");
   if (getEnv("SUBCONVERTER_LISTEN_PORT").empty() && !env_port.empty())

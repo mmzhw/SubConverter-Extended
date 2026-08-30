@@ -398,7 +398,8 @@ LABEL \
   maintainer="Aethersailor"
 
 ENV TZ=Asia/Shanghai \
-    SUBCONVERTER_SHORT_LINK_PASSWORD=""
+    SUBCONVERTER_SHORT_LINK_PASSWORD="" \
+    SUBCONVERTER_DNS_TEMPLATES_DIR="/base/dns-templates"
 RUN if [ -n "${ALPINE_MIRROR}" ]; then \
       sed -i "s#https://dl-cdn.alpinelinux.org/alpine#${ALPINE_MIRROR%/}#g" \
         /etc/apk/repositories; \

@@ -5,6 +5,7 @@ export interface FormState {
   target: string;
   sourceUrl: string;
   subscriptionName: string;
+  dnsTemplateId?: string;
   backendBase: string;
   githubProxy?: string;
   customGithubProxy?: string;
@@ -38,6 +39,13 @@ export function buildSubUrl(state: FormState): string {
   params.set('url', state.sourceUrl);
   if (state.subscriptionName.trim()) {
     params.set('filename', state.subscriptionName.trim());
+  }
+  if (
+    (state.target === 'clash' || state.target === 'clashr') &&
+    state.options['clash.dns'] === true &&
+    state.dnsTemplateId?.trim()
+  ) {
+    params.set('dns_template', state.dnsTemplateId.trim());
   }
   for (const [key, value] of Object.entries(state.options)) {
     if (key === 'provider' && state.target !== 'clash' && state.target !== 'clashr') continue;

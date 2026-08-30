@@ -16,6 +16,8 @@ services:
       WEB_PORT: "25500"
       SUBCONVERTER_LISTEN_PORT: "25501"
       SUBCONVERTER_SHORT_LINKS_FILE: "/base/short-links/links.json"
+      SUBCONVERTER_DNS_TEMPLATES_DIR: "/base/dns-templates"
+      SUBCONVERTER_DNS_TEMPLATE_MAX_ENTRIES: "500"
       # 服务器短链管理密码。留空时容器启动脚本会在 /base/short-links/admin-password
       # 自动生成并持久化一个随机 token；也可以显式设置此环境变量覆盖。
       # Server short-link management password. Leave empty to let the container
@@ -59,6 +61,9 @@ services:
       # 持久化短链映射数据，避免重建容器后短链失效。
       # Persist short-link mappings so generated short URLs survive container recreation.
       - "./short-links:/base/short-links"
+      # 持久化 Web UI 保存的单链接 DNS 模板。
+      # Persist per-link DNS templates saved from the Web UI.
+      - "./dns-templates:/base/dns-templates"
     logging:
       driver: "json-file"
       options:

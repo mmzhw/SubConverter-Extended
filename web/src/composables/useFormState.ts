@@ -14,6 +14,7 @@ const state = reactive<FormState>({
   target: 'clash',
   sourceUrl: '',
   subscriptionName: '',
+  dnsTemplateId: '',
   backendBase: '',
   githubProxy: '',
   customGithubProxy: '',
@@ -28,6 +29,7 @@ function currentState(): FormState {
     target: state.target,
     sourceUrl: state.sourceUrl,
     subscriptionName: state.subscriptionName,
+    dnsTemplateId: state.dnsTemplateId,
     backendBase: state.backendBase,
     githubProxy: state.githubProxy,
     customGithubProxy: state.customGithubProxy,
@@ -65,6 +67,7 @@ function applyParsed(next: FormState) {
   state.target = next.target;
   state.sourceUrl = next.sourceUrl;
   state.subscriptionName = next.subscriptionName || '';
+  state.dnsTemplateId = next.dnsTemplateId || '';
   state.backendBase = next.backendBase;
   state.githubProxy = next.githubProxy || '';
   state.customGithubProxy = next.customGithubProxy || '';
@@ -79,6 +82,7 @@ function applyGenerated(next: FormState, url: string) {
   state.target = next.target;
   state.sourceUrl = next.sourceUrl;
   state.subscriptionName = next.subscriptionName || '';
+  state.dnsTemplateId = next.dnsTemplateId || '';
   state.backendBase = next.backendBase;
   state.githubProxy = next.githubProxy || '';
   state.customGithubProxy = next.customGithubProxy || '';
