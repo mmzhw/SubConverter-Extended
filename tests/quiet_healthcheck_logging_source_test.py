@@ -24,6 +24,14 @@ def main() -> None:
             f"{name} server should identify successful probe paths as quiet completions",
         )
         require(
+            "quietShortLinkAdminAuthFailurePath" in source,
+            f"{name} server should keep expected short-link admin auth failures out of info logs",
+        )
+        require(
+            'status == 401 && quietShortLinkAdminAuthFailurePath(path)' in source,
+            f"{name} server should only quiet unauthorized short-link admin failures",
+        )
+        require(
             "responsePreparedLogLevel" in source,
             f"{name} server should route completion logs through a path-aware level helper",
         )

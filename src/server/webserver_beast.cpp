@@ -102,9 +102,15 @@ bool quietSuccessfulCompletionPath(const std::string &path) {
   return path == "/healthz" || path == "/version";
 }
 
+bool quietShortLinkAdminAuthFailurePath(const std::string &path) {
+  return path == "/short/list" || path == "/short";
+}
+
 LogLevel responsePreparedLogLevel(int status, const std::string &path) {
   if (status >= 500)
     return LOG_LEVEL_ERROR;
+  if (status == 401 && quietShortLinkAdminAuthFailurePath(path))
+    return LOG_LEVEL_DEBUG;
   if (status < 400 && quietSuccessfulCompletionPath(path))
     return LOG_LEVEL_DEBUG;
   return LOG_LEVEL_INFO;
