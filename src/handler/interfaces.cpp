@@ -136,6 +136,81 @@ extern WebServer webServer;
 
 string_array gRegexBlacklist = {"(.*)*"};
 
+// Human-readable name for ExternalConfigLoadStatus, shared by
+// buildExternalConfigFetchPlan and getGroupNames so both report the same
+// failure reasons.
+static std::string
+externalConfigLoadStatusName(ExternalConfigLoadStatus status) {
+  switch (status) {
+  case ExternalConfigLoadStatus::Success:
+    return "success";
+  case ExternalConfigLoadStatus::FetchFailed:
+    return "fetch_failed";
+  case ExternalConfigLoadStatus::RenderFailed:
+    return "render_failed";
+  case ExternalConfigLoadStatus::ParseFailed:
+    return "parse_failed";
+  case ExternalConfigLoadStatus::ImportFailed:
+    return "import_failed";
+  case ExternalConfigLoadStatus::ResourceLimitExceeded:
+    return "resource_limit_exceeded";
+  }
+  return "unknown";
+}
+
+// GET /getgroupnames?config=<url>
+// Returns the sorted list of valid ext_ruleset target group names for the
+// given external config: the groups declared in its custom_proxy_group
+// section plus the built-in Clash template fallback groups. Uses the same
+// fetch path (PublicRequest context, proxy policy, cache) as the config=
+// parameter in buildExternalConfigFetchPlan, so the returned list always
+// matches what ext_ruleset= validation accepts. Never returns config
+// content.
+std::string getGroupNames(RESPONSE_CALLBACK_ARGS) {
+  const std::string config_url = getUrlArg(request.argument, "config");
+  if (config_url.empty()) {
+    response.status_code = 400;
+    response.content_type = "text/plain; charset=utf-8";
+    response.headers["Cache-Control"] = "private, no-store";
+    return "Invalid request: missing config parameter.\n"
+           "无效请求：缺少 config 参数。";
+  }
+
+  ExternalConfig extconf;
+  ExternalConfigLoadResult loaded =
+      loadExternalConfig(config_url, extconf, FetchContext::PublicRequest);
+  if (!loaded.ok()) {
+    writeLog(LOG_LEVEL_WARNING, "getGroupNames 无法加载外部配置，来源：" +
+                    summarizeUrlForLog(config_url) + "，原因：" +
+                    externalConfigLoadStatusName(loaded.status));
+    response.status_code = 400;
+    response.content_type = "text/plain; charset=utf-8";
+    response.headers["Cache-Control"] = "private, no-store";
+    return "Invalid request: cannot load config to list its groups: " +
+           externalConfigLoadStatusName(loaded.status) + " (source: " +
+           config_url + ").\n"
+           "无效请求：无法加载配置以列出其策略组：" +
+           externalConfigLoadStatusName(loaded.status) + "（来源：" +
+           config_url + "）。";
+  }
+
+  std::set<std::string> groups = collectExternalGroupNames(extconf);
+  rapidjson::StringBuffer buffer;
+  rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+  writer.StartObject();
+  writer.Key("groups");
+  writer.StartArray();
+  // std::set iterates in ascending order; emit in that order.
+  for (const std::string &group : groups)
+    writer.String(group.c_str(), static_cast<rapidjson::SizeType>(group.size()));
+  writer.EndArray();
+  writer.EndObject();
+  response.status_code = 200;
+  response.content_type = "application/json; charset=utf-8";
+  response.headers["Cache-Control"] = "private, no-store";
+  return buffer.GetString();
+}
+
 static constexpr size_t kProviderUserAgentMaxLen = 512;
 
 enum class RemoteSubscriptionMode {
@@ -3945,24 +4020,6 @@ static std::string buildExternalConfigFetchPlan(
         {settings.defaultExtConfig, FetchContext::TrustedConfig, false});
   }
 
-  auto loadStatusName = [](ExternalConfigLoadStatus status) {
-    switch (status) {
-    case ExternalConfigLoadStatus::Success:
-      return "success";
-    case ExternalConfigLoadStatus::FetchFailed:
-      return "fetch_failed";
-    case ExternalConfigLoadStatus::RenderFailed:
-      return "render_failed";
-    case ExternalConfigLoadStatus::ParseFailed:
-      return "parse_failed";
-    case ExternalConfigLoadStatus::ImportFailed:
-      return "import_failed";
-    case ExternalConfigLoadStatus::ResourceLimitExceeded:
-      return "resource_limit_exceeded";
-    }
-    return "unknown";
-  };
-
   auto applyExternalConfig = [&](const ExternalConfig &extconf,
                                  FetchContext context) {
     const bool requested_config = context == FetchContext::PublicRequest;
@@ -4082,7 +4139,7 @@ static std::string buildExternalConfigFetchPlan(
 
     policy.template_arguments.local_vars = tpl_args_base;
     std::string reason = !loaded.ok()
-                             ? loadStatusName(loaded.status)
+                             ? externalConfigLoadStatusName(loaded.status)
                              : (!effective ? "no_effective_settings"
                                            : "selected_base_invalid");
     writeLog(LOG_LEVEL_WARNING, "外部配置不可用，原因：" + reason + "，来源：" +
