@@ -159,6 +159,34 @@ CLASHR_AUTO_USER_AGENTS = (
     VERIFIED_CLASHR_AUTO_USER_AGENTS + CLASHR_AUTO_COMPATIBILITY_ALIASES
 )
 DISABLE_RULEGEN_CONFIG = "data:,enable_rule_generator=false"
+# Minimal preset with Proxy + Domestic groups, used by the
+# ext_ruleset= smoke checks. The fixture must define Proxy and
+# Domestic so the strict group-name validation accepts them.
+EXT_RULESET_PRESET_CONFIG = "data:text/plain;base64," + base64.urlsafe_b64encode(
+    b"\n".join(
+        (
+            b"enable_rule_generator=true",
+            b"ruleset=Proxy,https://example.invalid/upstream-p.list",
+            b"ruleset=Domestic,https://example.invalid/upstream-d.list",
+            b"custom_proxy_group=Proxy`select`DIRECT",
+            b"custom_proxy_group=Domestic`select`DIRECT",
+        )
+    )
+).decode("ascii")
+# A small public ruleset URL used as the user-supplied custom
+# source. https://www.gstatic.com/generate_204 returns an empty
+# 204 body — that path is the canonical "is the network reachable"
+# check, but it yields no usable rules, so the backend's
+# atomic-failure semantics will reject it. To exercise the
+# success path of ext_ruleset=, the smoke harness accepts an
+# --ext-ruleset-success-url override; otherwise the success case
+# is skipped.
+EXT_RULESET_SUCCESS_URL_DEFAULT = (
+    "https://raw.githubusercontent.com/Aethersailor/Custom_OpenClash_Rules/"
+    "refs/heads/main/rule/Custom_Direct.list"
+)
+# Unreachable URL for the fetch-failure smoke case.
+EXT_RULESET_UNREACHABLE_URL = "https://nonexistent-host-1234567890.invalid/p.list"
 PROVIDER_FILTER_CONFIG = "data:text/plain;base64," + base64.urlsafe_b64encode(
     b"\n".join(
         (
@@ -863,7 +891,147 @@ def assert_netch_legacy_parser(base_url: str, timeout: int) -> None:
     )
 
 
-def run_checks(
+def assert_ext_ruleset_valid(
+    base_url: str,
+    timeout: int,
+    success_url: str,
+    common_params: dict[str, str],
+) -> None:
+    """Preset + ext_ruleset referencing existing groups succeeds and
+    the user rules appear after the upstream preset's rules."""
+    output = fetch(
+        base_url,
+        "/sub",
+        {
+            **common_params,
+            "config": EXT_RULESET_PRESET_CONFIG,
+            "ext_ruleset": f"Proxy,{success_url};Domestic,{success_url}",
+        },
+        timeout,
+    )
+    if "rules:" not in output:
+        raise AssertionError("ext_ruleset output is missing a rules:` section")
+    # The custom URL points at Aethersailor's Custom_Direct.list,
+    # which contains a `DIRECT` group reference — so the line
+    # DOMAIN-SUFFIX,<some-domain>,DIRECT will appear somewhere in
+    # the body. We don't assert exact ordering vs upstream because
+    # upstream URLs in the fixture are unreachable, so only the
+    # user's URL contributes rules. The rules must end with the
+    # ext_ruleset-tagged lines.
+    if "DIRECT" not in output:
+        raise AssertionError(
+            "ext_ruleset user-supplied rules were not appended to output"
+        )
+
+
+def assert_ext_ruleset_unknown_group(
+    base_url: str, timeout: int, common_params: dict[str, str]
+) -> None:
+    """ext_ruleset referencing a group not in the preset returns 400."""
+    assert_rejected(
+        base_url,
+        "/sub",
+        {
+            **common_params,
+            "config": EXT_RULESET_PRESET_CONFIG,
+            "ext_ruleset": (
+                f"NotARealGroup,{EXT_RULESET_UNREACHABLE_URL}"
+            ),
+        },
+        timeout,
+        "ext_ruleset unknown group must return 400",
+    )
+
+
+def assert_ext_ruleset_fetch_failure(
+    base_url: str, timeout: int, common_params: dict[str, str]
+) -> None:
+    """ext_ruleset pointing at an unreachable URL returns 400."""
+    assert_rejected(
+        base_url,
+        "/sub",
+        {
+            **common_params,
+            "config": EXT_RULESET_PRESET_CONFIG,
+            "ext_ruleset": f"Proxy,{EXT_RULESET_UNREACHABLE_URL}",
+        },
+        timeout,
+        "ext_ruleset fetch failure must return 400",
+    )
+
+
+def assert_ext_ruleset_with_list_true(
+    base_url: str, timeout: int, common_params: dict[str, str]
+) -> None:
+    """ext_ruleset + list=true returns 400 (mutually exclusive)."""
+    assert_rejected(
+        base_url,
+        "/sub",
+        {
+            **common_params,
+            "list": "true",
+            "config": EXT_RULESET_PRESET_CONFIG,
+            "ext_ruleset": f"Proxy,{EXT_RULESET_UNREACHABLE_URL}",
+        },
+        timeout,
+        "ext_ruleset + list=true must return 400",
+    )
+
+
+def assert_ext_ruleset_with_script_true(
+    base_url: str, timeout: int, common_params: dict[str, str]
+) -> None:
+    """ext_ruleset + script=true returns 400 (mutually exclusive)."""
+    assert_rejected(
+        base_url,
+        "/sub",
+        {
+            **common_params,
+            "script": "true",
+            "config": EXT_RULESET_PRESET_CONFIG,
+            "ext_ruleset": f"Proxy,{EXT_RULESET_UNREACHABLE_URL}",
+        },
+        timeout,
+        "ext_ruleset + script=true must return 400",
+    )
+
+
+def assert_ext_ruleset_wrong_target(
+    base_url: str, timeout: int, common_params: dict[str, str]
+) -> None:
+    """ext_ruleset with a non-clash target returns 400."""
+    assert_rejected(
+        base_url,
+        "/sub",
+        {
+            **common_params,
+            "target": "surge",
+            "config": EXT_RULESET_PRESET_CONFIG,
+            "ext_ruleset": f"Proxy,{EXT_RULESET_UNREACHABLE_URL}",
+        },
+        timeout,
+        "ext_ruleset with non-clash target must return 400",
+    )
+
+
+def assert_ext_ruleset_exceeds_quota(
+    base_url: str, timeout: int, common_params: dict[str, str]
+) -> None:
+    """ext_ruleset entries > max_allowed_rulesets (default 64) returns 400."""
+    entries = ";".join(
+        f"Proxy,{EXT_RULESET_UNREACHABLE_URL}" for _ in range(65)
+    )
+    assert_rejected(
+        base_url,
+        "/sub",
+        {
+            **common_params,
+            "config": EXT_RULESET_PRESET_CONFIG,
+            "ext_ruleset": entries,
+        },
+        timeout,
+        "ext_ruleset > max_allowed_rulesets must return 400",
+    )
     base_url: str,
     timeout: int,
     snapshot_dir: Path | None,
@@ -873,6 +1041,7 @@ def run_checks(
     mihomo_yaml_subscription_url: str | None,
     legacy_subscription_url: str | None,
     verify_non_clash: bool,
+    ext_ruleset_success_url: str | None,
 ) -> None:
     health = fetch(base_url, "/healthz", None, timeout)
     if health.strip() != "ok":
@@ -964,6 +1133,20 @@ def run_checks(
 
     assert_local_group_matcher_matrix(base_url, timeout)
     assert_select_health_check(base_url, timeout, remote_subscription_url)
+
+    # ext_ruleset= smoke cases. The success case requires network access
+    # to the upstream Aethersailor ruleset; skip it if the operator
+    # did not opt in via --ext-ruleset-success-url.
+    if ext_ruleset_success_url is not None:
+        assert_ext_ruleset_valid(
+            base_url, timeout, ext_ruleset_success_url, common_params
+        )
+    assert_ext_ruleset_unknown_group(base_url, timeout, common_params)
+    assert_ext_ruleset_fetch_failure(base_url, timeout, common_params)
+    assert_ext_ruleset_with_list_true(base_url, timeout, common_params)
+    assert_ext_ruleset_with_script_true(base_url, timeout, common_params)
+    assert_ext_ruleset_wrong_target(base_url, timeout, common_params)
+    assert_ext_ruleset_exceeds_quota(base_url, timeout, common_params)
 
     if verify_non_clash:
         assert_parser_route_isolation(base_url, timeout)
@@ -2466,9 +2649,24 @@ def main() -> int:
         action="store_true",
         help="Also verify sing-box, Surge, and legacy-parser compatibility.",
     )
+    parser.add_argument(
+        "--ext-ruleset-success-url",
+        default=EXT_RULESET_SUCCESS_URL_DEFAULT,
+        help=(
+            "Public HTTP(S) URL returning usable Clash rules. "
+            "Used as the user-supplied source in the ext_ruleset= "
+            "success smoke case. If the operator wants to skip the "
+            "success case (e.g., no network), pass an empty string."
+        ),
+    )
     args = parser.parse_args()
 
     try:
+        ext_ruleset_success_url = (
+            args.ext_ruleset_success_url
+            if args.ext_ruleset_success_url
+            else None
+        )
         run_checks(
             args.base_url,
             args.timeout,
@@ -2479,6 +2677,7 @@ def main() -> int:
             args.mihomo_yaml_subscription_url,
             args.legacy_subscription_url,
             args.verify_non_clash,
+            ext_ruleset_success_url,
         )
     except Exception as exc:
         print(f"smoke checks failed: {exc}", file=sys.stderr)
