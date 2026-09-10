@@ -1,4 +1,5 @@
 import { OPTION_DEFS } from '../config/options';
+import { parseExtRulesetRows } from './ext-rulesets';
 import { FormState } from './url-builder';
 
 export interface ParsedSubLink {
@@ -26,13 +27,10 @@ export function parseSubUrl(input: string): ParsedSubLink {
     const def = OPTION_DEFS.find((d) => d.key === key);
     if (def) {
       if (key === 'ext_ruleset' && typeof value === 'string') {
-        // Convert the URL-parameter `;` separator back to newlines
-        // so the multi-line textarea displays each entry on its own
-        // line, matching the form's edit-time format.
-        options[key] = value
-          .split(';')
-          .map((line) => line.trim())
-          .filter(Boolean)
+        // Round-trip through the shared row parser so the reverse parse
+        // stays consistent with the row-based control.
+        options[key] = parseExtRulesetRows(value)
+          .map((row) => `${row.group},${row.url}`)
           .join('\n');
         continue;
       }
