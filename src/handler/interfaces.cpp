@@ -98,6 +98,20 @@ void parseExtRuleset(const std::string &raw,
   }
 }
 
+std::set<std::string> collectExternalGroupNames(const ExternalConfig &ext) {
+  std::set<std::string> names;
+  for (const auto &group : ext.custom_proxy_group) {
+    if (!group.Name.empty()) names.insert(group.Name);
+  }
+  // Keep this list in sync with the hardcoded fallback group names
+  // used by the built-in Clash template.
+  names.insert("Proxy");
+  names.insert("Direct");
+  names.insert("REJECT");
+  names.insert("GLOBAL");
+  return names;
+}
+
 #include "utils/base64/base64.h"
 #include "utils/bounded_executor.h"
 #include "utils/cooperative_cpu.h"

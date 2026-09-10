@@ -533,6 +533,28 @@ IF(BUILD_TESTS)
     ADD_TEST(NAME parse_ext_ruleset COMMAND parse_ext_ruleset_test)
     SET_TESTS_PROPERTIES(parse_ext_ruleset PROPERTIES LABELS fast)
 
+    # collectExternalGroupNames lives in src/handler/interfaces.cpp and
+    # exercises ExternalConfig / ProxyGroupConfig from settings.h.
+    SET(COLLECT_EXTERNAL_GROUP_NAMES_TEST_SOURCES
+        ${SUBCONVERTER_RUNTIME_SOURCES})
+    LIST(REMOVE_ITEM COLLECT_EXTERNAL_GROUP_NAMES_TEST_SOURCES
+        src/parser/mihomo_bridge.cpp)
+    ADD_EXECUTABLE(collect_external_group_names_test
+        tests/collect_external_group_names_test.cpp
+        ${COLLECT_EXTERNAL_GROUP_NAMES_TEST_SOURCES})
+    TARGET_INCLUDE_DIRECTORIES(collect_external_group_names_test PRIVATE
+        $<TARGET_PROPERTY:${BUILD_TARGET_NAME},INCLUDE_DIRECTORIES>)
+    TARGET_LINK_DIRECTORIES(collect_external_group_names_test PRIVATE
+        $<TARGET_PROPERTY:${BUILD_TARGET_NAME},LINK_DIRECTORIES>)
+    TARGET_LINK_LIBRARIES(collect_external_group_names_test PRIVATE
+        $<TARGET_PROPERTY:${BUILD_TARGET_NAME},LINK_LIBRARIES>)
+    TARGET_COMPILE_DEFINITIONS(collect_external_group_names_test PRIVATE
+        $<TARGET_PROPERTY:${BUILD_TARGET_NAME},COMPILE_DEFINITIONS>)
+    ADD_TEST(NAME collect_external_group_names
+        COMMAND collect_external_group_names_test)
+    SET_TESTS_PROPERTIES(collect_external_group_names
+        PROPERTIES LABELS fast)
+
     ADD_EXECUTABLE(clash_proxy_test
         tests/clash_proxy_test.cpp
         src/generator/config/clash_proxy.cpp)

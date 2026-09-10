@@ -3,6 +3,7 @@
 
 #include <string>
 #include <map>
+#include <set>
 #include <utility>
 #include <vector>
 #include <inja.hpp>
@@ -11,6 +12,8 @@
 #include "generator/config/subexport.h"
 #include "handler/fetch_context.h"
 #include "server/webserver.h"
+
+struct ExternalConfig;  // defined in handler/settings.h
 
 // Parses the ext_ruleset= URL parameter value into (group, url) pairs.
 // Format: "Group,URL[;Group,URL]..."
@@ -24,6 +27,14 @@
 void parseExtRuleset(
     const std::string &raw,
     std::vector<std::pair<std::string, std::string>> &out);
+
+// Returns the set of valid proxy group names that ext_ruleset=
+// entries may reference. Combines:
+//   - groups declared in ext.custom_proxy_group (the parsed
+//     proxy_groups from the loaded .ini)
+//   - hardcoded template fallback groups used by the built-in
+//     Clash template (Proxy / Direct / REJECT / GLOBAL)
+std::set<std::string> collectExternalGroupNames(const ExternalConfig &ext);
 
 void refreshRulesets(RulesetConfigs &ruleset_list,
                      std::vector<RulesetContent> &rca,
