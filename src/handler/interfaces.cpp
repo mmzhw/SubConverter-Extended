@@ -641,7 +641,8 @@ static bool fetchExternalRuleSources(const string_array &sources,
                                      FetchContext context,
                                      string_array &destination,
                                      std::string &error,
-                                     bool require_target = true) {
+                                     bool require_target = true,
+                                     bool skip_on_fetch_failure = true) {
   const Settings &settings = effectiveSettings();
   ProxyPolicy proxy = parseProxy(settings.proxyRuleset, settings.proxyBypass);
   string_icase_map request_headers = {
@@ -678,6 +679,15 @@ static bool fetchExternalRuleSources(const string_array &sources,
     FetchResult result{&fetch_status, &content, nullptr, nullptr};
     webGet(argument, result);
     if (fetch_status < 200 || fetch_status >= 300 || content.empty()) {
+      if (!skip_on_fetch_failure) {
+        error =
+            "Invalid external rule source " + source_identifier +
+            ": fetch failed, returned a non-2xx status, or the content "
+            "was empty.\n"
+            "外部规则来源 " +
+            source_identifier + " 拉取失败、HTTP 状态异常或内容为空。";
+        return false;
+      }
       writeLog(LOG_LEVEL_WARNING,
                "外部规则来源 " + source_identifier +
                    " 拉取失败、HTTP 状态异常或内容为空，已跳过。");
@@ -4212,7 +4222,8 @@ static std::string buildExternalConfigFetchPlan(
       if (!fetchExternalRuleSources({url}, "ext_ruleset",
                                     FetchContext::PublicRequest,
                                     chunk, ext_error,
-                                    /*require_target=*/false)) {
+                                    /*require_target=*/false,
+                                    /*skip_on_fetch_failure=*/false)) {
         response.status_code = 400;
         return ext_error;
       }
