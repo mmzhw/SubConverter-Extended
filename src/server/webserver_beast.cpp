@@ -541,7 +541,8 @@ void BeastSession::process() {
     if (request.url == "/healthz" || request.url == "/version" ||
         request.url == "/inspect")
       context_->setCostClass(RequestCostClass::Low);
-    else if (request.url == "/getruleset")
+    else if (request.url == "/getruleset" ||
+             request.url == "/getgroupnames")
       context_->setCostClass(RequestCostClass::Medium);
     const client_ip::Policy policy = state_->server.client_ip_policy();
     if (policy.enabled()) {

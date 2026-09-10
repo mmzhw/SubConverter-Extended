@@ -593,7 +593,8 @@ static httplib::Server::Handler makeHandler(const responseRoute &rr,
     if (request.path == "/healthz" || request.path == "/version" ||
         request.path == "/inspect")
       telemetry.context->setCostClass(RequestCostClass::Low);
-    else if (request.path == "/getruleset")
+    else if (request.path == "/getruleset" ||
+             request.path == "/getgroupnames")
       telemetry.context->setCostClass(RequestCostClass::Medium);
     const client_ip::Policy policy = web_server->client_ip_policy();
     if (policy.enabled()) {

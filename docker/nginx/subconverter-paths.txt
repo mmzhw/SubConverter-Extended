@@ -3,6 +3,7 @@ sub
 short
 s
 getruleset
+getgroupnames
 version
 inspect
 dashboard

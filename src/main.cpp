@@ -427,6 +427,9 @@ int main(int argc, char *argv[]) {
 
   webServer.append_response("GET", "/getruleset", "text/plain;charset=utf-8",
                             getRuleset);
+  webServer.append_response("GET", "/getgroupnames",
+                            "application/json; charset=utf-8",
+                            getGroupNames);
   webServer.append_response("GET", "/api/github-proxy-latency",
                             "application/json; charset=utf-8",
                             githubProxyLatency);
