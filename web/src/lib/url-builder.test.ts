@@ -170,3 +170,35 @@ describe('buildSubUrl', () => {
     expect(url).toBe('http://127.0.0.1:25500/sub?target=clash&url=https%3A%2F%2Fs');
   });
 });
+
+describe('buildSubUrl with ext_ruleset', () => {
+  it('joins multi-line ext_ruleset with semicolons', () => {
+    const url = buildSubUrl(base({
+      sourceUrl: 'https://s',
+      options: {
+        ext_ruleset: 'Proxy,https://a/p.list\nDomestic,https://b/d.list',
+      },
+    }));
+    expect(url).toContain('ext_ruleset=Proxy%2Chttps%3A%2F%2Fa%2Fp.list%3BDomestic%2Chttps%3A%2F%2Fb%2Fd.list');
+  });
+
+  it('skips blank lines and comments', () => {
+    const url = buildSubUrl(base({
+      sourceUrl: 'https://s',
+      options: { ext_ruleset: '\n# comment\nProxy,https://a/p.list\n\n' },
+    }));
+    expect(url).toContain('ext_ruleset=Proxy%2Chttps%3A%2F%2Fa%2Fp.list');
+    // Only one entry — no extra semicolons.
+    const decoded = decodeURIComponent(url);
+    expect(decoded.match(/ext_ruleset=[^&]*/)![0])
+      .toBe('ext_ruleset=Proxy,https://a/p.list');
+  });
+
+  it('omits the parameter when ext_ruleset is empty/whitespace', () => {
+    const url = buildSubUrl(base({
+      sourceUrl: 'https://s',
+      options: { ext_ruleset: '   \n\n  ' },
+    }));
+    expect(url).not.toContain('ext_ruleset=');
+  });
+});

@@ -16,6 +16,11 @@ export interface OptionDef {
   placeholder?: BilingualText;
   min?: number;
   step?: number;
+  /**
+   * Render as <el-input type="textarea" :rows="5"/> instead of a
+   * single-line text input. Only honored when `type === 'string'`.
+   */
+  multiline?: boolean;
 }
 
 export interface TargetFormat { value: string; label: BilingualText; }
@@ -275,6 +280,22 @@ export const OPTION_DEFS: OptionDef[] = [
     placeholder: {
       en: 'Select a preset or paste a remote .ini URL',
       zh: '选择预设或粘贴远程 .ini 地址',
+    },
+  },
+  {
+    key: 'ext_ruleset',
+    type: 'string',
+    multiline: true,
+    label: { en: 'Extra rulesets', zh: '额外规则集' },
+    description: {
+      en: "One per line as 'Group,URL'. Appends rules to existing groups in the chosen preset. Each group must already exist in the preset.",
+      zh: '每行一条 "组名,URL"，规则会追加到所选 preset 已存在的策略组。组名必须已在 preset 中定义。',
+    },
+    group: 'rule',
+    defaultValue: '',
+    placeholder: {
+      en: 'Proxy,https://...\nDomestic,https://...',
+      zh: 'Proxy,https://...\nDomestic,https://...',
     },
   },
   {

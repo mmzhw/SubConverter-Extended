@@ -467,6 +467,8 @@ function updateSourceUrl(value: string) {
             />
             <el-input
               v-else-if="def.type === 'string'"
+              :type="def.multiline ? 'textarea' : 'text'"
+              :rows="def.multiline ? 5 : undefined"
               :model-value="String(optionValue(def.key))"
               :placeholder="placeholderOf(def)"
               clearable

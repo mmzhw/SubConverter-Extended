@@ -30,4 +30,10 @@ describe('parseSubUrl', () => {
     expect(() => parseSubUrl('http://host/sub?target=clash')).toThrow('invalid-link');
     expect(() => parseSubUrl('not a url')).toThrow('invalid-link');
   });
+
+  it('round-trips ext_ruleset via URL `;` separator back to textarea newlines', () => {
+    const query = '?target=clash&url=https%3A%2F%2Fs&ext_ruleset=Proxy%2Chttps%3A%2F%2Fa%2Fp.list%3BDomestic%2Chttps%3A%2F%2Fb%2Fd.list';
+    const { state: parsed } = parseSubUrl('http://host/sub' + query);
+    expect(parsed.options.ext_ruleset).toBe('Proxy,https://a/p.list\nDomestic,https://b/d.list');
+  });
 });

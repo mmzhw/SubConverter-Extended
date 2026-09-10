@@ -47,8 +47,20 @@ export function buildSubUrl(state: FormState): string {
   ) {
     params.set('dns_template', state.dnsTemplateId.trim());
   }
+  // ext_ruleset: textarea stores one "Group,URL" per line. Join with
+  // ';' and skip blanks + '#' comments so the URL parameter value
+  // is canonicalised.
+  const extRaw = state.options['ext_ruleset'];
+  if (typeof extRaw === 'string') {
+    const lines = extRaw
+      .split('\n')
+      .map((line) => line.trim())
+      .filter((line) => line && !line.startsWith('#'));
+    if (lines.length) params.set('ext_ruleset', lines.join(';'));
+  }
   for (const [key, value] of Object.entries(state.options)) {
     if (key === 'provider' && state.target !== 'clash' && state.target !== 'clashr') continue;
+    if (key === 'ext_ruleset') continue;  // handled above
     if (value === undefined || value === '') continue;
     if (value === false) {
       if (explicitFalseKeys.has(key)) params.set(key, 'false');

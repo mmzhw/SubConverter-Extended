@@ -25,6 +25,17 @@ export function parseSubUrl(input: string): ParsedSubLink {
     if (key === 'target' || key === 'url' || key === 'filename' || key === 'dns_template') continue;
     const def = OPTION_DEFS.find((d) => d.key === key);
     if (def) {
+      if (key === 'ext_ruleset' && typeof value === 'string') {
+        // Convert the URL-parameter `;` separator back to newlines
+        // so the multi-line textarea displays each entry on its own
+        // line, matching the form's edit-time format.
+        options[key] = value
+          .split(';')
+          .map((line) => line.trim())
+          .filter(Boolean)
+          .join('\n');
+        continue;
+      }
       if (def.type === 'boolean') {
         options[key] = value !== 'false' && value !== '0';
       } else if (def.type === 'number') {
