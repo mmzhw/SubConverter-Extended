@@ -23,6 +23,14 @@ describe('parseExtRulesetRows', () => {
       .toEqual([{ group: 'Proxy', url: 'https://a' }]);
   });
 
+  it('accepts legacy newline-joined textarea values', () => {
+    expect(parseExtRulesetRows('Proxy,https://a/p.list\nDomestic,https://b/d.list'))
+      .toEqual([
+        { group: 'Proxy', url: 'https://a/p.list' },
+        { group: 'Domestic', url: 'https://b/d.list' },
+      ]);
+  });
+
   it('ignores entries without a comma', () => {
     expect(parseExtRulesetRows('ProxyOnly;Proxy,https://a'))
       .toEqual([{ group: 'Proxy', url: 'https://a' }]);
