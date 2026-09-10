@@ -173,6 +173,17 @@ EXT_RULESET_PRESET_CONFIG = "data:text/plain;base64," + base64.urlsafe_b64encode
         )
     )
 ).decode("ascii")
+# Minimal preset used by the /getgroupnames smoke checks. MyGroup and
+# Streaming must be collected on top of the built-in group names.
+GET_GROUPNAMES_PRESET_CONFIG = "data:text/plain;base64," + base64.urlsafe_b64encode(
+    b"\n".join(
+        (
+            b"enable_rule_generator=true",
+            b"custom_proxy_group=MyGroup`select`DIRECT",
+            b"custom_proxy_group=Streaming`select`MyGroup",
+        )
+    )
+).decode("ascii")
 # A small public ruleset URL used as the user-supplied custom
 # source. https://www.gstatic.com/generate_204 returns an empty
 # 204 body — that path is the canonical "is the network reachable"
@@ -1034,6 +1045,42 @@ def assert_ext_ruleset_exceeds_quota(
     )
 
 
+def assert_getgroupnames_ok(base_url: str, timeout: int) -> None:
+    body = fetch(
+        base_url,
+        "/getgroupnames",
+        {"config": GET_GROUPNAMES_PRESET_CONFIG},
+        timeout,
+    )
+    payload = json.loads(body)
+    groups = payload.get("groups")
+    if not isinstance(groups, list):
+        raise AssertionError(f"/getgroupnames did not return a groups array: {body!r}")
+    expected = sorted({"Direct", "GLOBAL", "MyGroup", "Proxy", "REJECT", "Streaming"})
+    if groups != expected:
+        raise AssertionError(f"unexpected groups: {groups!r} != {expected!r}")
+
+
+def assert_getgroupnames_bad_url(base_url: str, timeout: int) -> None:
+    assert_rejected(
+        base_url,
+        "/getgroupnames",
+        {"config": "https://nonexistent-host-1234567890.invalid/x.ini"},
+        timeout,
+        "getgroupnames with an unreachable config must return 400",
+    )
+
+
+def assert_getgroupnames_missing_config(base_url: str, timeout: int) -> None:
+    assert_rejected(
+        base_url,
+        "/getgroupnames",
+        {},
+        timeout,
+        "getgroupnames without config must return 400",
+    )
+
+
 def run_checks(
     base_url: str,
     timeout: int,
@@ -1150,6 +1197,10 @@ def run_checks(
     assert_ext_ruleset_with_script_true(base_url, timeout, common_params)
     assert_ext_ruleset_wrong_target(base_url, timeout, common_params)
     assert_ext_ruleset_exceeds_quota(base_url, timeout, common_params)
+
+    assert_getgroupnames_ok(base_url, timeout)
+    assert_getgroupnames_bad_url(base_url, timeout)
+    assert_getgroupnames_missing_config(base_url, timeout)
 
     if verify_non_clash:
         assert_parser_route_isolation(base_url, timeout)
