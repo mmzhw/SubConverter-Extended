@@ -739,7 +739,8 @@ IF(BUILD_TESTS)
         cache_storage_test
         short_link_storage_test
         upload_persistence_test
-        parse_ext_ruleset_test)
+        parse_ext_ruleset_test
+        collect_external_group_names_test)
     FOREACH(TEST_TARGET IN LISTS SUBCONVERTER_ASSERTING_TEST_TARGETS)
         IF(MSVC)
             TARGET_COMPILE_OPTIONS(${TEST_TARGET} PRIVATE /UNDEBUG)
