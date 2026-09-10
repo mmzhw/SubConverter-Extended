@@ -288,8 +288,8 @@ export const OPTION_DEFS: OptionDef[] = [
     multiline: true,
     label: { en: 'Extra rulesets', zh: '额外规则集' },
     description: {
-      en: "One per line as 'Group,URL'. Appends rules to existing groups in the chosen preset. Each group must already exist in the preset.",
-      zh: '每行一条 "组名,URL"，规则会追加到所选 preset 已存在的策略组。组名必须已在 preset 中定义。',
+      en: 'Add remote rule sources to existing groups of the chosen preset. Pick the group from the dropdown (auto-loaded from the preset) and paste the ruleset URL. The row format is handled by the UI.',
+      zh: '把远程规则源追加到所选 preset 的已有策略组。从下拉框选择组名（自动从 preset 加载），粘贴规则集 URL；无需手动拼写格式。',
     },
     group: 'rule',
     defaultValue: '',

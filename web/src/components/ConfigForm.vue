@@ -5,6 +5,7 @@ import { ElMessage } from 'element-plus';
 import { Connection, EditPen, Finished, MagicStick, QuestionFilled, RefreshRight } from '@element-plus/icons-vue';
 import { TARGET_FORMATS, OPTION_DEFS, OptionDef } from '../config/options';
 import { useFormState } from '../composables/useFormState';
+import ExtraRulesetsControl from './ExtraRulesetsControl.vue';
 import {
   applyGitHubProxy,
   GITHUB_PROXY_CUSTOM,
@@ -464,6 +465,13 @@ function updateSourceUrl(value: string) {
               clearable
               tag-type="info"
               @update:model-value="(v?: string[]) => setRegexTags(def.key, v)"
+            />
+            <ExtraRulesetsControl
+              v-else-if="def.type === 'string' && def.key === 'ext_ruleset'"
+              :model-value="String(optionValue(def.key))"
+              :config-url="String(optionValue('config') ?? '')"
+              :backend-base="form.state.backendBase"
+              @update:model-value="(v: string) => setOption(def.key, v)"
             />
             <el-input
               v-else-if="def.type === 'string'"
