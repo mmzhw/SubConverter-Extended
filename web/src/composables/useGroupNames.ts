@@ -7,8 +7,9 @@ export const FALLBACK_GROUP_NAMES = ['Direct', 'GLOBAL', 'Proxy', 'REJECT'];
  *  - empty configUrl -> fallback groups, no request
  *  - 300ms debounce, in-memory cache keyed by configUrl (per composable instance)
  *  - failure keeps the last known groups and sets error
+ *  - backendBase overrides the backend origin (default: page origin)
  */
-export function useGroupNames(configUrl: () => string) {
+export function useGroupNames(configUrl: () => string, backendBase: string = '') {
   const cache = new Map<string, string[]>();
   const groups = ref<string[]>([...FALLBACK_GROUP_NAMES]);
   const loading = ref(false);
@@ -18,6 +19,11 @@ export function useGroupNames(configUrl: () => string) {
   function refresh() {
     const url = configUrl();
     if (!url) {
+      if (timer) {
+        clearTimeout(timer);
+        timer = null;
+      }
+      loading.value = false;
       groups.value = [...FALLBACK_GROUP_NAMES];
       error.value = false;
       return;
@@ -33,7 +39,7 @@ export function useGroupNames(configUrl: () => string) {
       try {
         const params = new URLSearchParams({ config: url });
         const response = await fetch(
-          `${backendBaseForState({ backendBase: '' })}/getgroupnames?${params}`,
+          `${backendBaseForState({ backendBase })}/getgroupnames?${params}`,
         );
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const payload = (await response.json()) as { groups?: string[] };

@@ -59,7 +59,7 @@ describe('useGroupNames', () => {
     (fetch as unknown as ReturnType<typeof vi.fn>)
       .mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ groups: ['Proxy', 'Direct', 'GLOBAL', 'REJECT'] }),
+        json: async () => ({ groups: ['Proxy', 'Direct', 'GLOBAL', 'REJECT', 'MyGroup'] }),
       })
       .mockResolvedValueOnce({ ok: false, status: 400 });
     let configUrl = 'https://c/preset.ini';
@@ -72,6 +72,6 @@ describe('useGroupNames', () => {
     await vi.advanceTimersByTimeAsync(300);
     await nextTick();
     expect(state.error.value).toBe(true);
-    expect(state.groups.value).toEqual(['Proxy', 'Direct', 'GLOBAL', 'REJECT']);
+    expect(state.groups.value).toEqual(['Proxy', 'Direct', 'GLOBAL', 'REJECT', 'MyGroup']);
   });
 });
