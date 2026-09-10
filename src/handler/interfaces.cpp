@@ -640,7 +640,8 @@ static bool fetchExternalRuleSources(const string_array &sources,
                                      const std::string &field_name,
                                      FetchContext context,
                                      string_array &destination,
-                                     std::string &error) {
+                                     std::string &error,
+                                     bool require_target = true) {
   const Settings &settings = effectiveSettings();
   ProxyPolicy proxy = parseProxy(settings.proxyRuleset, settings.proxyBypass);
   string_icase_map request_headers = {
@@ -684,7 +685,8 @@ static bool fetchExternalRuleSources(const string_array &sources,
     }
 
     ExternalRuleParseResult parsed =
-        parseExternalClashRules(content, source_identifier, ClashRuleTypes);
+        parseExternalClashRules(content, source_identifier, ClashRuleTypes,
+                               require_target);
     if (!parsed.ok) {
       error = std::move(parsed.error);
       return false;
@@ -4204,9 +4206,13 @@ static std::string buildExternalConfigFetchPlan(
     string_array ext_rule_lines;
     for (const auto &[group, url] : parsed.ext_rulesets) {
       string_array chunk;
+      // ext_ruleset sources are plain rule-set content lines
+      // ("TYPE,content") without a trailing target policy; the group
+      // is appended below from the URL parameter itself.
       if (!fetchExternalRuleSources({url}, "ext_ruleset",
                                     FetchContext::PublicRequest,
-                                    chunk, ext_error)) {
+                                    chunk, ext_error,
+                                    /*require_target=*/false)) {
         response.status_code = 400;
         return ext_error;
       }

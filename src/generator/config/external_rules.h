@@ -13,10 +13,14 @@ struct ExternalRuleParseResult {
   std::string error;
 };
 
+// When require_target is false, rules without a trailing ",<policy>"
+// field are accepted; the caller is expected to append the target
+// policy itself (e.g. the ext_ruleset= Group,URL path).
 ExternalRuleParseResult
 parseExternalClashRules(const std::string &content,
                         const std::string &source_identifier,
-                        const string_array &allowed_rule_types);
+                        const string_array &allowed_rule_types,
+                        bool require_target = true);
 
 string_array mergeClashRules(const string_array &prepend,
                              const string_array &original,

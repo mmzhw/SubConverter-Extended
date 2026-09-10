@@ -114,7 +114,8 @@ std::string locationError(const std::string &source_identifier,
 std::string validateRule(const std::string &rule,
                          const std::string &source_identifier,
                          const std::string &location,
-                         const string_array &allowed_rule_types) {
+                         const string_array &allowed_rule_types,
+                         bool require_target) {
   SplitResult split = splitTopLevelCommas(rule);
   if (!split.ok)
     return locationError(source_identifier, location,
@@ -137,6 +138,8 @@ std::string validateRule(const std::string &rule,
   if (fields.size() < 2 || fields[1].empty())
     return locationError(source_identifier, location,
                          "matching content is missing", "缺少匹配内容");
+  if (!require_target)
+    return "";
   if (fields.size() < 3)
     return locationError(source_identifier, location,
                          "target policy is missing", "缺少目标策略");
@@ -154,14 +157,15 @@ std::string validateRule(const std::string &rule,
 ExternalRuleParseResult parseRuleList(const string_array &candidates,
                                       const string_array &locations,
                                       const std::string &source_identifier,
-                                      const string_array &allowed_rule_types) {
+                                      const string_array &allowed_rule_types,
+                                      bool require_target) {
   ExternalRuleParseResult result;
   for (size_t i = 0; i < candidates.size(); ++i) {
     std::string rule = trimAscii(candidates[i]);
     if (rule.empty() || isComment(rule))
       continue;
     std::string error = validateRule(rule, source_identifier, locations[i],
-                                     allowed_rule_types);
+                                     allowed_rule_types, require_target);
     if (!error.empty()) {
       result.error = std::move(error);
       return result;
@@ -190,7 +194,8 @@ splitAtFirstTerminal(const string_array &rules) {
 ExternalRuleParseResult
 parseExternalClashRules(const std::string &content,
                         const std::string &source_identifier,
-                        const string_array &allowed_rule_types) {
+                        const string_array &allowed_rule_types,
+                        bool require_target) {
   if (trimAscii(content).empty()) {
     ExternalRuleParseResult result;
     result.error = "External rule source " + source_identifier +
@@ -242,7 +247,7 @@ parseExternalClashRules(const std::string &content,
         locations.emplace_back("rules[" + std::to_string(i) + "]");
       }
       return parseRuleList(rules, locations, source_identifier,
-                           allowed_rule_types);
+                           allowed_rule_types, require_target);
     }
   } catch (const YAML::Exception &) {
     // A plain-text rule list is not required to be valid YAML.
@@ -261,7 +266,7 @@ parseExternalClashRules(const std::string &content,
     locations.emplace_back("line " + std::to_string(line_number));
   }
   return parseRuleList(lines, locations, source_identifier,
-                       allowed_rule_types);
+                       allowed_rule_types, require_target);
 }
 
 string_array mergeClashRules(const string_array &prepend,
