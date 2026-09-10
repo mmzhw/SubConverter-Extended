@@ -15,13 +15,11 @@
 // Parses the ext_ruleset= URL parameter value into (group, url) pairs.
 // Format: "Group,URL[;Group,URL]..."
 //   - ';' separates entries
-//   - within an entry, '\n' is also treated as a sub-separator so that a
-//     '# comment\nProxy,URL' blob does not consume the URL line
-//   - first ',' in each line splits group from url
+//   - first ',' in each entry splits group from url
 //   - empty entries, entries without a comma, and lines starting with
 //     '#' (after trim) are skipped
-//   - group/url are URL-decoded by the caller; this helper only trims
-//     ASCII whitespace and does no decoding
+//   - group/url are URL-decoded by the caller (this helper does no
+//     decoding; it only trims ASCII whitespace)
 // Output vector is cleared before population.
 void parseExtRuleset(
     const std::string &raw,

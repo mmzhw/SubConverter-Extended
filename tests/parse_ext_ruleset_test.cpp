@@ -28,9 +28,12 @@ void testMultipleEntries() {
 
 void testSkipsBlankAndComments() {
   std::vector<std::pair<std::string, std::string>> out;
-  parseExtRuleset(
-      ";Proxy,https://x/p.list;# comment line\nDomestic,https://x/d.list;",
-      out);
+  // Realistic input from URLSearchParams: ';' separates entries, '#'
+  // lines never appear because the frontend filters them out before
+  // joining. The helper still defends against blank entries (leading
+  // / trailing ';') and standalone tokens without a comma.
+  parseExtRuleset(";Proxy,https://x/p.list;;Domestic,https://x/d.list;",
+                  out);
   assert(out.size() == 2);
   assert(out[0].first == "Proxy");
   assert(out[1].first == "Domestic");

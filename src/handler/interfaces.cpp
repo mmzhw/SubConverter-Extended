@@ -92,16 +92,7 @@ void parseExtRuleset(const std::string &raw,
     size_t end = raw.find(';', start);
     if (end == std::string::npos) end = raw.size();
     std::string token = raw.substr(start, end - start);
-    // Within a `;`-separated entry, also treat '\n' as a sub-separator so
-    // that a `# comment\nProxy,URL` blob does not consume the URL line.
-    size_t line_start = 0;
-    while (line_start <= token.size()) {
-      size_t line_end = token.find('\n', line_start);
-      if (line_end == std::string::npos) line_end = token.size();
-      handleToken(trim(token.substr(line_start, line_end - line_start)));
-      if (line_end == token.size()) break;
-      line_start = line_end + 1;
-    }
+    handleToken(trim(token));
     if (end == raw.size()) break;
     start = end + 1;
   }
