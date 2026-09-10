@@ -3,12 +3,12 @@ export interface ExtRulesetRow {
   url: string;
 }
 
-/** Parses the ext_ruleset value ("Group,URL" entries separated by ';'
- *  or newlines) into rows. Blank entries, '#'-prefixed entries, and
- *  entries without a comma are ignored; whitespace is trimmed. */
+/** Parses the ext_ruleset URL-parameter value ("Group,URL;Group,URL")
+ *  into rows. Blank entries, '#'-prefixed entries, and entries without
+ *  a comma are ignored; whitespace is trimmed. */
 export function parseExtRulesetRows(value: string): ExtRulesetRow[] {
   const rows: ExtRulesetRow[] = [];
-  for (const entry of value.split(/[;\r\n]/)) {
+  for (const entry of value.split(';')) {
     const trimmed = entry.trim();
     if (!trimmed || trimmed.startsWith('#')) continue;
     const comma = trimmed.indexOf(',');

@@ -10,12 +10,17 @@ describe('parseExtRulesetRows', () => {
       ]);
   });
 
-  it('ignores empty entries and comments', () => {
-    expect(parseExtRulesetRows(';Proxy,https://a;# note\nDomestic,https://b;'))
+  it('ignores empty entries', () => {
+    expect(parseExtRulesetRows(';Proxy,https://a;;Domestic,https://b;'))
       .toEqual([
         { group: 'Proxy', url: 'https://a' },
         { group: 'Domestic', url: 'https://b' },
       ]);
+  });
+
+  it("ignores '#'-prefixed entries", () => {
+    expect(parseExtRulesetRows('# note;Proxy,https://a'))
+      .toEqual([{ group: 'Proxy', url: 'https://a' }]);
   });
 
   it('ignores entries without a comma', () => {
