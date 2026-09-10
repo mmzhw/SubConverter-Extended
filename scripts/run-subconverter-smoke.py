@@ -1032,6 +1032,9 @@ def assert_ext_ruleset_exceeds_quota(
         timeout,
         "ext_ruleset > max_allowed_rulesets must return 400",
     )
+
+
+def run_checks(
     base_url: str,
     timeout: int,
     snapshot_dir: Path | None,
