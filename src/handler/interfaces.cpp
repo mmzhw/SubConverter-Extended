@@ -15,6 +15,7 @@
 #include <mutex>
 #include <numeric>
 #include <optional>
+#include <set>
 #include <sstream>
 #include <string>
 #include <thread>
@@ -3917,6 +3918,7 @@ static std::string buildExternalConfigFetchPlan(
     bool fallback = false;
   };
   std::vector<ExternalConfigCandidate> config_candidates;
+  std::set<std::string> ext_ruleset_valid_groups;
   if (plan.user_provided_external_config) {
     config_candidates.push_back(
         {parsed.external_config, FetchContext::PublicRequest, false});
@@ -4062,6 +4064,7 @@ static std::string buildExternalConfigFetchPlan(
       plan.config_load_success = true;
       parsed.explain.external_config_loaded = true;
       parsed.explain.fallback_config_used = candidate.fallback;
+      ext_ruleset_valid_groups = collectExternalGroupNames(extconf);
       break;
     }
 
@@ -4133,6 +4136,90 @@ static std::string buildExternalConfigFetchPlan(
                                   external_rule_error)) {
       response.status_code = 400;
       return external_rule_error;
+    }
+  }
+
+  // ext_ruleset: append user's custom ruleset URLs to the end of the
+  // generated rule list. Each entry's group must already exist in the
+  // loaded preset (strict validation; see spec.md).
+  if (!parsed.ext_rulesets.empty()) {
+    if (parsed.target != "clash") {
+      response.status_code = 400;
+      return "Invalid request: ext_ruleset is supported only for "
+             "target=clash.\n"
+             "无效请求：ext_ruleset 仅支持 target=clash。";
+    }
+    if (parsed.generate_node_list.get(false)) {
+      response.status_code = 400;
+      return "Invalid request: ext_ruleset does not support list=true.\n"
+             "无效请求：ext_ruleset 不支持 list=true。";
+    }
+    if (parsed.generate_clash_script.get(false)) {
+      response.status_code = 400;
+      return "Invalid request: ext_ruleset does not support "
+             "script=true.\n"
+             "无效请求：ext_ruleset 不支持 script=true。";
+    }
+    if (settings.maxAllowedRulesets &&
+        parsed.ext_rulesets.size() > settings.maxAllowedRulesets) {
+      response.status_code = 400;
+      return "Invalid request: ext_ruleset contains more sources than "
+             "max_allowed_rulesets (" +
+             std::to_string(settings.maxAllowedRulesets) + ").\n"
+             "无效请求：ext_ruleset 来源总数超过 max_allowed_rulesets "
+             "限制（" +
+             std::to_string(settings.maxAllowedRulesets) + "）。";
+    }
+    for (const auto &[group, url] : parsed.ext_rulesets) {
+      if (ext_ruleset_valid_groups.find(group) ==
+          ext_ruleset_valid_groups.end()) {
+        response.status_code = 400;
+        // Build a sorted, truncated list of valid groups for the
+        // error message (top 20, then " (N more, see preset for
+        // full list)").
+        std::vector<std::string> sorted_groups(
+            ext_ruleset_valid_groups.begin(),
+            ext_ruleset_valid_groups.end());
+        std::string list_str;
+        const size_t kMaxListed = 20;
+        for (size_t i = 0;
+             i < sorted_groups.size() && i < kMaxListed; ++i) {
+          if (i) list_str += ", ";
+          list_str += sorted_groups[i];
+        }
+        if (sorted_groups.size() > kMaxListed) {
+          list_str += " (" +
+                      std::to_string(sorted_groups.size() - kMaxListed) +
+                      " more, see preset for full list)";
+        }
+        return "Invalid request: ext_ruleset references unknown group '" +
+               group + "'. The chosen preset defines these groups: " +
+               list_str + ".\n"
+               "无效请求：ext_ruleset 引用了不存在的策略组 '" + group +
+               "'。所选 preset 已定义的策略组：" + list_str + "。";
+      }
+    }
+    // All groups valid; fetch each URL with atomic-failure semantics.
+    std::string ext_error;
+    string_array ext_rule_lines;
+    for (const auto &[group, url] : parsed.ext_rulesets) {
+      string_array chunk;
+      if (!fetchExternalRuleSources({url}, "ext_ruleset",
+                                    FetchContext::PublicRequest,
+                                    chunk, ext_error)) {
+        response.status_code = 400;
+        return ext_error;
+      }
+      // Tag each rule line with the target group so Clash dispatches
+      // hits from this URL to the right group. Append each tagged
+      // line to rule_append so it lands at the end of the merged
+      // rule list (downstream in subexport.cpp).
+      for (const std::string &raw_line : chunk) {
+        ext_rule_lines.push_back(raw_line + "," + group);
+      }
+    }
+    for (const std::string &line : ext_rule_lines) {
+      policy.generator.rule_append.push_back(line);
     }
   }
 
