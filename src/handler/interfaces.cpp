@@ -20,6 +20,7 @@
 #include <thread>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 #include <curl/curl.h>
@@ -3493,6 +3494,12 @@ struct ParsedSubRequest {
   // 单次请求覆盖 proxy-provider 开关；undef 时跟随部署级
   // [proxy_provider] enabled 设置。
   tribool provider_enabled;
+
+  // Each entry: <proxy_group_name, external_ruleset_url>
+  // Populated from the ext_ruleset= URL parameter. Appended to
+  // base_rule["rules] after the upstream preset's rules when the
+  // preset is loaded. Group names must already exist in the preset.
+  std::vector<std::pair<std::string, std::string>> ext_rulesets;
 };
 
 static std::string parseSubRequestArguments(Request &request,
