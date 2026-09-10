@@ -3614,6 +3614,7 @@ static std::string parseSubRequestArguments(Request &request,
   parsed.renames = getUrlArg(argument, "rename");
   parsed.provider_headers = getUrlArg(argument, "provider_headers");
   parsed.dns_template = getUrlArg(argument, "dns_template");
+  parseExtRuleset(getUrlArg(argument, "ext_ruleset"), parsed.ext_rulesets);
 
   parsed.upload = getUrlArg(argument, "upload");
   parsed.emoji = getUrlArg(argument, "emoji");
