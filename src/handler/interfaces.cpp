@@ -64,6 +64,49 @@ static string_icase_map buildSubscriptionRequestHeaders() {
   return headers;
 }
 
+void parseExtRuleset(const std::string &raw,
+                     std::vector<std::pair<std::string, std::string>> &out) {
+  out.clear();
+  auto trim = [](std::string s) {
+    size_t b = 0;
+    while (b < s.size() &&
+           std::isspace(static_cast<unsigned char>(s[b])))
+      ++b;
+    size_t e = s.size();
+    while (e > b &&
+           std::isspace(static_cast<unsigned char>(s[e - 1])))
+      --e;
+    return s.substr(b, e - b);
+  };
+  auto handleToken = [&](const std::string &token) {
+    if (token.empty() || token[0] == '#') return;
+    size_t comma = token.find(',');
+    if (comma == std::string::npos) return;
+    std::string group = trim(token.substr(0, comma));
+    std::string url = trim(token.substr(comma + 1));
+    if (group.empty() || url.empty()) return;
+    out.emplace_back(std::move(group), std::move(url));
+  };
+  size_t start = 0;
+  while (start <= raw.size()) {
+    size_t end = raw.find(';', start);
+    if (end == std::string::npos) end = raw.size();
+    std::string token = raw.substr(start, end - start);
+    // Within a `;`-separated entry, also treat '\n' as a sub-separator so
+    // that a `# comment\nProxy,URL` blob does not consume the URL line.
+    size_t line_start = 0;
+    while (line_start <= token.size()) {
+      size_t line_end = token.find('\n', line_start);
+      if (line_end == std::string::npos) line_end = token.size();
+      handleToken(trim(token.substr(line_start, line_end - line_start)));
+      if (line_end == token.size()) break;
+      line_start = line_end + 1;
+    }
+    if (end == raw.size()) break;
+    start = end + 1;
+  }
+}
+
 #include "utils/base64/base64.h"
 #include "utils/bounded_executor.h"
 #include "utils/cooperative_cpu.h"

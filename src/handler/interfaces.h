@@ -3,12 +3,29 @@
 
 #include <string>
 #include <map>
+#include <utility>
+#include <vector>
 #include <inja.hpp>
 
 #include "config/ruleset.h"
 #include "generator/config/subexport.h"
 #include "handler/fetch_context.h"
 #include "server/webserver.h"
+
+// Parses the ext_ruleset= URL parameter value into (group, url) pairs.
+// Format: "Group,URL[;Group,URL]..."
+//   - ';' separates entries
+//   - within an entry, '\n' is also treated as a sub-separator so that a
+//     '# comment\nProxy,URL' blob does not consume the URL line
+//   - first ',' in each line splits group from url
+//   - empty entries, entries without a comma, and lines starting with
+//     '#' (after trim) are skipped
+//   - group/url are URL-decoded by the caller; this helper only trims
+//     ASCII whitespace and does no decoding
+// Output vector is cleared before population.
+void parseExtRuleset(
+    const std::string &raw,
+    std::vector<std::pair<std::string, std::string>> &out);
 
 void refreshRulesets(RulesetConfigs &ruleset_list,
                      std::vector<RulesetContent> &rca,

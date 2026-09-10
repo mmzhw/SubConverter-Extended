@@ -513,6 +513,26 @@ IF(BUILD_TESTS)
     ADD_TEST(NAME external_rules COMMAND external_rules_test)
     SET_TESTS_PROPERTIES(external_rules PROPERTIES LABELS fast)
 
+    # parseExtRuleset lives in src/handler/interfaces.cpp. The test only
+    # calls that helper, but interfaces.cpp depends on the rest of the
+    # runtime sources at link time, so we compile them all in here.
+    SET(PARSE_EXT_RULESET_TEST_SOURCES ${SUBCONVERTER_RUNTIME_SOURCES})
+    LIST(REMOVE_ITEM PARSE_EXT_RULESET_TEST_SOURCES
+        src/parser/mihomo_bridge.cpp)
+    ADD_EXECUTABLE(parse_ext_ruleset_test
+        tests/parse_ext_ruleset_test.cpp
+        ${PARSE_EXT_RULESET_TEST_SOURCES})
+    TARGET_INCLUDE_DIRECTORIES(parse_ext_ruleset_test PRIVATE
+        $<TARGET_PROPERTY:${BUILD_TARGET_NAME},INCLUDE_DIRECTORIES>)
+    TARGET_LINK_DIRECTORIES(parse_ext_ruleset_test PRIVATE
+        $<TARGET_PROPERTY:${BUILD_TARGET_NAME},LINK_DIRECTORIES>)
+    TARGET_LINK_LIBRARIES(parse_ext_ruleset_test PRIVATE
+        $<TARGET_PROPERTY:${BUILD_TARGET_NAME},LINK_LIBRARIES>)
+    TARGET_COMPILE_DEFINITIONS(parse_ext_ruleset_test PRIVATE
+        $<TARGET_PROPERTY:${BUILD_TARGET_NAME},COMPILE_DEFINITIONS>)
+    ADD_TEST(NAME parse_ext_ruleset COMMAND parse_ext_ruleset_test)
+    SET_TESTS_PROPERTIES(parse_ext_ruleset PROPERTIES LABELS fast)
+
     ADD_EXECUTABLE(clash_proxy_test
         tests/clash_proxy_test.cpp
         src/generator/config/clash_proxy.cpp)
@@ -696,7 +716,8 @@ IF(BUILD_TESTS)
         preference_file_test
         cache_storage_test
         short_link_storage_test
-        upload_persistence_test)
+        upload_persistence_test
+        parse_ext_ruleset_test)
     FOREACH(TEST_TARGET IN LISTS SUBCONVERTER_ASSERTING_TEST_TARGETS)
         IF(MSVC)
             TARGET_COMPILE_OPTIONS(${TEST_TARGET} PRIVATE /UNDEBUG)
