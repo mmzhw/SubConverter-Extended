@@ -167,6 +167,8 @@ externalConfigLoadStatusName(ExternalConfigLoadStatus status) {
 // matches what ext_ruleset= validation accepts. Never returns config
 // content.
 std::string getGroupNames(RESPONSE_CALLBACK_ARGS) {
+  SettingsSnapshot snapshot = captureEffectiveSettingsSnapshot();
+  ScopedSettingsView settings_scope(std::move(snapshot));
   const std::string config_url = getUrlArg(request.argument, "config");
   if (config_url.empty()) {
     response.status_code = 400;
@@ -180,18 +182,21 @@ std::string getGroupNames(RESPONSE_CALLBACK_ARGS) {
   ExternalConfigLoadResult loaded =
       loadExternalConfig(config_url, extconf, FetchContext::PublicRequest);
   if (!loaded.ok()) {
+    // Redact the URL in logs and in the response body: data: URIs carry the
+    // whole config inline and http(s) URLs may embed credentials.
+    const std::string source_summary = summarizeUrlForLog(config_url);
     writeLog(LOG_LEVEL_WARNING, "getGroupNames 无法加载外部配置，来源：" +
-                    summarizeUrlForLog(config_url) + "，原因：" +
+                    source_summary + "，原因：" +
                     externalConfigLoadStatusName(loaded.status));
     response.status_code = 400;
     response.content_type = "text/plain; charset=utf-8";
     response.headers["Cache-Control"] = "private, no-store";
     return "Invalid request: cannot load config to list its groups: " +
            externalConfigLoadStatusName(loaded.status) + " (source: " +
-           config_url + ").\n"
+           source_summary + ").\n"
            "无效请求：无法加载配置以列出其策略组：" +
            externalConfigLoadStatusName(loaded.status) + "（来源：" +
-           config_url + "）。";
+           source_summary + "）。";
   }
 
   std::set<std::string> groups = collectExternalGroupNames(extconf);
