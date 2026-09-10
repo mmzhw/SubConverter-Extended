@@ -212,6 +212,7 @@ proxy_direct:false,https://example.com/sub
 
 规则和外部配置还支持：
 
+- `ext_ruleset=Group,URL[;Group,URL]...`：在所选 preset 已定义的策略组后追加远程规则来源；`Group` 必须已存在于 preset（`Proxy` / `Domestic` 等），未知组名返回 400 并列出合法组名；仅 `target=clash`，与 `ruleprepend` / `ruleappend` 共享 `max_allowed_rulesets` 配额，单条 URL 抓取失败或解析为空时整批拒绝（atomic 失败语义）。Web UI 在"规则"分组下新增"额外规则集"多行文本框控件。
 - `ruleprepend` / `ruleappend`：向 Clash 完整规则的首尾插入远程规则来源；
 - `28800|no-resolve`：为 `clash-ipcidr` 规则集引用增加 `no-resolve`；
 - `provider_headers`：从当前请求中选择允许的请求头，并写入 Clash 或 Stash Provider；
