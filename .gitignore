@@ -29,3 +29,7 @@ docs/**/*.md
 
 # Local SSH helper containing server credentials — never commit
 .ssh_run.py
+
+# Local working notes: contain test-server credentials and machine-specific
+# paths. Kept locally, deliberately out of the public repo.
+EXPERIENCE.md

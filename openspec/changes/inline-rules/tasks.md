@@ -34,6 +34,6 @@
 ## 7. 文档与验收
 
 - [x] 7.1 README "额外规则集" 章节后补"内联规则"小节：示例（输 DOMAIN-SUFFIX → 选 Proxy）、与 ext_ruleset 的差异、wire format 一句话、`max_allowed_rulesets` 限额提示。验证：`grep -n "inline_rules" README.md` 命中。
-- [x] 7.2 端到端验收：服务器 192.168.200.130 容器重建后 → `/sub?target=clash&config=<preset>&inline_rules=...` 200 且 YAML 含正确规则；前端 dev 走查两组控件并存；既有 smoke 全量通过。验证：smoke exit 0。
+- [x] 7.2 端到端验收：测试服务器容器重建后 → `/sub?target=clash&config=<preset>&inline_rules=...` 200 且 YAML 含正确规则；前端 dev 走查两组控件并存；既有 smoke 全量通过。验证：smoke exit 0。
   - 实际结果：服务器 sce-test 重建后 10/10 inline_rules smoke case 通过；整 smoke 套件 `smoke checks passed`；手测 `inline_rules=Domestic:DOMAIN-SUFFIX,foo.com|DOMAIN-KEYWORD,bar;Proxy:IP-CIDR,10.0.0.0/8` 在响应 rules: 节下严格按提交顺序生成三条。
 - [ ] 7.3 OpenSpec change 归档（按项目 archive 流程）。

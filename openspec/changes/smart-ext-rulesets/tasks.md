@@ -28,5 +28,5 @@
 ## 6. 文档与验收
 
 - [ ] 6.1 README "额外规则集" 更新：行式控件行为 + `/getgroupnames` 一句话；验证：grep 命中
-- [ ] 6.2 端到端验收（服务器 192.168.200.130 容器重建后）：`/getgroupnames` 200 JSON；前端行式控件加载组名；生成订阅 URL 含正确 `ext_ruleset=`；既有 smoke 全量通过；验证：smoke exit 0
+- [ ] 6.2 端到端验收（测试服务器容器重建后）：`/getgroupnames` 200 JSON；前端行式控件加载组名；生成订阅 URL 含正确 `ext_ruleset=`；既有 smoke 全量通过；验证：smoke exit 0
 - [ ] 6.3 OpenSpec change 归档（按项目 archive 流程）
