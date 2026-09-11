@@ -33,3 +33,7 @@ docs/**/*.md
 # Local working notes: contain test-server credentials and machine-specific
 # paths. Kept locally, deliberately out of the public repo.
 EXPERIENCE.md
+
+# Local build/deploy scratch: release tarballs and commit-message temp files
+*.tar.gz
+.git-msg.tmp
