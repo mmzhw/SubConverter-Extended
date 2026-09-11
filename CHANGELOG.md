@@ -36,6 +36,20 @@
 - **`parseExtRulesetRows` 不认旧格式**：兼容 `;` 与换行两种分隔，修复旧链接导入后行合并乱码。
 - **`templates.cpp` 空 `request_params` 崩溃**：`all_args.erase(size()-1)` 在空 map 时 `erase(npos)` 抛 `out_of_range`，导致 `/getgroupnames` 返回 500；补空判断。
 
+### 变更
+
+#### 构建、镜像与文档不再指向上游仓库
+
+本 fork 此前对外宣称的源码地址是上游仓库，导致两个问题：`/version` 页的构建提交链接 404（该 SHA 只存在于本 fork），以及两个自动更新器会把上游的 release 覆盖到本 fork 的构建上。
+
+- `src/version.h` 新增 `PROJECT_REPO_URL`；`/version` 的构建提交链接与 `/version`、`/inspect` 两处源代码页脚都改用它。
+- 两个自动更新器改为从本 fork 拉取 release：`bridge/cmd/portable-updater`、OpenWrt 的 `subconverter-extended-update`。
+- 镜像命名空间：Docker Hub 改为 `mmzhw51/subconverter-extended`，GHCR 改为 `ghcr.io/mmzhw/subconverter-extended`（两者所有者不同，改写时 GHCR 先行）。
+- 同步更新 `Dockerfile`、`docker/Dockerfile.{debian,armv7-cross}` 的 OCI 标签与 maintainer、`docker-compose.yml`、`scripts/{ci/build_plan.py,ci/release_manifest.py,merge_manifest.py}`、`build-dockerhub.yml`、`block-master-prs.yml` 的 actor 守卫、OpenWrt 包元数据，以及锁步的 `tests/test_build_plan.py` 与 `tests/ci_delivery_scripts_test.sh`。
+- 文档中的仓库身份链接改指本 fork。**Wiki 链接仍指向上游**（本 fork 没有 wiki，`/wiki` 会 302 回仓库首页）。
+- 版权归属保留：`/version` 的「项目沿革」段、LICENSE，以及 `Custom_OpenClash_Rules`、`Rule-Bot` 等相关项目链接均未改动。
+- 刻意未改：`bridge/go.mod` 的 module 路径，以及 CI 会读取的 `com.aethersailor.dependency-snapshot.sha256` 标签。
+
 ### 测试
 
 - 后端 smoke 新增 `inline_rules`（10 例）与短链更新（4 例）用例，并新增 `--short-link-password` 参数（默认读 `SUBCONVERTER_SHORT_LINK_PASSWORD`）。
