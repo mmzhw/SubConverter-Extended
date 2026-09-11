@@ -161,7 +161,7 @@ subconverter 的节点解析器需要人工跟进协议、传输方式和参数�
 | Web 配置界面 | 内置 Vue 3 配置工作台，支持显式生成、导入回显、二维码、生成历史、服务端短链和短链管理。 |
 | 远程配置预设 | Web UI 内置 Aethersailor Custom_OpenClash_Rules 与 ACL4SSR 常用模板，也支持粘贴公开 `.ini` 地址。 |
 | 单链接 DNS 模板 | Web UI 可读取默认 Clash/Mihomo DNS 模板，编辑后保存为服务端本地模板，并通过 `dns_template` 只作用于当前订阅链接。 |
-| 短链服务 | 支持把很长的 `/sub?...` 链接保存为 `/s?id=...`，并提供列表、复制、载入和删除管理接口。 |
+| 短链服务 | 支持把很长的 `/sub?...` 链接保存为 `/s?id=...`，并提供列表、复制、载入、编辑和删除管理接口；短链地址固定，内容可原地更新。 |
 | 部署安全 | 提供 `lan`、`public`、`strict` 安全档位，并区分请求方可控抓取、可信本地配置和上传权限。 |
 | 出站访问 | `proxy_config`、`proxy_ruleset`、`proxy_subscription` 使用明确的 Direct、System、Explicit、Cors 策略，并支持 `proxy_bypass`。 |
 | 规则扩展 | 支持外部 Clash 完整规则的 `ruleprepend` / `ruleappend`，以及 `clash-ipcidr` 的 `no-resolve` 选项。 |
@@ -213,6 +213,7 @@ proxy_direct:false,https://example.com/sub
 规则和外部配置还支持：
 
 - `ext_ruleset=Group,URL[;Group,URL]...`：在所选 preset 已定义的策略组后追加远程规则来源；`Group` 必须已存在于 preset（`Proxy` / `Domestic` 等），未知组名返回 400 并列出合法组名；仅 `target=clash`，与 `ruleprepend` / `ruleappend` 共享 `max_allowed_rulesets` 配额，单条 URL 抓取失败或解析为空时整批拒绝（atomic 失败语义）。Web UI 的"额外规则集"为行式控件：组名下拉自动从所选 preset 加载（后端 `GET /getgroupnames?config=<url>` 返回合法组名），每行一个 URL 输入框，无需手动拼写 `组名,URL` 格式。
+- `inline_rules=Group:TYPE,value|TYPE,value[;Group2:...]`：直接在 URL 里录入 Clash 规则行追加到指定策略组，无需自建并公网托管一份规则文件。`:` 分组名/规则列表，`|` 分同组内规则，`;` 分组。`Group` 必须已存在于 preset（与 `ext_ruleset=` 共用 `collectExternalGroupNames`），规则类型须在 `ClashRuleTypes` 内（`MATCH` / `FINAL` 拒绝），值非空；不校验是否已存在同名规则。与 `ext_ruleset=` 的区别：远程规则集适合多人共享、长期维护；内联规则适合一次性把某个域名 / 关键词直接打到某个组。Web UI 的"内联规则"控件每行 = 匹配模式下拉（`DOMAIN` / `DOMAIN-SUFFIX` / `DOMAIN-KEYWORD` / `DOMAIN-REGEX` / `GEOIP` / `GEOSITE` / `IP-CIDR` / `IP-CIDR6` / `SRC-IP-CIDR`）+ 值输入框（按匹配模式给 placeholder）+ 组名下拉（复用 `/getgroupnames` 自动加载），同样复用 `max_allowed_rulesets` 配额。示例：`inline_rules=Domestic:DOMAIN-SUFFIX,foo.com|DOMAIN-KEYWORD,bar;Proxy:IP-CIDR,10.0.0.0/8`。
 - `ruleprepend` / `ruleappend`：向 Clash 完整规则的首尾插入远程规则来源；
 - `28800|no-resolve`：为 `clash-ipcidr` 规则集引用增加 `no-resolve`；
 - `provider_headers`：从当前请求中选择允许的请求头，并写入 Clash 或 Stash Provider；
@@ -287,7 +288,27 @@ Web UI 目前覆盖这些高频流程：
 - GitHub Proxy 选择和延迟测试用于改善远程配置模板访问，并会继承到该配置内的 GitHub 规则集和基础模板地址；不会改写 `url=` 订阅源；
 - 生成历史保存在浏览器本地，点击可回显；
 - Web UI 顶部内置项目 Logo，便于从普通表单页中识别当前工具；
-- 服务端短链可在“短链管理”中刷新、复制、载入和删除；列表和删除接口需要短链管理密码。
+- 服务端短链可在“短链管理”中刷新、复制、载入、**编辑**和删除；除 `/s` 外，列表、编辑和删除接口都需要短链管理密码。
+
+### 短链内容可编辑
+
+短链记录的是一个完整的 `/sub?...` 地址。**短链地址（`/s?id=<code>`）不会因为内容变化而改变**，因此把短链分发给客户端后，后续增删规则无需让每台客户端重新导入订阅。
+
+- 在 Web UI 的“服务器短链”列表里点某条的“编辑”，表单会回填该短链的全部参数（含内联规则、额外规则集、远程配置等）。改完后点“生成”，再点“更新短链”，短链地址保持不变。
+- 命令行等价操作：
+
+```bash
+curl -X PATCH 'http://127.0.0.1:25500/short?id=<code>' \
+  -H 'Content-Type: application/json' \
+  -H 'X-Short-Link-Password: <password>' \
+  -d '{"url":"http://127.0.0.1:25500/sub?target=clash&url=<订阅源>&inline_rules=Proxy%3ADOMAIN-SUFFIX%2Cfoo.com"}'
+# → {"code":"<同一个 code>","path":"/s?id=<code>","updated_at":1757000000000}
+```
+
+- 响应语义：`code` 不存在或格式非法 → 404 `not-found`；`url` 不是合法的 `/sub?target=...&url=...` 地址 → 400 `invalid-url`（原记录不变）；`url` 字段缺失 → 400 `invalid-request`；写盘失败 → 503 `storage-unavailable`（内存回滚）。
+- 更新只替换目标地址，`code`、`created_at`、`last_access_at` 全部保留，并刷新列表里的 `updated_at`（“修改”时间）。
+- `/s` 每次都是实时转换，不缓存结果，所以更新后客户端下次刷新即可拿到新内容。
+- 更新**不会**与其它短链合并：即使两条短链被改成同一个目标地址，也各自独立保留。
 
 nginx 同时将 `/api`、`/sub`、`/getprofile`、`/getruleset`、`/short`、`/short/list`、`/s` 等接口反向代理到容器内 subconverter。容器默认只发布一个端口：`25500`。`WEB_PORT` 控制 nginx 的公开入口，`SUBCONVERTER_LISTEN_PORT` 控制容器内后端回环端口，两者应保持不同。
 
@@ -296,6 +317,7 @@ nginx 同时将 `/api`、`/sub`、`/getprofile`、`/getruleset`、`/short`、`/s
 `/s?id=...` 是客户端实际导入订阅时使用的短链解析入口，保持免密；否则 Clash、Nikki、OpenClash 等客户端无法定时更新。服务器短链的管理入口会受密码保护：
 
 - `GET /short/list`：查看服务器保存的短链；
+- `PATCH /short?id=<code>`：原地修改短链的目标地址（`code` 不变）；
 - `DELETE /short?id=<code>`：删除服务器短链。
 
 管理密码通过 `SUBCONVERTER_SHORT_LINK_PASSWORD` 配置。Web UI 的“服务器短链”页会把输入的密码作为 `X-Short-Link-Password` 请求头发送；命令行也可使用 `Authorization: Bearer <password>` 或 `X-Short-Link-Password: <password>`。Docker 启动时如果未显式设置密码，会在 `/base/short-links/admin-password` 生成并复用一个随机 token；挂载 `./short-links:/base/short-links` 后，重建容器不会丢失这个 token。为了便于部署时获取密码，容器启动日志会明文打印当前短链管理密码。

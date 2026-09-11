@@ -26,3 +26,6 @@ upstream-sync-decisions.raw
 # Local Markdown files under docs
 docs/*.md
 docs/**/*.md
+
+# Local SSH helper containing server credentials — never commit
+.ssh_run.py

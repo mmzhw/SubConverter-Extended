@@ -14,6 +14,7 @@ import base64
 import difflib
 import hashlib
 import json
+import os
 import re
 import sys
 import urllib.error
@@ -181,6 +182,20 @@ GET_GROUPNAMES_PRESET_CONFIG = "data:text/plain;base64," + base64.urlsafe_b64enc
             b"enable_rule_generator=true",
             b"custom_proxy_group=MyGroup`select`DIRECT",
             b"custom_proxy_group=Streaming`select`MyGroup",
+        )
+    )
+).decode("ascii")
+# Minimal preset for smoke cases that actually run a conversion and only
+# need the target groups to exist. Declares Proxy (Direct is a built-in
+# fallback group) and no remote rulesets, so the conversion never waits on
+# an outbound fetch. EXT_RULESET_PRESET_CONFIG cannot be used here: its
+# ruleset= lines point at unreachable hosts, which makes the cases slow
+# and intermittently flaky.
+NO_RULESET_PRESET_CONFIG = "data:text/plain;base64," + base64.urlsafe_b64encode(
+    b"\n".join(
+        (
+            b"enable_rule_generator=true",
+            b"custom_proxy_group=Proxy`select`DIRECT",
         )
     )
 ).decode("ascii")
@@ -355,6 +370,34 @@ def fetch(
 ) -> str:
     body, _ = fetch_response(base_url, path, params, timeout, headers)
     return body
+
+
+def request_status(
+    base_url: str,
+    path: str,
+    params: dict[str, str] | None,
+    timeout: int,
+    method: str = "GET",
+    payload: dict | None = None,
+    headers: dict[str, str] | None = None,
+) -> tuple[int, str]:
+    """Like fetch_response but returns (status, body) for ANY status
+    instead of raising, so smoke cases can assert on 4xx/5xx codes."""
+    url = build_url(base_url, path, params)
+    data = json.dumps(payload).encode() if payload is not None else None
+    request_headers = dict(headers or {})
+    if data is not None:
+        request_headers.setdefault("Content-Type", "application/json")
+    request = urllib.request.Request(
+        url, data=data, headers=request_headers, method=method
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            return response.status, response.read().decode("utf-8", errors="replace")
+    except urllib.error.HTTPError as exc:
+        return exc.code, exc.read().decode("utf-8", errors="replace")
+    except urllib.error.URLError as exc:
+        raise AssertionError(f"{url} failed: {exc}") from exc
 
 
 def assert_rejected(
@@ -1081,6 +1124,466 @@ def assert_getgroupnames_missing_config(base_url: str, timeout: int) -> None:
     )
 
 
+def assert_inline_rules_valid(base_url: str, timeout: int) -> None:
+    """inline_rules= with valid groups and rules succeeds and the
+    user-supplied rule lines appear in the output rules: block."""
+    output = fetch(
+        base_url,
+        "/sub",
+        {
+            "target": "clash",
+            "url": SAMPLE_SS_LINK,
+            "config": NO_RULESET_PRESET_CONFIG,
+            "inline_rules": (
+                "Proxy:DOMAIN-SUFFIX,foo.com|DOMAIN-KEYWORD,bar;"
+                "Direct:DOMAIN-SUFFIX,lan.internal"
+            ),
+        },
+        timeout,
+    )
+    if "rules:" not in output:
+        raise AssertionError(
+            "inline_rules output is missing a rules: section"
+        )
+    expected_lines = (
+        "DOMAIN-SUFFIX,foo.com,Proxy",
+        "DOMAIN-KEYWORD,bar,Proxy",
+        "DOMAIN-SUFFIX,lan.internal,Direct",
+    )
+    for line in expected_lines:
+        if line not in output:
+            raise AssertionError(
+                f"inline_rules output missing expected rule line: {line}"
+            )
+
+
+def assert_inline_rules_empty(base_url: str, timeout: int) -> None:
+    """inline_rules= with only whitespace produces 200 and no inline
+    rule lines."""
+    output = fetch(
+        base_url,
+        "/sub",
+        {
+            "target": "clash",
+            "url": SAMPLE_SS_LINK,
+            "config": NO_RULESET_PRESET_CONFIG,
+            "inline_rules": "   ",
+        },
+        timeout,
+    )
+    if "rules:" not in output:
+        raise AssertionError(
+            "inline_rules empty output is missing a rules: section"
+        )
+
+
+def assert_inline_rules_unknown_group(
+    base_url: str, timeout: int
+) -> None:
+    """inline_rules= referencing a group not in the preset returns 400."""
+    assert_rejected(
+        base_url,
+        "/sub",
+        {
+            "target": "clash",
+            "url": SAMPLE_SS_LINK,
+            "config": EXT_RULESET_PRESET_CONFIG,
+            "inline_rules": "NotARealGroup:DOMAIN-SUFFIX,foo.com",
+        },
+        timeout,
+        "inline_rules unknown group must return 400",
+    )
+
+
+def assert_inline_rules_unknown_type(
+    base_url: str, timeout: int
+) -> None:
+    """inline_rules= with an unsupported rule type returns 400."""
+    assert_rejected(
+        base_url,
+        "/sub",
+        {
+            "target": "clash",
+            "url": SAMPLE_SS_LINK,
+            "config": EXT_RULESET_PRESET_CONFIG,
+            "inline_rules": "Proxy:BOGUS,foo.com",
+        },
+        timeout,
+        "inline_rules unknown rule type must return 400",
+    )
+
+
+def assert_inline_rules_match_forbidden(
+    base_url: str, timeout: int
+) -> None:
+    """inline_rules= with MATCH as the rule type is rejected even
+    though it lives in ClashRuleTypes — parseExternalClashRules rejects
+    terminal rules."""
+    assert_rejected(
+        base_url,
+        "/sub",
+        {
+            "target": "clash",
+            "url": SAMPLE_SS_LINK,
+            "config": EXT_RULESET_PRESET_CONFIG,
+            "inline_rules": "Proxy:MATCH,DIRECT",
+        },
+        timeout,
+        "inline_rules MATCH must return 400",
+    )
+
+
+def assert_inline_rules_with_list_true(
+    base_url: str, timeout: int
+) -> None:
+    """inline_rules= combined with list=true returns 400."""
+    assert_rejected(
+        base_url,
+        "/sub",
+        {
+            "target": "clash",
+            "list": "true",
+            "url": SAMPLE_SS_LINK,
+            "config": EXT_RULESET_PRESET_CONFIG,
+            "inline_rules": "Proxy:DOMAIN-SUFFIX,foo.com",
+        },
+        timeout,
+        "inline_rules + list=true must return 400",
+    )
+
+
+def assert_inline_rules_with_script_true(
+    base_url: str, timeout: int
+) -> None:
+    """inline_rules= combined with script=true returns 400."""
+    assert_rejected(
+        base_url,
+        "/sub",
+        {
+            "target": "clash",
+            "script": "true",
+            "url": SAMPLE_SS_LINK,
+            "config": EXT_RULESET_PRESET_CONFIG,
+            "inline_rules": "Proxy:DOMAIN-SUFFIX,foo.com",
+        },
+        timeout,
+        "inline_rules + script=true must return 400",
+    )
+
+
+def assert_inline_rules_wrong_target(
+    base_url: str, timeout: int
+) -> None:
+    """inline_rules= with a non-clash target returns 400."""
+    assert_rejected(
+        base_url,
+        "/sub",
+        {
+            "target": "surge",
+            "url": SAMPLE_SS_LINK,
+            "config": EXT_RULESET_PRESET_CONFIG,
+            "inline_rules": "Proxy:DOMAIN-SUFFIX,foo.com",
+        },
+        timeout,
+        "inline_rules with non-clash target must return 400",
+    )
+
+
+def assert_inline_rules_exceeds_quota(
+    base_url: str, timeout: int
+) -> None:
+    """inline_rules= with more than max_allowed_rulesets (default 64)
+    rule lines returns 400."""
+    sections = [
+        f"Proxy:DOMAIN-SUFFIX,host{i}.example.com" for i in range(65)
+    ]
+    assert_rejected(
+        base_url,
+        "/sub",
+        {
+            "target": "clash",
+            "url": SAMPLE_SS_LINK,
+            "config": EXT_RULESET_PRESET_CONFIG,
+            "inline_rules": ";".join(sections),
+        },
+        timeout,
+        "inline_rules > max_allowed_rulesets must return 400",
+    )
+
+
+def assert_inline_rules_empty_value(
+    base_url: str, timeout: int
+) -> None:
+    """inline_rules= with a rule whose value is empty returns 400."""
+    assert_rejected(
+        base_url,
+        "/sub",
+        {
+            "target": "clash",
+            "url": SAMPLE_SS_LINK,
+            "config": EXT_RULESET_PRESET_CONFIG,
+            "inline_rules": "Proxy:DOMAIN-SUFFIX,",
+        },
+        timeout,
+        "inline_rules empty value must return 400",
+    )
+
+
+def assert_inline_rules_coexists_with_ext_ruleset(
+    base_url: str,
+    timeout: int,
+    ext_ruleset_success_url: str,
+) -> None:
+    """inline_rules= and ext_ruleset= both contribute; the user rules
+    from both sources appear in the response."""
+    output = fetch(
+        base_url,
+        "/sub",
+        {
+            "target": "clash",
+            "url": SAMPLE_SS_LINK,
+            "config": EXT_RULESET_PRESET_CONFIG,
+            "ext_ruleset": f"Proxy,{ext_ruleset_success_url}",
+            "inline_rules": "Domestic:DOMAIN-SUFFIX,inline-only.example",
+        },
+        timeout,
+    )
+    if "rules:" not in output:
+        raise AssertionError(
+            "inline_rules + ext_ruleset output is missing a rules: section"
+        )
+    if "DOMAIN-SUFFIX,inline-only.example,Domestic" not in output:
+        raise AssertionError(
+            "inline_rules contribution missing in mixed request"
+        )
+
+
+def short_link_admin_headers(password: str | None) -> dict[str, str]:
+    token = (password or "").strip()
+    return {"X-Short-Link-Password": token} if token else {}
+
+
+def smoke_sub_url(base_url: str, inline_rules: str) -> str:
+    """Builds a complete /sub?... URL for short-link fixtures.
+
+    Uses a ruleset-free preset on purpose: the short-link cases call
+    /s, which runs a real conversion, and EXT_RULESET_PRESET_CONFIG
+    points at unreachable rulesets that make the conversion slow and
+    flaky. This fixture only needs the target group to exist.
+    """
+    query = urllib.parse.urlencode(
+        {
+            "target": "clash",
+            "url": SAMPLE_SS_LINK,
+            "config": NO_RULESET_PRESET_CONFIG,
+            "inline_rules": inline_rules,
+        }
+    )
+    return f"{base_url}/sub?{query}"
+
+
+def create_smoke_short_link(
+    base_url: str, timeout: int, url: str, name: str, headers: dict[str, str]
+) -> str:
+    status, body = request_status(
+        base_url,
+        "/short",
+        None,
+        timeout,
+        method="POST",
+        payload={"url": url, "name": name},
+        headers=headers,
+    )
+    if status != 200:
+        raise AssertionError(f"POST /short returned HTTP {status}\n{body}")
+    code = json.loads(body).get("code")
+    if not isinstance(code, str) or not code:
+        raise AssertionError(f"POST /short did not return a code: {body!r}")
+    return code
+
+
+def delete_smoke_short_link(
+    base_url: str, timeout: int, code: str, headers: dict[str, str]
+) -> None:
+    request_status(
+        base_url,
+        "/short",
+        {"id": code},
+        timeout,
+        method="DELETE",
+        headers=headers,
+    )
+
+
+def assert_short_link_update_ok(
+    base_url: str, timeout: int, password: str | None
+) -> None:
+    """PATCH /short replaces the target URL in place: the code is stable,
+    /s resolves the new content, and the list reflects the new URL."""
+    headers = short_link_admin_headers(password)
+    before_rules = "Proxy:DOMAIN-SUFFIX,smoke-before.example"
+    after_rules = "Proxy:DOMAIN-SUFFIX,smoke-after.example"
+    code = create_smoke_short_link(
+        base_url, timeout, smoke_sub_url(base_url, before_rules),
+        "smoke-update", headers,
+    )
+    try:
+        # The link starts out serving the "before" rules.
+        initial = fetch(base_url, "/s", {"id": code}, timeout)
+        if "DOMAIN-SUFFIX,smoke-before.example,Proxy" not in initial:
+            raise AssertionError(
+                "newly created short link did not serve its target rules"
+            )
+
+        status, body = request_status(
+            base_url,
+            "/short",
+            {"id": code},
+            timeout,
+            method="PATCH",
+            payload={"url": smoke_sub_url(base_url, after_rules)},
+            headers=headers,
+        )
+        if status != 200:
+            raise AssertionError(f"PATCH /short returned HTTP {status}\n{body}")
+        payload = json.loads(body)
+        if payload.get("code") != code:
+            raise AssertionError(
+                f"update changed the code: {payload.get('code')!r} != {code!r}"
+            )
+        if payload.get("path") != f"/s?id={code}":
+            raise AssertionError(
+                f"update changed the path: {payload.get('path')!r}"
+            )
+        updated_at = payload.get("updated_at")
+        if not isinstance(updated_at, int) or updated_at <= 0:
+            raise AssertionError(f"update did not stamp updated_at: {body!r}")
+
+        # Same short URL now serves the new content.
+        resolved = fetch(base_url, "/s", {"id": code}, timeout)
+        if "DOMAIN-SUFFIX,smoke-after.example,Proxy" not in resolved:
+            raise AssertionError(
+                "short link did not serve the updated rules"
+            )
+        if "smoke-before.example" in resolved:
+            raise AssertionError(
+                "short link still served the pre-update rules"
+            )
+
+        # The admin list reflects the new URL and the update stamp.
+        listing = json.loads(
+            fetch(base_url, "/short/list", None, timeout, headers)
+        )
+        entry = next(
+            (item for item in listing.get("items", []) if item.get("code") == code),
+            None,
+        )
+        if entry is None:
+            raise AssertionError("updated short link is missing from the list")
+        # The stored URL is percent-encoded, so compare on the decoded
+        # form rather than looking for the raw rule text.
+        stored_url = urllib.parse.unquote(entry.get("url", ""))
+        if after_rules not in stored_url:
+            raise AssertionError(
+                f"list still shows the old URL: {entry.get('url')!r}"
+            )
+        if before_rules in stored_url:
+            raise AssertionError(
+                f"list still shows the pre-update rules: {entry.get('url')!r}"
+            )
+        if entry.get("updated_at") != updated_at:
+            raise AssertionError(
+                "list updated_at does not match the PATCH response"
+            )
+    finally:
+        delete_smoke_short_link(base_url, timeout, code, headers)
+
+
+def assert_short_link_update_not_found(
+    base_url: str, timeout: int, password: str | None
+) -> None:
+    """PATCH on an unknown (but well-formed) code returns 404 not-found."""
+    headers = short_link_admin_headers(password)
+    status, body = request_status(
+        base_url,
+        "/short",
+        {"id": "zzzzzzzz"},
+        timeout,
+        method="PATCH",
+        payload={"url": smoke_sub_url(base_url, "Proxy:DOMAIN-SUFFIX,x.example")},
+        headers=headers,
+    )
+    if status != 404:
+        raise AssertionError(
+            f"PATCH on unknown code must return 404, got {status}\n{body}"
+        )
+    if json.loads(body).get("error") != "not-found":
+        raise AssertionError(f"unexpected error body: {body!r}")
+
+
+def assert_short_link_update_invalid_url(
+    base_url: str, timeout: int, password: str | None
+) -> None:
+    """PATCH with a non-/sub URL returns 400 invalid-url and leaves the
+    stored target untouched."""
+    headers = short_link_admin_headers(password)
+    original_rules = "Proxy:DOMAIN-SUFFIX,smoke-keep.example"
+    code = create_smoke_short_link(
+        base_url, timeout, smoke_sub_url(base_url, original_rules),
+        "smoke-invalid", headers,
+    )
+    try:
+        status, body = request_status(
+            base_url,
+            "/short",
+            {"id": code},
+            timeout,
+            method="PATCH",
+            payload={"url": "https://example.com/not-a-sub-link"},
+            headers=headers,
+        )
+        if status != 400:
+            raise AssertionError(
+                f"PATCH with a non-/sub URL must return 400, got {status}\n{body}"
+            )
+        if json.loads(body).get("error") != "invalid-url":
+            raise AssertionError(f"unexpected error body: {body!r}")
+
+        # The rejection must not have mutated the record.
+        resolved = fetch(base_url, "/s", {"id": code}, timeout)
+        if "DOMAIN-SUFFIX,smoke-keep.example,Proxy" not in resolved:
+            raise AssertionError(
+                "rejected update modified the short link target"
+            )
+    finally:
+        delete_smoke_short_link(base_url, timeout, code, headers)
+
+
+def assert_short_link_update_missing_url(
+    base_url: str, timeout: int, password: str | None
+) -> None:
+    """PATCH without a url field returns 400 invalid-request."""
+    headers = short_link_admin_headers(password)
+    code = create_smoke_short_link(
+        base_url, timeout,
+        smoke_sub_url(base_url, "Proxy:DOMAIN-SUFFIX,smoke-nourl.example"),
+        "smoke-nourl", headers,
+    )
+    try:
+        status, body = request_status(
+            base_url, "/short", {"id": code}, timeout,
+            method="PATCH", payload={"name": "only-a-name"}, headers=headers,
+        )
+        if status != 400:
+            raise AssertionError(
+                f"PATCH without url must return 400, got {status}\n{body}"
+            )
+        if json.loads(body).get("error") != "invalid-request":
+            raise AssertionError(f"unexpected error body: {body!r}")
+    finally:
+        delete_smoke_short_link(base_url, timeout, code, headers)
+
+
 def run_checks(
     base_url: str,
     timeout: int,
@@ -1092,6 +1595,7 @@ def run_checks(
     legacy_subscription_url: str | None,
     verify_non_clash: bool,
     ext_ruleset_success_url: str | None,
+    short_link_password: str | None = None,
 ) -> None:
     health = fetch(base_url, "/healthz", None, timeout)
     if health.strip() != "ok":
@@ -1201,6 +1705,34 @@ def run_checks(
     assert_getgroupnames_ok(base_url, timeout)
     assert_getgroupnames_bad_url(base_url, timeout)
     assert_getgroupnames_missing_config(base_url, timeout)
+
+    # inline_rules= smoke cases. None require upstream network — they
+    # all go through the parseInlineRules / inline_rules main-flow
+    # branch which never fetches remote rulesets.
+    assert_inline_rules_valid(base_url, timeout)
+    assert_inline_rules_empty(base_url, timeout)
+    assert_inline_rules_unknown_group(base_url, timeout)
+    assert_inline_rules_unknown_type(base_url, timeout)
+    assert_inline_rules_match_forbidden(base_url, timeout)
+    assert_inline_rules_with_list_true(base_url, timeout)
+    assert_inline_rules_with_script_true(base_url, timeout)
+    assert_inline_rules_wrong_target(base_url, timeout)
+    assert_inline_rules_exceeds_quota(base_url, timeout)
+    assert_inline_rules_empty_value(base_url, timeout)
+    if ext_ruleset_success_url is not None:
+        assert_inline_rules_coexists_with_ext_ruleset(
+            base_url, timeout, ext_ruleset_success_url
+        )
+
+    # Editable short links: PATCH /short replaces the target URL while
+    # the code stays stable. These need the short-link admin password
+    # when the deployment sets SUBCONVERTER_SHORT_LINK_PASSWORD.
+    assert_short_link_update_ok(base_url, timeout, short_link_password)
+    assert_short_link_update_not_found(base_url, timeout, short_link_password)
+    assert_short_link_update_invalid_url(base_url, timeout, short_link_password)
+    assert_short_link_update_missing_url(
+        base_url, timeout, short_link_password
+    )
 
     if verify_non_clash:
         assert_parser_route_isolation(base_url, timeout)
@@ -2713,6 +3245,16 @@ def main() -> int:
             "success case (e.g., no network), pass an empty string."
         ),
     )
+    parser.add_argument(
+        "--short-link-password",
+        default=os.environ.get("SUBCONVERTER_SHORT_LINK_PASSWORD", ""),
+        help=(
+            "Value for the X-Short-Link-Password header on short-link "
+            "admin calls (PATCH/DELETE /short, GET /short/list). "
+            "Defaults to the SUBCONVERTER_SHORT_LINK_PASSWORD env var; "
+            "empty means the deployment has no password configured."
+        ),
+    )
     args = parser.parse_args()
 
     try:
@@ -2732,6 +3274,7 @@ def main() -> int:
             args.legacy_subscription_url,
             args.verify_non_clash,
             ext_ruleset_success_url,
+            args.short_link_password,
         )
     except Exception as exc:
         print(f"smoke checks failed: {exc}", file=sys.stderr)
