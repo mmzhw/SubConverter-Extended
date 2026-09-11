@@ -272,7 +272,7 @@ LABEL \
   org.opencontainers.image.revision="${SHA}" \
   org.opencontainers.image.created="${BUILD_DATE}" \
   com.aethersailor.dependency-snapshot.sha256="${DEPENDENCY_SNAPSHOT_SHA}" \
-  maintainer="Aethersailor"
+  maintainer="mmzhw"
 
 COPY --from=builder /runtime-root/ /
 COPY --from=builder --chmod=0755 /src/subconverter /usr/bin/subconverter

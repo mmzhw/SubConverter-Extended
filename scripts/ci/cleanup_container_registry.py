@@ -410,9 +410,13 @@ def wait_for_package_tag_digests(
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--github-owner", default="Aethersailor")
+    # These defaults must name the account that owns this build. They were
+    # left pointing at upstream, and cleanup-container-registry.yml invokes
+    # the script with --prune-all --apply and no explicit owner, so the daily
+    # job targeted upstream's registries instead of this fork's.
+    parser.add_argument("--github-owner", default="mmzhw")
     parser.add_argument("--repository", default="subconverter-extended")
-    parser.add_argument("--dockerhub-namespace", default="aethersailor")
+    parser.add_argument("--dockerhub-namespace", default="mmzhw51")
     parser.add_argument("--current-tag", action="append", default=[])
     parser.add_argument("--current-prefix", action="append", default=[])
     parser.add_argument("--prune-orphans", action="store_true")

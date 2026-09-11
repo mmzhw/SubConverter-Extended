@@ -43,8 +43,12 @@ jobs:
           username = os.environ.get("DOCKERHUB_USERNAME", "")
           secret = os.environ.get("DOCKERHUB_TOKEN", "")
           token = dockerhub_token(username, secret)
+          # The namespace must be the account that owns this image. It was
+          # left as the upstream namespace, so the PATCH targeted a
+          # repository this token cannot write to and the description never
+          # synced.
           url = (
-              "https://hub.docker.com/v2/namespaces/aethersailor/"
+              "https://hub.docker.com/v2/namespaces/mmzhw51/"
               "repositories/subconverter-extended"
           )
           expected = {

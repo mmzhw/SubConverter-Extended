@@ -2,6 +2,17 @@
 
 SubConverter-Extended 是面向多种代理客户端的订阅转换后端增强版，重点完善 Mihomo 节点解析、Proxy Provider、多客户端远程资源、请求诊断和公网部署边界。
 
+![SubConverter-Extended Web 配置界面](https://raw.githubusercontent.com/mmzhw/SubConverter-Extended/master/docs/images/dockerhub-web-ui.jpg)
+
+## Web 配置界面
+
+镜像内置 Vue 3 可视化工作台：打开发布端口根路径即可组装真实可复制的订阅 URL。界面使用显式“生成”按钮，避免输入一个字符就更新链接；生成后可复制长链接、生成二维码，也可创建服务端短链。
+
+- **内联规则**：直接录入“匹配模式 + 值 + 目标组”，无需另外托管一份规则文件。例如把某个域名走指定策略组时，填一次即可。
+- **额外规则集**：需要共享的远程规则源可追加到所选预设的已有策略组，组名下拉自动从预设加载。
+- **短链内容可编辑**：短链地址（`/s?id=...`）保持不变即可修改其目标内容，增删规则后客户端无需重新导入订阅。
+- **生成历史与服务端短链**：本地历史可回显，服务端短链可刷新、复制、载入、编辑和删除。
+
 ## 支持范围
 
 - 为 Mihomo/Clash 生成 Proxy Provider，并使用 Mihomo 解析桥处理节点链接。
@@ -9,7 +20,7 @@ SubConverter-Extended 是面向多种代理客户端的订阅转换后端增强�
 - 支持 Sing-box、Quantumult 以及多种传统订阅和分享链接目标。
 - 提供 `explain=true`、`/inspect`、`X-Request-ID`、安全档位和可选运行统计。
 
-不同目标格式的能力和限制不同。完整范围见[Wiki 的客户端与目标格式](https://github.com/Aethersailor/SubConverter-Extended/wiki/Compatibility)。
+不同目标格式的能力和限制不同。完整范围见 [Wiki 的客户端与目标格式](https://github.com/Aethersailor/SubConverter-Extended/wiki/Compatibility)。
 
 ## 快速启动
 
