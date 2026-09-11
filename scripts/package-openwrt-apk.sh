@@ -260,8 +260,8 @@ apk mkpkg \\
   --info description:"SubConverter-Extended portable package for OpenWrt" \\
   --info license:GPL-3.0-only \\
   --info origin:${PACKAGE_NAME} \\
-  --info maintainer:"Aethersailor" \\
-  --info url:"https://github.com/Aethersailor/SubConverter-Extended" \\
+  --info maintainer:"mmzhw" \\
+  --info url:"https://github.com/mmzhw/SubConverter-Extended" \\
   --info repo-commit:${REPO_COMMIT} \\
   --info depends:"${PACKAGE_DEPENDS}" \\
   --info build-time:${BUILD_TIME} \\

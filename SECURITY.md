@@ -10,7 +10,7 @@ Docker 用户应使用与最新正式 Release 对应的 `latest` 或版本标签
 
 如果问题可能导致未授权访问、服务端请求伪造（SSRF）、路径或文件边界绕过、凭据泄漏、远程代码执行或其他安全影响，请使用 GitHub 的私密报告入口：
 
-<https://github.com/Aethersailor/SubConverter-Extended/security/advisories/new>
+<https://github.com/mmzhw/SubConverter-Extended/security/advisories/new>
 
 不要在公开 Issue、Discussion、PR 或社交平台中披露未修复漏洞的利用细节。
 
@@ -26,10 +26,10 @@ Docker 用户应使用与最新正式 Release 对应的 `latest` 或版本标签
 
 ## 非安全问题
 
-一般转换失败、第三方订阅不可达、客户端不兼容或配置错误，请先阅读 [Wiki 故障排查](https://github.com/Aethersailor/SubConverter-Extended/wiki/Troubleshooting)，再使用 [Bug 反馈表单](https://github.com/Aethersailor/SubConverter-Extended/issues/new?template=bug_report.yml)。
+一般转换失败、第三方订阅不可达、客户端不兼容或配置错误，请先阅读 [Wiki 故障排查](https://github.com/Aethersailor/SubConverter-Extended/wiki/Troubleshooting)，再使用 [Bug 反馈表单](https://github.com/mmzhw/SubConverter-Extended/issues/new?template=bug_report.yml)。
 
 ---
 
 ## English summary
 
-Security fixes target the latest stable Release. Report suspected vulnerabilities privately through [GitHub Security Advisories](https://github.com/Aethersailor/SubConverter-Extended/security/advisories/new). Do not publish exploit details or real subscription URLs, credentials, tokens, cookies, or user data in public issues.
+Security fixes target the latest stable Release. Report suspected vulnerabilities privately through [GitHub Security Advisories](https://github.com/mmzhw/SubConverter-Extended/security/advisories/new). Do not publish exploit details or real subscription URLs, credentials, tokens, cookies, or user data in public issues.

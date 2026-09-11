@@ -79,8 +79,8 @@ def image_tags(mode: str, version: str) -> list[str]:
     else:
         return []
     return [
-        f"aethersailor/subconverter-extended:{tag}",
-        f"ghcr.io/aethersailor/subconverter-extended:{tag}",
+        f"mmzhw51/subconverter-extended:{tag}",
+        f"ghcr.io/mmzhw/subconverter-extended:{tag}",
     ]
 
 

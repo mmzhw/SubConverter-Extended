@@ -7,7 +7,7 @@ body:
       value: |
         请先阅读 [故障排查](https://github.com/Aethersailor/SubConverter-Extended/wiki/Troubleshooting) 并检索现有 Issue。第三方公共实例的运行问题，请先联系对应服务提供者。
 
-        **敏感信息警告：** 不要提交真实订阅 URL、节点凭据、Token、Cookie、密码、私有主机名或未脱敏日志。`explain=true` 会隐藏已知敏感字段，但提交前仍需人工检查输出。未修复的安全漏洞请使用 [GitHub 私密报告](https://github.com/Aethersailor/SubConverter-Extended/security/advisories/new)。
+        **敏感信息警告：** 不要提交真实订阅 URL、节点凭据、Token、Cookie、密码、私有主机名或未脱敏日志。`explain=true` 会隐藏已知敏感字段，但提交前仍需人工检查输出。未修复的安全漏洞请使用 [GitHub 私密报告](https://github.com/mmzhw/SubConverter-Extended/security/advisories/new)。
   - type: checkboxes
     id: preflight
     attributes:

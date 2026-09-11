@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	repository                 = "Aethersailor/SubConverter-Extended"
+	repository                 = "mmzhw/SubConverter-Extended"
 	stateSchema                = 1
 	defaultCheckInterval       = 24 * time.Hour
 	updaterExitChanged         = 10

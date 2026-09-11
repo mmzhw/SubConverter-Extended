@@ -21,7 +21,7 @@ docker run -d \
   --name SubConverter-Extended \
   -p 127.0.0.1:25500:25500 \
   --restart unless-stopped \
-  aethersailor/subconverter-extended:latest
+  mmzhw51/subconverter-extended:latest
 ```
 
 然后访问：
@@ -37,12 +37,12 @@ http://localhost:25500/healthz
 
 ## 文档
 
-- [README](https://github.com/Aethersailor/SubConverter-Extended)
+- [README](https://github.com/mmzhw/SubConverter-Extended)
 - [完整 Wiki](https://github.com/Aethersailor/SubConverter-Extended/wiki)
-- [最新 Release](https://github.com/Aethersailor/SubConverter-Extended/releases/latest)
+- [最新 Release](https://github.com/mmzhw/SubConverter-Extended/releases/latest)
 - [安全与隐私](https://github.com/Aethersailor/SubConverter-Extended/wiki/Security-and-Privacy)
 - [故障排查](https://github.com/Aethersailor/SubConverter-Extended/wiki/Troubleshooting)
 
 ## 许可证
 
-SubConverter-Extended 按 [GNU General Public License v3.0](https://github.com/Aethersailor/SubConverter-Extended/blob/master/LICENSE) 发布。Mihomo 解析桥所使用的 Mihomo 依赖同样遵循 GPL-3.0。
+SubConverter-Extended 按 [GNU General Public License v3.0](https://github.com/mmzhw/SubConverter-Extended/blob/master/LICENSE) 发布。Mihomo 解析桥所使用的 Mihomo 依赖同样遵循 GPL-3.0。

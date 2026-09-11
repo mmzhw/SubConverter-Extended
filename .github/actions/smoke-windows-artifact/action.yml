@@ -146,7 +146,7 @@ runs:
             "ss://YWVzLTEyOC1nY206cGFzc3dvcmQ@example.com:8388#NativeCA"
           )
           $externalConfig = [uri]::EscapeDataString(
-            "https://raw.githubusercontent.com/Aethersailor/SubConverter-Extended/3bc7f09aeeafe4c823b47723915d039d064c4b67/base/config/example_external_config.toml"
+            "https://raw.githubusercontent.com/mmzhw/SubConverter-Extended/3bc7f09aeeafe4c823b47723915d039d064c4b67/base/config/example_external_config.toml"
           )
           $nativeCaResponse = Invoke-WebRequest `
             -UseBasicParsing `

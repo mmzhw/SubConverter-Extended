@@ -84,8 +84,8 @@ bash "$REPOSITORY/scripts/ci/build-candidate-image.sh" \
 assert_trace "--load"
 assert_trace "subconverter-extended:amd64-ci"
 deny_trace "--push"
-deny_trace "aethersailor/subconverter-extended"
-deny_trace "ghcr.io/aethersailor/subconverter-extended"
+deny_trace "mmzhw51/subconverter-extended"
+deny_trace "ghcr.io/mmzhw/subconverter-extended"
 deny_trace "buildcache-"
 assert_trace "--build-arg THREADS=16"
 grep -Eq '^digest=sha256:[0-9]{64}$' "$GITHUB_OUTPUT"
@@ -126,7 +126,7 @@ grep -Fq 'group: container-registry-cleanup' "$CLEANUP_WORKFLOW"
 
 build_linux_block="$(sed -n '/^  build-linux:/,/^  build-windows-amd64:/p' "$BUILD_WORKFLOW")"
 deny_build_linux_registry_write=false
-if grep -Eq 'docker login|docker push|--push|aethersailor/subconverter-extended:ci-|ghcr.io/aethersailor/subconverter-extended:ci-' <<<"$build_linux_block"; then
+if grep -Eq 'docker login|docker push|--push|mmzhw51/subconverter-extended:ci-|ghcr.io/mmzhw/subconverter-extended:ci-' <<<"$build_linux_block"; then
   deny_build_linux_registry_write=true
 fi
 if [ "$deny_build_linux_registry_write" = true ]; then

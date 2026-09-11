@@ -9,9 +9,9 @@
 
 **面向多种代理客户端的订阅转换后端增强版**
 
-[![GitHub Tag](https://img.shields.io/github/v/tag/Aethersailor/SubConverter-Extended?style=flat&logo=github&label=version&color=blue)](https://github.com/Aethersailor/SubConverter-Extended/releases/latest)
-[![Release](https://img.shields.io/github/actions/workflow/status/Aethersailor/SubConverter-Extended/release.yml?style=flat&label=release&logo=githubactions)](https://github.com/Aethersailor/SubConverter-Extended/actions/workflows/release.yml)
-[![Docker Pulls](https://img.shields.io/docker/pulls/aethersailor/subconverter-extended?style=flat&logo=docker)](https://hub.docker.com/r/aethersailor/subconverter-extended)
+[![GitHub Tag](https://img.shields.io/github/v/tag/mmzhw/SubConverter-Extended?style=flat&logo=github&label=version&color=blue)](https://github.com/mmzhw/SubConverter-Extended/releases/latest)
+[![Release](https://img.shields.io/github/actions/workflow/status/mmzhw/SubConverter-Extended/release.yml?style=flat&label=release&logo=githubactions)](https://github.com/mmzhw/SubConverter-Extended/actions/workflows/release.yml)
+[![Docker Pulls](https://img.shields.io/docker/pulls/mmzhw51/subconverter-extended?style=flat&logo=docker)](https://hub.docker.com/r/mmzhw51/subconverter-extended)
 [![License](https://img.shields.io/badge/license-GPL--3.0-orange?style=flat)](LICENSE)
 [![Wiki](https://img.shields.io/badge/Wiki-完整用户手册-2f81f7?style=flat&logo=github)](https://github.com/Aethersailor/SubConverter-Extended/wiki)
 
@@ -43,7 +43,7 @@ SubConverter-Extended 基于 [asdlokj1qpi233/subconverter](https://github.com/as
 | 确认客户端应使用哪个 `target` | [客户端与目标格式](https://github.com/Aethersailor/SubConverter-Extended/wiki/Compatibility) |
 | 自行部署服务 | [Docker 部署](https://github.com/Aethersailor/SubConverter-Extended/wiki/Docker-Deployment) · [原生部署](https://github.com/Aethersailor/SubConverter-Extended/wiki/Native-Deployment) |
 | 使用 OpenClash 模板和规则 | [Custom_OpenClash_Rules](https://github.com/Aethersailor/Custom_OpenClash_Rules) |
-| 排查失败或提交脱敏反馈 | [故障排查](https://github.com/Aethersailor/SubConverter-Extended/wiki/Troubleshooting) · [Bug 反馈](https://github.com/Aethersailor/SubConverter-Extended/issues/new?template=bug_report.yml) |
+| 排查失败或提交脱敏反馈 | [故障排查](https://github.com/Aethersailor/SubConverter-Extended/wiki/Troubleshooting) · [Bug 反馈](https://github.com/mmzhw/SubConverter-Extended/issues/new?template=bug_report.yml) |
 
 <a id="与相关项目的关系"></a>
 
@@ -253,7 +253,7 @@ docker run -d \
   -e TZ=Asia/Shanghai \
   -e SUBCONVERTER_SHORT_LINK_PASSWORD="" \
   --restart unless-stopped \
-  aethersailor/subconverter-extended:latest
+  mmzhw51/subconverter-extended:latest
 ```
 
 检查服务：
@@ -332,7 +332,7 @@ nginx 同时将 `/api`、`/sub`、`/getprofile`、`/getruleset`、`/short`、`/s
 | OpenWrt APK | OpenWrt 25.12+ 的多种 `apk` 架构；包未签名 |
 | 完整性校验 | `SHA256SUMS` 与 `RELEASE-MANIFEST.json` |
 
-下载入口：[最新 Release](https://github.com/Aethersailor/SubConverter-Extended/releases/latest)
+下载入口：[最新 Release](https://github.com/mmzhw/SubConverter-Extended/releases/latest)
 
 ---
 
@@ -380,7 +380,7 @@ nginx 同时将 `/api`、`/sub`、`/getprofile`、`/getruleset`、`/short`、`/s
 | :--- | :--- | :--- |
 | Docker `latest` | Docker Hub 或 GHCR | 默认安装和更新 |
 | Docker 版本标签 | 与正式 Release 相同的 `vX.Y.Z` | 固定版本和回滚 |
-| 便携包与 OpenWrt APK | [最新 Release](https://github.com/Aethersailor/SubConverter-Extended/releases/latest) | 原生部署与完整性校验 |
+| 便携包与 OpenWrt APK | [最新 Release](https://github.com/mmzhw/SubConverter-Extended/releases/latest) | 原生部署与完整性校验 |
 
 功能说明以当前正式 Release 为准。报告问题时，请提供 `/version` 显示的版本和源代码修订。
 
@@ -404,9 +404,9 @@ SubConverter-Extended 按 [GPL-3.0](LICENSE) 发布。Mihomo 解析桥使用的 
 <div align="center">
   <a href="https://www.star-history.com/?type=date&repos=Aethersailor%2FSubConverter-Extended">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=Aethersailor/SubConverter-Extended&type=date&theme=dark&legend=top-left&sealed_token=NKvX6WwN3no1B0JCAxO5Tkk4nqJLR5HppGP59Pp9IDkrygstiLYT8T8_MsYyG-hqMAuML_mTOU2N1PX79o9ZgwfXacAhIBKClQskYzigRVD1FQyH66FGwA">
-      <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=Aethersailor/SubConverter-Extended&type=date&legend=top-left&sealed_token=NKvX6WwN3no1B0JCAxO5Tkk4nqJLR5HppGP59Pp9IDkrygstiLYT8T8_MsYyG-hqMAuML_mTOU2N1PX79o9ZgwfXacAhIBKClQskYzigRVD1FQyH66FGwA">
-      <img alt="SubConverter-Extended Star 历史" src="https://api.star-history.com/chart?repos=Aethersailor/SubConverter-Extended&type=date&legend=top-left&sealed_token=NKvX6WwN3no1B0JCAxO5Tkk4nqJLR5HppGP59Pp9IDkrygstiLYT8T8_MsYyG-hqMAuML_mTOU2N1PX79o9ZgwfXacAhIBKClQskYzigRVD1FQyH66FGwA">
+      <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=mmzhw/SubConverter-Extended&type=date&theme=dark&legend=top-left&sealed_token=NKvX6WwN3no1B0JCAxO5Tkk4nqJLR5HppGP59Pp9IDkrygstiLYT8T8_MsYyG-hqMAuML_mTOU2N1PX79o9ZgwfXacAhIBKClQskYzigRVD1FQyH66FGwA">
+      <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=mmzhw/SubConverter-Extended&type=date&legend=top-left&sealed_token=NKvX6WwN3no1B0JCAxO5Tkk4nqJLR5HppGP59Pp9IDkrygstiLYT8T8_MsYyG-hqMAuML_mTOU2N1PX79o9ZgwfXacAhIBKClQskYzigRVD1FQyH66FGwA">
+      <img alt="SubConverter-Extended Star 历史" src="https://api.star-history.com/chart?repos=mmzhw/SubConverter-Extended&type=date&legend=top-left&sealed_token=NKvX6WwN3no1B0JCAxO5Tkk4nqJLR5HppGP59Pp9IDkrygstiLYT8T8_MsYyG-hqMAuML_mTOU2N1PX79o9ZgwfXacAhIBKClQskYzigRVD1FQyH66FGwA">
     </picture>
   </a>
 </div>

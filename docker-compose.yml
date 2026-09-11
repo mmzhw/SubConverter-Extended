@@ -3,7 +3,7 @@
 services:
   subconverter-extended:
     container_name: SubConverter-Extended
-    image: aethersailor/subconverter-extended:latest
+    image: mmzhw51/subconverter-extended:latest
     ports:
       # 单一对外端口：nginx 托管前端并反代 subconverter。默认继续使用 25500；
       # 可用 WEB_PORT 覆盖宿主机侧和容器内 nginx 监听端口。

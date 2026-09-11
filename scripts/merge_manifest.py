@@ -1,7 +1,7 @@
 import glob
 import os, sys
 
-MAIN_IMAGE_NAME="aethersailor/subconverter-extended"
+MAIN_IMAGE_NAME="mmzhw51/subconverter-extended"
 TARGET_TAG="latest" if len(sys.argv) < 2 else sys.argv[1]
 
 args=["docker manifest create {}:{}".format(MAIN_IMAGE_NAME, TARGET_TAG)]

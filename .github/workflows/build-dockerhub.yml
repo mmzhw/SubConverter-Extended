@@ -159,12 +159,12 @@ jobs:
 
           assert_registry_tag_absent \
             registry-1.docker.io \
-            aethersailor/subconverter-extended \
-            "https://auth.docker.io/token?service=registry.docker.io&scope=repository:aethersailor/subconverter-extended:pull"
+            mmzhw51/subconverter-extended \
+            "https://auth.docker.io/token?service=registry.docker.io&scope=repository:mmzhw51/subconverter-extended:pull"
           assert_registry_tag_absent \
             ghcr.io \
-            aethersailor/subconverter-extended \
-            "https://ghcr.io/token?service=ghcr.io&scope=repository:aethersailor/subconverter-extended:pull"
+            mmzhw51/subconverter-extended \
+            "https://ghcr.io/token?service=ghcr.io&scope=repository:mmzhw51/subconverter-extended:pull"
 
       - name: Verify COCR runtime assets are absent
         shell: bash
@@ -894,12 +894,12 @@ jobs:
           }
           assert_absent \
             registry-1.docker.io \
-            aethersailor/subconverter-extended \
-            "https://auth.docker.io/token?service=registry.docker.io&scope=repository:aethersailor/subconverter-extended:pull"
+            mmzhw51/subconverter-extended \
+            "https://auth.docker.io/token?service=registry.docker.io&scope=repository:mmzhw51/subconverter-extended:pull"
           assert_absent \
             ghcr.io \
-            aethersailor/subconverter-extended \
-            "https://ghcr.io/token?service=ghcr.io&scope=repository:aethersailor/subconverter-extended:pull"
+            mmzhw51/subconverter-extended \
+            "https://ghcr.io/token?service=ghcr.io&scope=repository:mmzhw51/subconverter-extended:pull"
 
       - name: Push tested candidates and publish manifests
         shell: bash
@@ -913,8 +913,8 @@ jobs:
           fi
           TAGS="${{ needs.prepare.outputs.tags }}"
           IMAGE_NAMES=(
-            "aethersailor/subconverter-extended"
-            "ghcr.io/aethersailor/subconverter-extended"
+            "mmzhw51/subconverter-extended"
+            "ghcr.io/mmzhw/subconverter-extended"
           )
 
           resolve_digest() {
@@ -943,8 +943,8 @@ jobs:
               candidate="ci-${{ needs.prepare.outputs.version }}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${arch}"
             fi
             local_image="subconverter-extended:${arch}-ci"
-            dockerhub_candidate="aethersailor/subconverter-extended:${candidate}"
-            ghcr_candidate="ghcr.io/aethersailor/subconverter-extended:${candidate}"
+            dockerhub_candidate="mmzhw51/subconverter-extended:${candidate}"
+            ghcr_candidate="ghcr.io/mmzhw/subconverter-extended:${candidate}"
             docker tag "$local_image" "$dockerhub_candidate"
             docker tag "$local_image" "$ghcr_candidate"
             docker push "$dockerhub_candidate"
@@ -1212,8 +1212,8 @@ jobs:
           ## Docker Images
 
           Docker images are published to:
-          - `aethersailor/subconverter-extended`
-          - `ghcr.io/aethersailor/subconverter-extended`
+          - `mmzhw51/subconverter-extended`
+          - `ghcr.io/mmzhw/subconverter-extended`
 
           Supported Docker platforms:
           - `linux/amd64`
@@ -1378,10 +1378,10 @@ jobs:
           inspect_digest() {
             docker buildx imagetools inspect "$1" | awk '$1 == "Digest:" && digest == "" {digest = $2} END {if (digest == "") exit 1; print digest}'
           }
-          test "$(inspect_digest "aethersailor/subconverter-extended:${{ needs.prepare.outputs.version }}")" = "${{ needs.merge-manifest.outputs.dockerhub_digest }}"
-          test "$(inspect_digest "ghcr.io/aethersailor/subconverter-extended:${{ needs.prepare.outputs.version }}")" = "${{ needs.merge-manifest.outputs.ghcr_digest }}"
-          dockerhub_latest="$(inspect_digest aethersailor/subconverter-extended:latest)"
-          ghcr_latest="$(inspect_digest ghcr.io/aethersailor/subconverter-extended:latest)"
+          test "$(inspect_digest "mmzhw51/subconverter-extended:${{ needs.prepare.outputs.version }}")" = "${{ needs.merge-manifest.outputs.dockerhub_digest }}"
+          test "$(inspect_digest "ghcr.io/mmzhw/subconverter-extended:${{ needs.prepare.outputs.version }}")" = "${{ needs.merge-manifest.outputs.ghcr_digest }}"
+          dockerhub_latest="$(inspect_digest mmzhw51/subconverter-extended:latest)"
+          ghcr_latest="$(inspect_digest ghcr.io/mmzhw/subconverter-extended:latest)"
           [[ "$dockerhub_latest" =~ ^sha256:[0-9a-f]{64}$ ]]
           [[ "$ghcr_latest" =~ ^sha256:[0-9a-f]{64}$ ]]
           echo "dockerhub_latest=$dockerhub_latest" >> "$GITHUB_OUTPUT"
@@ -1410,34 +1410,34 @@ jobs:
           }
           OLD_DOCKERHUB="${{ steps.version_images.outputs.dockerhub_latest }}"
           OLD_GHCR="${{ steps.version_images.outputs.ghcr_latest }}"
-          test "$(inspect_digest aethersailor/subconverter-extended:latest)" = "$OLD_DOCKERHUB"
-          test "$(inspect_digest ghcr.io/aethersailor/subconverter-extended:latest)" = "$OLD_GHCR"
+          test "$(inspect_digest mmzhw51/subconverter-extended:latest)" = "$OLD_DOCKERHUB"
+          test "$(inspect_digest ghcr.io/mmzhw/subconverter-extended:latest)" = "$OLD_GHCR"
 
           rollback_latest() {
             echo "::warning::Restoring the pre-release latest pointers after a promotion failure."
             docker buildx imagetools create \
-              -t aethersailor/subconverter-extended:latest \
-              "aethersailor/subconverter-extended@$OLD_DOCKERHUB" || true
+              -t mmzhw51/subconverter-extended:latest \
+              "mmzhw51/subconverter-extended@$OLD_DOCKERHUB" || true
             docker buildx imagetools create \
-              -t ghcr.io/aethersailor/subconverter-extended:latest \
-              "ghcr.io/aethersailor/subconverter-extended@$OLD_GHCR" || true
+              -t ghcr.io/mmzhw/subconverter-extended:latest \
+              "ghcr.io/mmzhw/subconverter-extended@$OLD_GHCR" || true
           }
 
           if ! docker buildx imagetools create \
-            -t aethersailor/subconverter-extended:latest \
-            "aethersailor/subconverter-extended:$VERSION"; then
+            -t mmzhw51/subconverter-extended:latest \
+            "mmzhw51/subconverter-extended:$VERSION"; then
             rollback_latest
             exit 1
           fi
           if ! docker buildx imagetools create \
-            -t ghcr.io/aethersailor/subconverter-extended:latest \
-            "ghcr.io/aethersailor/subconverter-extended:$VERSION"; then
+            -t ghcr.io/mmzhw/subconverter-extended:latest \
+            "ghcr.io/mmzhw/subconverter-extended:$VERSION"; then
             rollback_latest
             exit 1
           fi
 
-          if [ "$(inspect_digest aethersailor/subconverter-extended:latest)" != "${{ needs.merge-manifest.outputs.dockerhub_digest }}" ] || \
-             [ "$(inspect_digest ghcr.io/aethersailor/subconverter-extended:latest)" != "${{ needs.merge-manifest.outputs.ghcr_digest }}" ]; then
+          if [ "$(inspect_digest mmzhw51/subconverter-extended:latest)" != "${{ needs.merge-manifest.outputs.dockerhub_digest }}" ] || \
+             [ "$(inspect_digest ghcr.io/mmzhw/subconverter-extended:latest)" != "${{ needs.merge-manifest.outputs.ghcr_digest }}" ]; then
             rollback_latest
             echo "::error::latest digest verification failed."
             exit 1

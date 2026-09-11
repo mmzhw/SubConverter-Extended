@@ -1,4 +1,4 @@
-提交前请阅读 [CONTRIBUTING.md](https://github.com/Aethersailor/SubConverter-Extended/blob/dev/CONTRIBUTING.md)。
+提交前请阅读 [CONTRIBUTING.md](https://github.com/mmzhw/SubConverter-Extended/blob/dev/CONTRIBUTING.md)。
 
 - [ ] PR 的目标分支是 `dev`，不是 `master`。
 - [ ] PR 描述已说明问题、修改范围、兼容性影响和验证结果。

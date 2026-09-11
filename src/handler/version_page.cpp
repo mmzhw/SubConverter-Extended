@@ -83,8 +83,7 @@ std::string buildCommitLink(const std::string &build_id) {
   if (build_id.empty())
     return "";
   return "<a "
-         "href=\"https://github.com/Aethersailor/"
-         "SubConverter-Extended/commit/" +
+         "href=\"" PROJECT_REPO_URL "/commit/" +
          build_id + "\" target=\"_blank\" rel=\"noopener noreferrer\">" +
          build_id + "</a>";
 }
@@ -913,8 +912,8 @@ std::string page(Request &request, Response &response) {
         </div>
 
         <div class="footer">
-            <span data-lang="en">Source Code: <a href="https://github.com/Aethersailor/SubConverter-Extended" target="_blank" rel="noopener noreferrer">GitHub</a> • License: <a href="https://www.gnu.org/licenses/gpl-3.0.html" target="_blank" rel="noopener noreferrer">GPL-3.0</a></span>
-            <span data-lang="zh">源代码：<a href="https://github.com/Aethersailor/SubConverter-Extended" target="_blank" rel="noopener noreferrer">GitHub</a> • 许可证：<a href="https://www.gnu.org/licenses/gpl-3.0.html" target="_blank" rel="noopener noreferrer">GPL-3.0</a></span>
+            <span data-lang="en">Source Code: <a href=")html" PROJECT_REPO_URL R"html(" target="_blank" rel="noopener noreferrer">GitHub</a> • License: <a href="https://www.gnu.org/licenses/gpl-3.0.html" target="_blank" rel="noopener noreferrer">GPL-3.0</a></span>
+            <span data-lang="zh">源代码：<a href=")html" PROJECT_REPO_URL R"html(" target="_blank" rel="noopener noreferrer">GitHub</a> • 许可证：<a href="https://www.gnu.org/licenses/gpl-3.0.html" target="_blank" rel="noopener noreferrer">GPL-3.0</a></span>
         </div>
     </div>
     <script>

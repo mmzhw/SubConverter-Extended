@@ -13,7 +13,7 @@ umask 077
 
 PACKAGE_NAME='subconverter-extended'
 DISPLAY_NAME='SubConverter-Extended'
-GITHUB_REPOSITORY='Aethersailor/SubConverter-Extended'
+GITHUB_REPOSITORY='mmzhw/SubConverter-Extended'
 GITHUB_API_PATH="repos/${GITHUB_REPOSITORY}/releases"
 GITHUB_DOWNLOAD_ROOT="https://github.com/${GITHUB_REPOSITORY}/releases/download"
 USER_AGENT='SubConverter-Extended-OpenWrt-Updater/1'

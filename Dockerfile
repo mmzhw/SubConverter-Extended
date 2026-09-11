@@ -392,14 +392,14 @@ ARG ALPINE_MIRROR=""
 LABEL \
   org.opencontainers.image.title="SubConverter-Extended" \
   org.opencontainers.image.description="A Modern Evolution of subconverter; an enhanced implementation aligned with Mihomo configuration" \
-  org.opencontainers.image.url="https://github.com/Aethersailor/SubConverter-Extended" \
-  org.opencontainers.image.source="https://github.com/Aethersailor/SubConverter-Extended" \
+  org.opencontainers.image.url="https://github.com/mmzhw/SubConverter-Extended" \
+  org.opencontainers.image.source="https://github.com/mmzhw/SubConverter-Extended" \
   org.opencontainers.image.licenses="GPL-3.0" \
   org.opencontainers.image.version="${VERSION}" \
   org.opencontainers.image.revision="${SHA}" \
   org.opencontainers.image.created="${BUILD_DATE}" \
   com.aethersailor.dependency-snapshot.sha256="${DEPENDENCY_SNAPSHOT_SHA}" \
-  maintainer="Aethersailor"
+  maintainer="mmzhw"
 
 ENV TZ=Asia/Shanghai \
     SUBCONVERTER_SHORT_LINK_PASSWORD="" \

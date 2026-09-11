@@ -1,6 +1,6 @@
 # 贡献指南
 
-SubConverter-Extended 接受缺陷修复、兼容性改进、文档修正和可验证的功能建议。提交前，请先确认现有 README、[Wiki](https://github.com/Aethersailor/SubConverter-Extended/wiki) 和 [Issue](https://github.com/Aethersailor/SubConverter-Extended/issues) 尚未解决同一问题。
+SubConverter-Extended 接受缺陷修复、兼容性改进、文档修正和可验证的功能建议。提交前，请先确认现有 README、[Wiki](https://github.com/Aethersailor/SubConverter-Extended/wiki) 和 [Issue](https://github.com/mmzhw/SubConverter-Extended/issues) 尚未解决同一问题。
 
 ## 分支与文档边界
 
@@ -28,4 +28,4 @@ CI 是必要验证，但不代替与改动对应的本地检查和实际输出�
 
 不要在 Issue、PR、日志、截图、样例或测试数据中提交真实订阅 URL、节点凭据、Token、Cookie、私有主机名或其他秘密。使用 `example.com`、保留的测试网段和明确的占位符构造最小复现。
 
-未修复的安全漏洞请通过 [GitHub 私密漏洞报告](https://github.com/Aethersailor/SubConverter-Extended/security/advisories/new) 提交，不要创建公开 Issue。
+未修复的安全漏洞请通过 [GitHub 私密漏洞报告](https://github.com/mmzhw/SubConverter-Extended/security/advisories/new) 提交，不要创建公开 Issue。
