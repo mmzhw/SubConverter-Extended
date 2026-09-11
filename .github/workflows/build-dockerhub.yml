@@ -1094,10 +1094,28 @@ jobs:
           # yet — a fresh fork, or the first release of a new version line.
           # Treat that as the first release and summarise the current history
           # instead of failing an otherwise valid release.
-          PREVIOUS_TAG="$(gh api \
-            -H 'X-GitHub-Api-Version: 2026-03-10' \
-            "repos/$GITHUB_REPOSITORY/releases/latest" \
-            --jq '.tag_name' 2>/dev/null || true)"
+          #
+          # Read the status explicitly rather than relying on `gh api` failing:
+          # on a 404 it writes the error body to stdout, so a command
+          # substitution captures JSON instead of nothing and the empty check
+          # below never fires.
+          latest_status="$(curl -sS -o /tmp/latest-release.json -w '%{http_code}' \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H 'Accept: application/vnd.github+json' \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/releases/latest")"
+          case "$latest_status" in
+            404)
+              PREVIOUS_TAG=""
+              ;;
+            200)
+              PREVIOUS_TAG="$(python3 -c 'import json; print(json.load(open("/tmp/latest-release.json")).get("tag_name") or "")')"
+              ;;
+            *)
+              cat /tmp/latest-release.json >&2
+              echo "::error::Could not read the latest published Release (HTTP $latest_status)."
+              exit 1
+              ;;
+          esac
           if [ -z "$PREVIOUS_TAG" ]; then
             echo "No previously published release; treating $CURRENT_TAG as the first release."
             RANGE_LABEL="first release"
