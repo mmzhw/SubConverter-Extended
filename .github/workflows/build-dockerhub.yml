@@ -1069,26 +1069,34 @@ jobs:
           test "$CURRENT_COMMIT" = "${{ needs.prepare.outputs.sha }}"
           REMOTE_COMMIT="$(git ls-remote origin "refs/tags/$CURRENT_TAG^{}" | awk '{print $1}')"
           test "$REMOTE_COMMIT" = "$CURRENT_COMMIT"
+          # `releases/latest` 404s while a repository has no published release
+          # yet — a fresh fork, or the first release of a new version line.
+          # Treat that as the first release and summarise the current history
+          # instead of failing an otherwise valid release.
           PREVIOUS_TAG="$(gh api \
             -H 'X-GitHub-Api-Version: 2026-03-10' \
             "repos/$GITHUB_REPOSITORY/releases/latest" \
-            --jq '.tag_name')"
+            --jq '.tag_name' 2>/dev/null || true)"
           if [ -z "$PREVIOUS_TAG" ]; then
-            echo "::error::Latest published GitHub Release returned an empty tag."
-            exit 1
+            echo "No previously published release; treating $CURRENT_TAG as the first release."
+            RANGE_LABEL="first release"
+            git log --pretty=format:'- %h %s' --max-count=200 "$CURRENT_COMMIT" > commits.md
+            : > changed-files.md
+            : > diffstat.md
+          else
+            if ! [[ "$PREVIOUS_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "::error::Latest published Release tag is not canonical SemVer: $PREVIOUS_TAG"
+              exit 1
+            fi
+            if ! git merge-base --is-ancestor "$PREVIOUS_TAG" "$CURRENT_COMMIT"; then
+              echo "::error::Latest published Release $PREVIOUS_TAG is not an ancestor of $CURRENT_TAG."
+              exit 1
+            fi
+            RANGE_LABEL="$PREVIOUS_TAG..$CURRENT_COMMIT"
+            git log --pretty=format:'- %h %s' "$PREVIOUS_TAG..$CURRENT_COMMIT" > commits.md
+            git diff --name-only "$PREVIOUS_TAG" "$CURRENT_COMMIT" > changed-files.md
+            git diff --stat "$PREVIOUS_TAG" "$CURRENT_COMMIT" > diffstat.md
           fi
-          if ! [[ "$PREVIOUS_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "::error::Latest published Release tag is not canonical SemVer: $PREVIOUS_TAG"
-            exit 1
-          fi
-          if ! git merge-base --is-ancestor "$PREVIOUS_TAG" "$CURRENT_COMMIT"; then
-            echo "::error::Latest published Release $PREVIOUS_TAG is not an ancestor of $CURRENT_TAG."
-            exit 1
-          fi
-          RANGE_LABEL="$PREVIOUS_TAG..$CURRENT_COMMIT"
-          git log --pretty=format:'- %h %s' "$PREVIOUS_TAG..$CURRENT_COMMIT" > commits.md
-          git diff --name-only "$PREVIOUS_TAG" "$CURRENT_COMMIT" > changed-files.md
-          git diff --stat "$PREVIOUS_TAG" "$CURRENT_COMMIT" > diffstat.md
 
           {
             echo "# Release Context"

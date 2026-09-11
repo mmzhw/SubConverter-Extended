@@ -384,6 +384,37 @@ nginx 同时将 `/api`、`/sub`、`/getprofile`、`/getruleset`、`/short`、`/s
 
 功能说明以当前正式 Release 为准。报告问题时，请提供 `/version` 显示的版本和源代码修订。
 
+### 发布流程（维护者）
+
+正式版本由 CI 构建发布，不需要手动构建镜像：
+
+```bash
+# 1. 确认待发布提交已推送
+git status --short            # 应为空
+git push origin master
+
+# 2. 打附注标签
+git tag -a v1.10.0 -m "v1.10.0"
+
+# 3. 推送标签，触发发布
+git push origin v1.10.0
+```
+
+CI 随后自动完成：编译 amd64 / arm64 / armv7 三种架构 → 推送镜像到 Docker Hub 与 GHCR → 创建 GitHub Release → 把 `latest` 推进到该版本。
+
+> ⚠️ **必须使用附注标签（`git tag -a`）**。workflow 通过 `refs/tags/<tag>^{}` 解析标签指向的提交；轻量标签（`git tag v1.10.0`，不带 `-a`）在这一步解析为空，会导致发布失败。
+
+> ⚠️ **标签名必须是 `vX.Y.Z`**。`release.yml` 只响应 `v*.*.*`；形如 `2026.09.11-abcdef0` 的日期标签不会触发任何 CI。
+
+发布需要两个仓库 secret：
+
+| Secret | 值 |
+| :--- | :--- |
+| `DOCKERHUB_USERNAME` | Docker Hub 用户名 |
+| `DOCKERHUB_TOKEN` | Docker Hub Personal access token，权限需含 **Read & Write** |
+
+推送到 GHCR 使用 GitHub 自动提供的 `GITHUB_TOKEN`，无需额外配置。首个正式发布不需要预先存在 Release：当仓库尚无已发布 Release 时，CI 会自动按首次发布生成说明。
+
 ---
 
 ## 🤝 致谢与许可证

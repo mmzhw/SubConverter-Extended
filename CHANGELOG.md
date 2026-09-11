@@ -3,9 +3,33 @@
 本文件记录本 fork（[mmzhw/SubConverter-Extended](https://github.com/mmzhw/SubConverter-Extended)）相对上游的显著变更。
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号遵循[语义化版本](https://semver.org/lang/zh-CN/)。
-镜像由 GitHub Actions 在推送 `vX.Y.Z` 标签时构建并发布；分支构建的版本号为 `master-<短 SHA>`，本地/CI 构建为 `dev`。
 
-## [Unreleased]
+发布方式：推送**附注标签** `vX.Y.Z`（`git tag -a v1.10.0 -m "..."`）触发 GitHub Actions，自动构建 amd64 / arm64 / armv7 三架构镜像并推送到 Docker Hub 与 GHCR，随后创建 GitHub Release 并把 `latest` 推进到该版本。分支构建的版本号为 `master-<短 SHA>`，本地或非发布 CI 构建为 `dev`。日期式标签（`2026.09.11-<短 SHA>`）不会触发 CI，仅供手动构建使用。
+
+版本线独立于上游：本 fork 从 `v1.10.0` 起计，数值高于上游当前版本，避免与上游的 `1.9.x` 混淆。
+
+## [v1.10.0] - 2026-09-11
+
+### 变更
+
+#### 发布流程改为 CI 驱动的 `vX.Y.Z` 标签
+
+- 正式版本不再手动构建，改为推送 `vX.Y.Z` 附注标签由 CI 自动完成。
+- **必须使用附注标签**：workflow 用 `refs/tags/<tag>^{}` 解析标签指向的提交，轻量标签（`git tag v1.10.0`，不带 `-a`）解析为空并导致发布失败。
+- 修复首次发布被阻塞的问题：`create-release` 原先要求仓库已存在已发布的 Release 才能生成发布说明，`releases/latest` 返回空即直接报错退出。现在该情况会被识别为首次发布，改用当前历史生成说明。
+- README 补充维护者发布流程、标签规范和所需 secrets。
+
+#### 构建、镜像与文档不再指向上游仓库
+
+本 fork 此前对外宣称的源码地址是上游仓库，导致两个问题：`/version` 页的构建提交链接 404（该 SHA 只存在于本 fork），以及两个自动更新器会把上游的 release 覆盖到本 fork 的构建上。
+
+- `src/version.h` 新增 `PROJECT_REPO_URL`；`/version` 的构建提交链接与 `/version`、`/inspect` 两处源代码页脚都改用它。
+- 两个自动更新器改为从本 fork 拉取 release：`bridge/cmd/portable-updater`、OpenWrt 的 `subconverter-extended-update`。
+- 镜像命名空间：Docker Hub 改为 `mmzhw51/subconverter-extended`，GHCR 改为 `ghcr.io/mmzhw/subconverter-extended`（两者所有者不同，改写时 GHCR 先行）。
+- 同步更新 `Dockerfile`、`docker/Dockerfile.{debian,armv7-cross}` 的 OCI 标签与 maintainer、`docker-compose.yml`、`scripts/{ci/build_plan.py,ci/release_manifest.py,merge_manifest.py}`、`build-dockerhub.yml`、`block-master-prs.yml` 的 actor 守卫、OpenWrt 包元数据，以及锁步的 `tests/test_build_plan.py` 与 `tests/ci_delivery_scripts_test.sh`。
+- 文档中的仓库身份链接改指本 fork。**Wiki 链接仍指向上游**（本 fork 没有 wiki，`/wiki` 会 302 回仓库首页）。
+- 版权归属保留：`/version` 的「项目沿革」段、LICENSE，以及 `Custom_OpenClash_Rules`、`Rule-Bot` 等相关项目链接均未改动。
+- 刻意未改：`bridge/go.mod` 的 module 路径，以及 CI 会读取的 `com.aethersailor.dependency-snapshot.sha256` 标签。
 
 ### 新增
 
@@ -36,20 +60,6 @@
 - **`parseExtRulesetRows` 不认旧格式**：兼容 `;` 与换行两种分隔，修复旧链接导入后行合并乱码。
 - **`templates.cpp` 空 `request_params` 崩溃**：`all_args.erase(size()-1)` 在空 map 时 `erase(npos)` 抛 `out_of_range`，导致 `/getgroupnames` 返回 500；补空判断。
 
-### 变更
-
-#### 构建、镜像与文档不再指向上游仓库
-
-本 fork 此前对外宣称的源码地址是上游仓库，导致两个问题：`/version` 页的构建提交链接 404（该 SHA 只存在于本 fork），以及两个自动更新器会把上游的 release 覆盖到本 fork 的构建上。
-
-- `src/version.h` 新增 `PROJECT_REPO_URL`；`/version` 的构建提交链接与 `/version`、`/inspect` 两处源代码页脚都改用它。
-- 两个自动更新器改为从本 fork 拉取 release：`bridge/cmd/portable-updater`、OpenWrt 的 `subconverter-extended-update`。
-- 镜像命名空间：Docker Hub 改为 `mmzhw51/subconverter-extended`，GHCR 改为 `ghcr.io/mmzhw/subconverter-extended`（两者所有者不同，改写时 GHCR 先行）。
-- 同步更新 `Dockerfile`、`docker/Dockerfile.{debian,armv7-cross}` 的 OCI 标签与 maintainer、`docker-compose.yml`、`scripts/{ci/build_plan.py,ci/release_manifest.py,merge_manifest.py}`、`build-dockerhub.yml`、`block-master-prs.yml` 的 actor 守卫、OpenWrt 包元数据，以及锁步的 `tests/test_build_plan.py` 与 `tests/ci_delivery_scripts_test.sh`。
-- 文档中的仓库身份链接改指本 fork。**Wiki 链接仍指向上游**（本 fork 没有 wiki，`/wiki` 会 302 回仓库首页）。
-- 版权归属保留：`/version` 的「项目沿革」段、LICENSE，以及 `Custom_OpenClash_Rules`、`Rule-Bot` 等相关项目链接均未改动。
-- 刻意未改：`bridge/go.mod` 的 module 路径，以及 CI 会读取的 `com.aethersailor.dependency-snapshot.sha256` 标签。
-
 ### 测试
 
 - 后端 smoke 新增 `inline_rules`（10 例）与短链更新（4 例）用例，并新增 `--short-link-password` 参数（默认读 `SUBCONVERTER_SHORT_LINK_PASSWORD`）。
@@ -64,9 +74,9 @@
 
 ---
 
-## 更早的变更（本次尚未推送的历史）
+## 更早的变更
 
-以上版本之前，本 fork 相对上游已包含以下功能，均随本次一并推送：
+本 fork 在 v1.10.0 之前相对上游已包含以下功能：
 
 - `ext_ruleset=Group,URL[;...]`：向所选 preset 的已有策略组追加远程规则来源，含严格组名校验、atomic 抓取失败语义与配额限制。
 - `GET /getgroupnames?config=<url>`：返回所选远程配置的合法策略组名，供 UI 下拉自动加载；与 `ext_ruleset` 校验共用 `collectExternalGroupNames`，保证两端清单一致。
