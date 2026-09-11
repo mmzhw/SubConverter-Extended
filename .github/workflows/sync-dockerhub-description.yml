@@ -31,6 +31,7 @@ jobs:
         env:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          DOCKERHUB_PASSWORD: ${{ secrets.DOCKERHUB_PASSWORD }}
         run: |
           python3 - <<'PY'
           import os
@@ -43,23 +44,27 @@ jobs:
               dockerhub_token,
           )
 
-          username = os.environ.get("DOCKERHUB_USERNAME", "")
-          secret = os.environ.get("DOCKERHUB_TOKEN", "")
-          # GitHub stores a secret byte-for-byte, so a stray trailing newline
-          # or space survives. docker/login-action trims it, which is why the
-          # release workflow works, but a raw API call rejects it with 401.
-          username = username.strip()
-          secret = secret.strip()
-          try:
-              token = dockerhub_token(username, secret)
-          except CleanupError as exc:
-              print(f"::error::Docker Hub authentication failed: {exc}. "
-                    f"username_set={bool(username)} secret_length={len(secret)}")
-              raise SystemExit(1)
-          # The namespace must be the account that owns this image. It was
-          # left as the upstream namespace, so the PATCH targeted a
-          # repository this token cannot write to and the description never
-          # synced.
+          # Docker Hub refuses repository-description writes from a personal
+          # access token (docker/hub-feedback#1927); the same call works with
+          # an account password. So prefer an optional DOCKERHUB_PASSWORD and
+          # fall back to the PAT, which will 403 until Docker lifts that limit.
+          username = os.environ.get("DOCKERHUB_USERNAME", "").strip()
+          password = os.environ.get("DOCKERHUB_PASSWORD", "").strip()
+          pat = os.environ.get("DOCKERHUB_TOKEN", "").strip()
+          # GitHub stores a secret byte-for-byte, so a pasted value keeps any
+          # trailing newline; docker/login-action trims it, a raw API call
+          # does not.
+          if password:
+              secret = password
+              auth = "password"
+          else:
+              secret = pat
+              auth = "pat"
+          if not username or not secret:
+              print("::warning::DOCKERHUB_USERNAME and a credential secret are "
+                    "required to sync the description; skipping.")
+              raise SystemExit(0)
+
           url = (
               "https://hub.docker.com/v2/namespaces/mmzhw51/"
               "repositories/subconverter-extended"
@@ -70,6 +75,23 @@ jobs:
                   ".github/DOCKERHUB_DESCRIPTION.md"
               ).read_text(encoding="utf-8"),
           }
+
+          try:
+              if auth == "password":
+                  data, _headers = _json_request(
+                      "POST",
+                      "https://hub.docker.com/v2/users/login/",
+                      payload={"username": username, "password": secret},
+                  )
+                  token = data.get("token", "") if isinstance(data, dict) else ""
+                  if not token:
+                      raise CleanupError("login did not return a session token")
+              else:
+                  token = dockerhub_token(username, secret)
+          except CleanupError as exc:
+              print(f"::error::Docker Hub authentication failed ({auth}): {exc}")
+              raise SystemExit(1)
+
           try:
               _request(
                   "PATCH",
@@ -80,8 +102,18 @@ jobs:
               )
               current, _headers = _json_request("GET", url)
           except CleanupError as exc:
-              print(f"::error::Docker Hub description update failed: {exc}")
+              if auth == "pat" and "HTTP 403" in str(exc):
+                  print(
+                      "::warning::Docker Hub refuses description writes from a "
+                      "personal access token (docker/hub-feedback#1927). The "
+                      "image push is unaffected. To automate this, add a "
+                      "DOCKERHUB_PASSWORD secret holding the account password; "
+                      "otherwise update the Overview by hand."
+                  )
+                  raise SystemExit(0)
+              print(f"::error::Docker Hub description update failed ({auth}): {exc}")
               raise SystemExit(1)
+
           if not isinstance(current, dict) or any(
               current.get(key) != value for key, value in expected.items()
           ):
@@ -89,10 +121,8 @@ jobs:
                   key for key, value in expected.items()
                   if not isinstance(current, dict) or current.get(key) != value
               ]
-              print(
-                  "::error::Docker Hub description readback mismatch on: "
-                  + ", ".join(mismatched)
-              )
+              print("::error::Docker Hub description readback mismatch on: "
+                    + ", ".join(mismatched))
               raise SystemExit(1)
-          print("Docker Hub description synced.")
+          print(f"Docker Hub description synced via {auth}.")
           PY
