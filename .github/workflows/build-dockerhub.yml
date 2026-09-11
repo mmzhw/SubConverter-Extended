@@ -163,8 +163,8 @@ jobs:
             "https://auth.docker.io/token?service=registry.docker.io&scope=repository:mmzhw51/subconverter-extended:pull"
           assert_registry_tag_absent \
             ghcr.io \
-            mmzhw51/subconverter-extended \
-            "https://ghcr.io/token?service=ghcr.io&scope=repository:mmzhw51/subconverter-extended:pull"
+            mmzhw/subconverter-extended \
+            "https://ghcr.io/token?service=ghcr.io&scope=repository:mmzhw/subconverter-extended:pull"
 
       - name: Verify COCR runtime assets are absent
         shell: bash
@@ -898,8 +898,8 @@ jobs:
             "https://auth.docker.io/token?service=registry.docker.io&scope=repository:mmzhw51/subconverter-extended:pull"
           assert_absent \
             ghcr.io \
-            mmzhw51/subconverter-extended \
-            "https://ghcr.io/token?service=ghcr.io&scope=repository:mmzhw51/subconverter-extended:pull"
+            mmzhw/subconverter-extended \
+            "https://ghcr.io/token?service=ghcr.io&scope=repository:mmzhw/subconverter-extended:pull"
 
       - name: Push tested candidates and publish manifests
         shell: bash
