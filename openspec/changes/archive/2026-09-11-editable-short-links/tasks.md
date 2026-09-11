@@ -39,4 +39,4 @@
 
 - [x] 7.1 README 补一段短链可编辑说明：`PATCH /short?id=` 用法 + "code 不变、内容可改"的语义 + 前端编辑入口一句话。验证：`grep -n "PATCH /short" README.md` 命中
 - [x] 7.2 端到端验收（测试服务器容器重建后）：创建短链 → PATCH 更新 → `/s?id=` 命中新内容 → 前端走查"编辑 → 加内联规则 → 生成 → 更新短链 → 短链地址不变"；既有 smoke 无回归。验证：smoke exit 0（短链用例需带 `--short-link-password`）
-- [ ] 7.3 OpenSpec change 归档（按项目 archive 流程）
+- [x] 7.3 OpenSpec change 归档（按项目 archive 流程）

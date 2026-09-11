@@ -1,4 +1,4 @@
-# Spec: smart-ext-rulesets
+# smart-ext-rulesets Specification
 
 ## Purpose
 
@@ -87,7 +87,7 @@ export function serializeExtRulesetRows(rows: ExtRulesetRow[]): string
   - modelValue 外部变化（导入链接回填）→ 重新解析为行。
   - 任何行编辑 → 序列化并 emit `update:modelValue`。
   - 删除按钮：行数 > 1 时删除该行；行数 = 1 时清空该行（等效空输入，序列化后为 `""`）。
-  - "远程配置"为空：显示引导提示"选择远程配置后自动加载组名"，下拉仅 4 个 fallback 组。
+  - "远程配置"为空：MUST 显示引导提示"选择远程配置后自动加载组名"，下拉仅 4 个 fallback 组。
 
 #### Scenario: 与旧数据兼容
 
@@ -98,6 +98,11 @@ export function serializeExtRulesetRows(rows: ExtRulesetRow[]): string
 
 - **WHEN** 通过行式控件添加两行（Proxy,https://a；Domestic,https://b）后生成订阅链接
 - **THEN** URL 含 `ext_ruleset=Proxy,https://a;Domestic,https://b`（编码后），与 textarea 时代行为一致
+
+#### Scenario: 半填行不写入 URL
+
+- **WHEN** 某一行只填了组名或只填了 URL
+- **THEN** 该行 MUST NOT 出现在生成的 `ext_ruleset=` 值里（组件序列化前过滤半填行）
 
 ### Requirement: nginx / 路由注册
 
@@ -111,6 +116,16 @@ export function serializeExtRulesetRows(rows: ExtRulesetRow[]): string
 
 ### Requirement: 测试与文档
 
-- 后端 smoke（`scripts/run-subconverter-smoke.py`）新增 2 case：合法 fixture config → 200 + 组名断言；坏 URL → 400。
-- 前端 vitest：`ext-rulesets.ts` 互转 case；`useGroupNames` 防抖 / 缓存 / 失败回退（mock fetch）。
-- README "额外规则集" 描述更新为行式控件行为 + `/getgroupnames` 一句话说明。
+- 后端 smoke（`scripts/run-subconverter-smoke.py`）MUST 新增 2 case：合法 fixture config → 200 + 组名断言；坏 URL → 400。
+- 前端 vitest MUST 覆盖：`ext-rulesets.ts` 互转 case；`useGroupNames` 防抖 / 缓存 / 失败回退（mock fetch）。
+- README "额外规则集" 描述 MUST 更新为行式控件行为 + `/getgroupnames` 一句话说明。
+
+#### Scenario: smoke 覆盖 getgroupnames
+
+- **WHEN** 运行 `scripts/run-subconverter-smoke.py`
+- **THEN** 合法 fixture config MUST 返回 200 且组名数组含预期值；坏 URL 与缺 `config` 参数 MUST 返回 400
+
+#### Scenario: README 覆盖行式控件
+
+- **WHEN** 阅读 README 的"额外规则集"说明
+- **THEN** MUST 描述行式控件行为，并提到 `/getgroupnames` 负责加载合法组名

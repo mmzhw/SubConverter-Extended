@@ -4,7 +4,7 @@
 
 在 Web UI 选三方规则预设（Aethersailor / ACL4SSR 等）的基础上叠加用户自定义规则，无需 fork `.ini`、无需 cron / Action 同步基础设施。三方规则由后端每次请求实时拉取，用户自定义规则随请求 URL 一并送达，在单次转换里合并到 Clash 输出。
 
-## Requirements
+## ADDED Requirements
 
 ### Requirement: URL 参数 `ext_ruleset=`
 
@@ -141,6 +141,16 @@ placeholder: { en: 'Proxy,https://...\nDomestic,https://...', zh: 'Proxy,https:/
 
 `web/src/composables/useGenerateSubscription.test.ts` 与 `useFormState.test.ts` MUST 新增 `ext_ruleset` 多行 round-trip case。
 
+#### Scenario: smoke 覆盖 ext_ruleset 的正反路径
+
+- **WHEN** 运行 `scripts/run-subconverter-smoke.py`
+- **THEN** 上述 4 个 case MUST 全部执行；合法输入返回 200 且输出含用户规则，未知组名 / 抓取失败 / 错误 target 均返回 400
+
+#### Scenario: 前端多行 round-trip
+
+- **WHEN** 表单里填写多行 `ext_ruleset` 并生成订阅 URL，再把该 URL 导回表单
+- **THEN** 每一行的组名与 URL MUST 与导入前一致
+
 ### Requirement: 文档
 
 README "规则和外部配置还支持" 段 MUST 新增 `ext_ruleset=` 用法，包含：
@@ -149,3 +159,8 @@ README "规则和外部配置还支持" 段 MUST 新增 `ext_ruleset=` 用法，
 - 合法组名约束说明
 - 与既有 `ruleprepend` / `ruleappend` 的差异
 - 错误信息解读
+
+#### Scenario: README 覆盖 ext_ruleset
+
+- **WHEN** 阅读 README 的"规则和外部配置还支持"段
+- **THEN** MUST 能找到 `ext_ruleset=` 的语法示例、合法组名约束、与 `ruleprepend` / `ruleappend` 的差异说明，以及常见错误信息的解读
