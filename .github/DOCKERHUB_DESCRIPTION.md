@@ -2,7 +2,7 @@
 
 SubConverter-Extended 是一个订阅转换服务，基于 subconverter 深度演进，面向 Mihomo / Clash Meta / OpenClash 以及 Surge、Quantumult X、Loon、Stash、Surfboard、Sing-box 等客户端生成可用配置。
 
-![SubConverter-Extended Web UI](https://raw.githubusercontent.com/mmzhw/SubConverter-Extended/master/docs/images/dockerhub-web-ui.jpg)
+![SubConverter-Extended Web UI](https://raw.githubusercontent.com/mmzhw/SubConverter-Extended/master/docs/images/dockerhub-web-ui.png)
 
 ## 项目来源
 
