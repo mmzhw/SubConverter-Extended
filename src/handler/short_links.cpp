@@ -67,6 +67,33 @@ std::string jsonDeleted(Response &response, bool deleted) {
   return buffer.GetString();
 }
 
+std::string jsonUpdated(Response &response,
+                        const ShortLinkUpdateResult &updated,
+                        uint64_t updated_at) {
+  response.status_code = 200;
+  response.content_type = "application/json; charset=utf-8";
+  response.headers["Cache-Control"] = "private, no-store";
+  rapidjson::StringBuffer buffer;
+  rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+  writer.StartObject();
+  writer.Key("code");
+  writer.String(updated.code.c_str());
+  writer.Key("path");
+  writer.String(updated.path.c_str());
+  writer.Key("updated_at");
+  writer.Uint64(updated_at);
+  writer.EndObject();
+  return buffer.GetString();
+}
+
+int statusForUpdateError(const std::string &error) {
+  if (error == "not-found")
+    return 404;
+  if (error == "storage-unavailable")
+    return 503;
+  return 400;
+}
+
 } // namespace
 
 std::string createShortLinkEndpoint(RESPONSE_CALLBACK_ARGS) {
@@ -121,6 +148,8 @@ std::string listShortLinksEndpoint(RESPONSE_CALLBACK_ARGS) {
     writer.Uint64(record.created_at);
     writer.Key("last_access_at");
     writer.Uint64(record.last_access_at);
+    writer.Key("updated_at");
+    writer.Uint64(record.updated_at);
     writer.EndObject();
   }
   writer.EndArray();
@@ -138,6 +167,40 @@ std::string deleteShortLinkEndpoint(RESPONSE_CALLBACK_ARGS) {
   if (code == request.argument.end())
     return jsonDeleted(response, false);
   return jsonDeleted(response, deleteShortLink(code->second));
+}
+
+std::string updateShortLinkEndpoint(RESPONSE_CALLBACK_ARGS) {
+  if (!shortLinkAdminAuthorized(request)) {
+    response.headers["WWW-Authenticate"] = "Bearer realm=\"short-links\"";
+    return jsonError(response, 401, "unauthorized");
+  }
+
+  const auto id = request.argument.find("id");
+  if (id == request.argument.end())
+    return jsonError(response, 404, "not-found");
+
+  rapidjson::Document document;
+  document.Parse(request.postdata.c_str());
+  if (!document.IsObject() || !document.HasMember("url") ||
+      !document["url"].IsString()) {
+    return jsonError(response, 400, "invalid-request");
+  }
+
+  std::string name;
+  bool has_name = false;
+  if (document.HasMember("name") && document["name"].IsString()) {
+    name = document["name"].GetString();
+    has_name = true;
+  }
+
+  const uint64_t now = nowMillis();
+  const ShortLinkUpdateResult updated =
+      updateShortLink(id->second, document["url"].GetString(), name,
+                      has_name, now);
+  if (!updated.ok)
+    return jsonError(response, statusForUpdateError(updated.error),
+                     updated.error);
+  return jsonUpdated(response, updated, now);
 }
 
 std::string resolveShortLinkEndpoint(RESPONSE_CALLBACK_ARGS) {

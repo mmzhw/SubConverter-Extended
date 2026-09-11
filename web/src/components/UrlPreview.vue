@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { Clock, Close, CopyDocument, Delete, Download, Lock, MagicStick, Refresh, Upload } from '@element-plus/icons-vue';
+import { Clock, Close, CopyDocument, Delete, Download, EditPen, Lock, MagicStick, Refresh, Upload } from '@element-plus/icons-vue';
 import QRCode from 'qrcode';
+import { ElMessage } from 'element-plus';
 import { useCopy } from '../composables/useCopy';
 import { GeneratedLink } from '../composables/useGeneratedLinks';
 import { useGenerateSubscription } from '../composables/useGenerateSubscription';
@@ -19,6 +20,8 @@ const { state: copyState, copy } = useCopy();
 const qrDataUrl = ref('');
 const importVisible = ref(false);
 const managerTab = ref('history');
+const editingShortLink = ref<ServerShortLink | null>(null);
+const updatingShortLink = ref(false);
 const serverShortLinkPassword = ref(localStorage.getItem('sce.shortLinkPassword') || '');
 const serverBackendBase = computed(() => {
   try {
@@ -61,6 +64,52 @@ function loadServerShortLink(item: ServerShortLink) {
     form.applyParsed(parseSubUrl(item.url).state);
   } catch {
     copy(item.url);
+  }
+}
+
+/**
+ * Loads the short link's current parameters into the form and enters
+ * edit mode. The user then edits with the normal controls, hits
+ * Generate, and saves the result back onto the same code.
+ */
+function startEditShortLink(item: ServerShortLink) {
+  loadServerShortLink(item);
+  editingShortLink.value = item;
+}
+
+function cancelEditShortLink() {
+  editingShortLink.value = null;
+}
+
+async function updateEditingShortLink() {
+  const target = editingShortLink.value;
+  const url = form.builtUrl.value;
+  // builtUrl is empty until the form is generated, and it goes empty
+  // again as soon as an option changes, so this also guards against
+  // writing back a stale URL.
+  if (!target || !url || updatingShortLink.value) return;
+  updatingShortLink.value = true;
+  try {
+    const ok = await shortManager.update(
+      target.code, url, form.state.subscriptionName,
+    );
+    if (!ok) {
+      ElMessage.error(t('history.updateFailed'));
+      return;
+    }
+    editingShortLink.value = null;
+    ElMessage.success(t('history.updateSuccess'));
+  } finally {
+    updatingShortLink.value = false;
+  }
+}
+
+async function removeServerShortLink(item: ServerShortLink) {
+  const ok = await shortManager.remove(item.code);
+  // Leaving edit mode pointing at a deleted link would let the next
+  // "update" silently recreate nothing.
+  if (ok && editingShortLink.value?.code === item.code) {
+    editingShortLink.value = null;
   }
 }
 
@@ -182,18 +231,47 @@ watch(serverShortLinkPassword, (value) => {
             {{ shortManager.error.value === 'unauthorized' ? t('history.serverUnauthorized') : t('history.serverLoadFailed') }}
           </div>
           <div v-else-if="!shortManager.items.value.length" class="history-empty">{{ t('history.serverEmpty') }}</div>
-          <div v-for="item in shortManager.items.value" :key="item.code" class="server-link-row">
+          <div v-if="editingShortLink" class="short-edit-banner">
+            <div class="short-edit-info">
+              <el-icon><EditPen /></el-icon>
+              <span class="short-edit-title">{{ t('history.editing', { code: editingShortLink.code }) }}</span>
+              <span class="short-edit-target">{{ editingShortLink.maskedShortUrl }}</span>
+              <span class="short-edit-hint">
+                {{ form.builtUrl.value ? t('history.editReady') : t('history.generateFirst') }}
+              </span>
+            </div>
+            <div class="short-edit-actions">
+              <el-button
+                type="primary"
+                size="small"
+                :disabled="!form.builtUrl.value"
+                :loading="updatingShortLink"
+                @click="updateEditingShortLink"
+              >
+                {{ t('history.updateShortLink') }}
+              </el-button>
+              <el-button size="small" @click="cancelEditShortLink">{{ t('history.cancelEdit') }}</el-button>
+            </div>
+          </div>
+          <div
+            v-for="item in shortManager.items.value"
+            :key="item.code"
+            class="server-link-row"
+            :class="{ 'is-editing': editingShortLink?.code === item.code }"
+          >
             <button class="server-link-main" type="button" @click="loadServerShortLink(item)">
               <span class="history-title">{{ item.name || item.code }}</span>
               <span class="server-link-url">{{ item.maskedShortUrl }}</span>
               <span class="history-meta">
                 <span>{{ t('history.createdAt') }} {{ shortLinkTime(item.createdAt) }}</span>
                 <span>{{ t('history.lastAccessAt') }} {{ shortLinkTime(item.lastAccessAt) }}</span>
+                <span v-if="item.updatedAt">{{ t('history.updatedAt') }} {{ shortLinkTime(item.updatedAt) }}</span>
               </span>
             </button>
             <div class="server-link-actions">
               <el-button link :icon="CopyDocument" @click="copy(item.shortUrl)">{{ t('preview.copyShortLink') }}</el-button>
-              <el-button link type="danger" :icon="Delete" @click="shortManager.remove(item.code)">{{ t('history.delete') }}</el-button>
+              <el-button link :icon="EditPen" @click="startEditShortLink(item)">{{ t('history.edit') }}</el-button>
+              <el-button link type="danger" :icon="Delete" @click="removeServerShortLink(item)">{{ t('history.delete') }}</el-button>
             </div>
           </div>
         </el-tab-pane>
@@ -449,6 +527,67 @@ watch(serverShortLinkPassword, (value) => {
 
 .server-link-actions :deep(.el-button) {
   margin-left: 0;
+}
+
+.short-edit-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 10px 0;
+  padding: 10px 12px;
+  border: 1px solid var(--accent);
+  border-radius: 10px;
+  background: var(--control-bg);
+}
+
+.short-edit-info {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.short-edit-info .el-icon {
+  color: var(--accent);
+}
+
+.short-edit-title {
+  font-weight: 750;
+  font-size: 0.88rem;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.short-edit-target {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.76rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.short-edit-hint {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+.short-edit-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.short-edit-actions :deep(.el-button) {
+  margin-left: 0;
+}
+
+.server-link-row.is-editing {
+  border-left: 2px solid var(--accent);
+  padding-left: 8px;
 }
 
 .qr-wrap {

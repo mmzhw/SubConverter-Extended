@@ -15,7 +15,7 @@ export default {
   },
   preview: { title: '生成的订阅 URL', kicker: '生成结果', ready: '可复制', emptyState: '未生成', generate: '生成', shortLink: '生成短链', copyShortLink: '复制短链', shortLinkFailed: '短链生成失败', copy: '复制', copied: '已复制！', copyFailed: '复制失败', qr: '二维码', qrEmpty: '点击生成后显示二维码' },
   presets: { title: '预设', empty: '暂无预设', load: '加载', delete: '删除', savePrompt: '预设名称', saved: '预设已保存', storageUnavailable: '浏览器存储不可用，预设无法保存' },
-  history: { title: '生成历史', local: '本地历史', serverShortLinks: '服务器短链', empty: '暂无生成记录', serverEmpty: '暂无服务器短链', clear: '清空', refresh: '刷新', delete: '删除', serverLoadFailed: '短链列表加载失败', serverUnauthorized: '请输入正确的服务器短链管理密码', serverPasswordPlaceholder: '短链管理密码：SUBCONVERTER_SHORT_LINK_PASSWORD', createdAt: '创建', lastAccessAt: '访问' },
+  history: { title: '生成历史', local: '本地历史', serverShortLinks: '服务器短链', empty: '暂无生成记录', serverEmpty: '暂无服务器短链', clear: '清空', refresh: '刷新', delete: '删除', serverLoadFailed: '短链列表加载失败', serverUnauthorized: '请输入正确的服务器短链管理密码', serverPasswordPlaceholder: '短链管理密码：SUBCONVERTER_SHORT_LINK_PASSWORD', createdAt: '创建', lastAccessAt: '访问', updatedAt: '修改', edit: '编辑', editing: '正在编辑短链 {code}', editReady: '短链地址不变，改完点“更新短链”即可', generateFirst: '请先点“生成”，再更新短链', updateShortLink: '更新短链', cancelEdit: '取消编辑', updateSuccess: '短链已更新，客户端无需更换地址', updateFailed: '短链更新失败' },
   dnsTemplate: { title: 'DNS 模板', configure: '编辑 DNS', edit: '编辑 DNS', reset: '恢复默认', save: '保存', saved: 'DNS 模板已保存', loadFailed: 'DNS 模板读取失败', saveFailed: 'DNS 模板保存失败，请检查 YAML 格式' },
   import: { title: '导入现有链接', placeholder: '粘贴已有的 /sub?... 链接', invalid: '不是合法的 subconverter 订阅链接', unknownKept: '已保留未知参数' },
   common: { lang: 'EN', cancel: '取消', confirm: '确定' },

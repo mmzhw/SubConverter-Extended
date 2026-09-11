@@ -75,11 +75,78 @@ int main() {
   require(duplicate.ok, "duplicate URL was not accepted");
   require(duplicate.code == created.code, "duplicate URL did not reuse code");
 
+  // updated_at starts equal to created_at on create.
+  {
+    ShortLinkResolveResult fresh = resolveShortLink(created.code, 3100);
+    require(fresh.ok, "fresh record could not be resolved");
+    require(fresh.record.updated_at == 1000,
+            "updated_at did not start at created_at");
+  }
+
+  // In-place update keeps the code and timestamps, replaces the URL.
+  const std::string updated_url =
+      "http://127.0.0.1:8080/sub?target=clash&url=https%3A%2F%2Fsub.example.com"
+      "%2Fb&inline_rules=Proxy%3ADOMAIN-SUFFIX%2Cfoo.com";
+  ShortLinkUpdateResult updated =
+      updateShortLink(created.code, updated_url, "", false, 3300);
+  require(updated.ok, "in-place update was rejected");
+  require(updated.code == created.code, "update changed the code");
+  require(updated.path == "/s?id=" + created.code, "update path changed");
+  {
+    ShortLinkResolveResult after = resolveShortLink(created.code, 3400);
+    require(after.ok, "updated code stopped resolving");
+    require(after.record.url == updated_url, "updated URL was not stored");
+    require(after.record.name == "Test", "update clobbered the name");
+    require(after.record.created_at == 1000, "update changed created_at");
+    require(after.record.updated_at == 3300, "update did not stamp updated_at");
+    require(after.record.last_access_at == 3400,
+            "update changed last_access_at semantics");
+  }
+
+  // Name is only replaced when explicitly supplied.
+  {
+    ShortLinkUpdateResult renamed =
+        updateShortLink(created.code, url, "Renamed", true, 3500);
+    require(renamed.ok, "update with name was rejected");
+    ShortLinkResolveResult after = resolveShortLink(created.code, 3600);
+    require(after.ok && after.record.name == "Renamed",
+            "explicit name was not applied");
+    require(after.record.url == url, "update with name did not set the URL");
+    // Restore the URL + name for the assertions further down.
+    (void)updateShortLink(created.code, url, "Test", true, 3700);
+  }
+
+  // Unknown / malformed codes and invalid URLs are rejected without
+  // touching the stored record.
+  {
+    ShortLinkUpdateResult unknown =
+        updateShortLink("zzzzzzzz", updated_url, "", false, 3800);
+    require(!unknown.ok && unknown.error == "not-found",
+            "unknown code did not report not-found");
+    ShortLinkUpdateResult malformed =
+        updateShortLink("short", updated_url, "", false, 3800);
+    require(!malformed.ok && malformed.error == "not-found",
+            "malformed code did not report not-found");
+    ShortLinkUpdateResult bad_url = updateShortLink(
+        created.code, "http://127.0.0.1:8080/version?target=clash", "", false,
+        3900);
+    require(!bad_url.ok && bad_url.error == "invalid-url",
+            "non-/sub URL was accepted by update");
+    ShortLinkResolveResult unchanged = resolveShortLink(created.code, 3950);
+    require(unchanged.ok && unchanged.record.url == url,
+            "rejected update modified the stored URL");
+    require(unchanged.record.updated_at == 3700,
+            "rejected update modified updated_at");
+  }
+
   std::vector<ShortLinkRecord> listed = listShortLinks();
   require(listed.size() == 1, "created short link was not listed");
   require(listed[0].code == created.code, "listed code changed");
   require(listed[0].name == "Test", "listed name changed");
-  require(listed[0].last_access_at == 2000, "listed last access was not kept");
+  // The update block above resolved the code several times, so the last
+  // access stamp is the most recent of those resolves.
+  require(listed[0].last_access_at == 3950,
+          "listed last access was not kept");
 
   require(deleteShortLink(created.code), "created code was not deleted");
   ShortLinkResolveResult deleted = resolveShortLink(created.code, 3500);
@@ -109,6 +176,8 @@ int main() {
   ShortLinkResolveResult reloaded = resolveShortLink(first.code, 4000);
   require(reloaded.ok, "stored code was not reloaded from disk");
   require(reloaded.record.url == url + "&rename=first", "reloaded URL changed");
+  require(reloaded.record.updated_at == 4100,
+          "reloaded updated_at did not survive the round-trip");
 
   ShortLinkCreateResult invalid =
       createShortLink("http://127.0.0.1:8080/version?target=clash", "Bad",
@@ -130,5 +199,35 @@ int main() {
   require(fileExist("persisted/links.json"),
           "env-configured storage path was not written");
   clearEnvironment("SUBCONVERTER_SHORT_LINKS_FILE");
+
+  // A store written before updated_at existed must still load: every
+  // record keeps working and updated_at reads back as 0.
+  {
+    const std::string legacy_path = "legacy-short-links.json";
+    (void)fileWrite(legacy_path,
+                    "{\"legacy01\":{\"url\":\"" + url +
+                        "\",\"name\":\"Legacy\",\"created_at\":8100,"
+                        "\"last_access_at\":8200}}",
+                    true);
+    setShortLinkStoragePathForTests(legacy_path);
+    ShortLinkResolveResult legacy = resolveShortLink("legacy01", 8300);
+    require(legacy.ok, "legacy record without updated_at failed to load");
+    require(legacy.record.url == url, "legacy record URL changed");
+    require(legacy.record.name == "Legacy", "legacy record name changed");
+    require(legacy.record.created_at == 8100,
+            "legacy record created_at changed");
+    require(legacy.record.updated_at == 0,
+            "missing updated_at did not default to 0");
+    // The record is still updatable, which backfills updated_at.
+    ShortLinkUpdateResult migrated =
+        updateShortLink("legacy01", url + "&emoji=true", "", false, 8400);
+    require(migrated.ok, "legacy record could not be updated");
+    ShortLinkResolveResult after = resolveShortLink("legacy01", 8500);
+    require(after.ok && after.record.updated_at == 8400,
+            "legacy record did not gain updated_at on update");
+    setShortLinkStoragePathForTests("");
+    clearShortLinkMemoryForTests();
+  }
+
   return 0;
 }

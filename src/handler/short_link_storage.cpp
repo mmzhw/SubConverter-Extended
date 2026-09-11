@@ -176,6 +176,10 @@ void loadLocked() {
       record.created_at = valueUint64(value["created_at"]);
     if (value.HasMember("last_access_at"))
       record.last_access_at = valueUint64(value["last_access_at"]);
+    // Pre-update records have no updated_at; treat them as never
+    // modified rather than failing the load.
+    if (value.HasMember("updated_at"))
+      record.updated_at = valueUint64(value["updated_at"]);
     records[code] = std::move(record);
   }
 }
@@ -195,6 +199,8 @@ bool saveLocked() {
     writer.Uint64(record.created_at);
     writer.Key("last_access_at");
     writer.Uint64(record.last_access_at);
+    writer.Key("updated_at");
+    writer.Uint64(record.updated_at);
     writer.EndObject();
   }
   writer.EndObject();
@@ -261,6 +267,7 @@ ShortLinkCreateResult createShortLink(const std::string &url,
   record.name = trimName(name);
   record.created_at = now_ms;
   record.last_access_at = 0;
+  record.updated_at = now_ms;
   records[code] = std::move(record);
   pruneLocked(configuredMaxEntries());
   if (records.find(code) == records.end()) {
@@ -269,6 +276,52 @@ ShortLinkCreateResult createShortLink(const std::string &url,
   }
   if (!saveLocked()) {
     records.erase(code);
+    result.error = "storage-unavailable";
+    return result;
+  }
+
+  result.ok = true;
+  result.code = code;
+  result.path = "/s?id=" + code;
+  return result;
+}
+
+// Replaces the target URL of an existing short link in place. The code,
+// created_at and last_access_at are preserved so clients that already
+// hold the short URL keep working without re-importing the subscription.
+ShortLinkUpdateResult updateShortLink(const std::string &code,
+                                      const std::string &url,
+                                      const std::string &name,
+                                      bool has_name,
+                                      uint64_t now_ms) {
+  ShortLinkUpdateResult result;
+  if (!validCode(code)) {
+    result.error = "not-found";
+    return result;
+  }
+  if (!extractSubQuery(url)) {
+    result.error = "invalid-url";
+    return result;
+  }
+
+  std::lock_guard<std::mutex> lock(storage_mutex);
+  loadLocked();
+  auto iter = records.find(code);
+  if (iter == records.end()) {
+    result.error = "not-found";
+    return result;
+  }
+
+  // Keep a copy so a failed persist does not leave a half-updated
+  // record in memory (same rollback shape as createShortLink).
+  const ShortLinkRecord previous = iter->second;
+  iter->second.url = url;
+  if (has_name)
+    iter->second.name = trimName(name);
+  iter->second.updated_at = now_ms;
+
+  if (!saveLocked()) {
+    iter->second = previous;
     result.error = "storage-unavailable";
     return result;
   }

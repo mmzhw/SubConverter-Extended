@@ -9,6 +9,7 @@ export interface ServerShortLink {
   name: string;
   createdAt: number;
   lastAccessAt: number;
+  updatedAt: number;
 }
 
 type ShortLinksResult =
@@ -16,6 +17,8 @@ type ShortLinksResult =
   | { ok: false; error: string };
 
 type DeleteResult = { ok: true } | { ok: false; error: string };
+
+type UpdateResult = { ok: true; updatedAt: number } | { ok: false; error: string };
 
 function backendOrigin(origin: string) {
   return origin.replace(/\/+$/, '');
@@ -63,6 +66,9 @@ function normalizeItem(value: unknown, origin: string): ServerShortLink | undefi
     name: value.name,
     createdAt: value.created_at,
     lastAccessAt: value.last_access_at,
+    // Records written before editable short links existed have no
+    // updated_at; treat them as never modified.
+    updatedAt: typeof value.updated_at === 'number' ? value.updated_at : 0,
   };
 }
 
@@ -111,6 +117,41 @@ export async function requestDeleteShortLink(
   }
 }
 
+export async function requestUpdateShortLink(
+  origin: string,
+  code: string,
+  url: string,
+  name = '',
+  password = '',
+  fetcher: typeof fetch = fetch,
+): Promise<UpdateResult> {
+  try {
+    const base = backendOrigin(origin);
+    const response = await fetcher(
+      `${base}/short?id=${encodeURIComponent(code)}`,
+      authInit(password, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url, name }),
+      }),
+    );
+    const payload = await response.json() as {
+      code?: unknown;
+      updated_at?: unknown;
+      error?: unknown;
+    };
+    if (!response.ok || typeof payload.code !== 'string') {
+      return { ok: false, error: typeof payload.error === 'string' ? payload.error : 'request-failed' };
+    }
+    return {
+      ok: true,
+      updatedAt: typeof payload.updated_at === 'number' ? payload.updated_at : 0,
+    };
+  } catch {
+    return { ok: false, error: 'request-failed' };
+  }
+}
+
 export function useShortLinksManager(origin: string | Ref<string>, password: string | Ref<string> = '') {
   const items = ref<ServerShortLink[]>([]);
   const loading = ref(false);
@@ -140,11 +181,35 @@ export function useShortLinksManager(origin: string | Ref<string>, password: str
     return true;
   }
 
+  /**
+   * Rewrites the target URL of an existing short link in place. The code
+   * is unchanged, so clients already holding the short URL keep working.
+   * The local item is patched in place instead of refetching the whole
+   * list, which keeps the panel from flickering.
+   */
+  async function update(code: string, url: string, name = '') {
+    error.value = '';
+    const result = await requestUpdateShortLink(
+      unref(origin), code, url, name, unref(password),
+    );
+    if (!result.ok) {
+      error.value = result.error;
+      return false;
+    }
+    items.value = items.value.map((item) => (
+      item.code === code
+        ? { ...item, url, name: name || item.name, updatedAt: result.updatedAt }
+        : item
+    ));
+    return true;
+  }
+
   return {
     items: computed(() => items.value),
     loading: computed(() => loading.value),
     error: computed(() => error.value),
     refresh,
     remove,
+    update,
   };
 }
