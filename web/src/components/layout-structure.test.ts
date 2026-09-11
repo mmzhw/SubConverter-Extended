@@ -94,4 +94,19 @@ describe('responsive layout structure', () => {
     expect(source).toContain('white-space: normal;');
     expect(source).toContain('text-overflow: clip;');
   });
+
+  it('offers a row/bulk mode switch for inline rules', () => {
+    const source = componentSource('InlineRulesControl.vue');
+
+    // Both editors must sit behind the toggle, and the bulk editor must
+    // reuse the shared line parser rather than inventing its own format.
+    expect(source).toContain("const mode = ref<'rows' | 'text'>('rows')");
+    expect(source).toContain('parseInlineRuleLines(');
+    expect(source).toContain('serializeInlineRuleLines(');
+    expect(source).toContain('type="textarea"');
+    expect(source).toContain('inlineRulesToText');
+    expect(source).toContain('inlineRulesToRows');
+    // Unparsable lines are surfaced rather than silently dropped.
+    expect(source).toContain('inlineRulesInvalidLines');
+  });
 });

@@ -1,13 +1,15 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { Delete } from '@element-plus/icons-vue';
+import { Delete, Document, List } from '@element-plus/icons-vue';
 import {
   MATCH_TYPE_OPTIONS,
   descriptionForMatchType,
   exampleForMatchType,
+  parseInlineRuleLines,
   parseInlineRuleRows,
   placeholderForMatchType,
+  serializeInlineRuleLines,
   serializeInlineRuleRows,
   type InlineRuleRow,
 } from '../lib/inline-rules';
@@ -24,16 +26,31 @@ const emit = defineEmits<{
   (event: 'update:modelValue', value: string): void;
 }>();
 
-const { locale } = useI18n();
+const { t, locale } = useI18n();
 const form = useFormState();
 
 const rows = ref<InlineRuleRow[]>(parseInlineRuleRows(props.modelValue));
+/**
+ * 'rows' is the per-field editor, 'text' is the bulk editor. Both modes
+ * share `rows`; the text editor parses its content into `rows` on every
+ * edit, so half-filled rows behave identically in both modes.
+ */
+const mode = ref<'rows' | 'text'>('rows');
+/** Raw textarea content. Kept as typed so unparsable lines are not lost
+ *  while the user is fixing them. */
+const textValue = ref('');
+const invalidLines = ref(0);
 const { groups, loading, error, refresh } = useGroupNames(
   () => props.configUrl,
   props.backendBase,
   () => form.state.githubProxy,
   () => form.state.customGithubProxy,
 );
+
+function syncTextFromRows() {
+  textValue.value = serializeInlineRuleLines(rows.value);
+  invalidLines.value = 0;
+}
 
 watch(() => props.modelValue, (value) => {
   const parsed = parseInlineRuleRows(value);
@@ -46,6 +63,9 @@ watch(() => props.modelValue, (value) => {
   );
   if (serializeInlineRuleRows(parsed) !== serializeInlineRuleRows(complete)) {
     rows.value = parsed;
+    // An external change (importing a link, loading a preset) must also
+    // refresh the text editor when it is the active mode.
+    if (mode.value === 'text') syncTextFromRows();
   }
 });
 
@@ -53,6 +73,29 @@ watch(() => props.configUrl, () => refresh());
 onMounted(refresh);
 
 function isZh() { return locale.value.startsWith('zh'); }
+
+function switchMode(next: 'rows' | 'text') {
+  if (next === mode.value) return;
+  if (next === 'text') {
+    // Rows -> text: render the current rules for bulk editing. Unparsable
+    // lines cannot exist yet, so the counter resets.
+    syncTextFromRows();
+  } else {
+    // Text -> rows: keep only what parsed. Unparsable lines are dropped
+    // here; the hint in text mode says so.
+    rows.value = parseInlineRuleLines(textValue.value).rows;
+    invalidLines.value = 0;
+  }
+  mode.value = next;
+}
+
+function onTextInput(value: string) {
+  textValue.value = value;
+  const parsed = parseInlineRuleLines(value);
+  invalidLines.value = parsed.invalidLines;
+  rows.value = parsed.rows;
+  updateRows();
+}
 
 function updateRows() {
   // Only fully-filled rows survive serialization; partially-typed rows
@@ -105,6 +148,9 @@ const groupPlaceholder = computed(() => (hasConfig.value
   ? (isZh() ? '选择组名' : 'Select group')
   : (isZh() ? '组名' : 'Group name')));
 const typePlaceholder = computed(() => (isZh() ? '匹配模式' : 'Match type'));
+const textPlaceholder = computed(() => (isZh()
+  ? '每行一条规则，格式：匹配模式,值,组名\n例如：DOMAIN-SUFFIX,foo.com,Domestic\n以 # 开头的行会被忽略'
+  : 'One rule per line: TYPE,value,Group\nFor example: DOMAIN-SUFFIX,foo.com,Domestic\nLines starting with # are ignored'));
 
 function typeDescription(row: InlineRuleRow): string {
   const desc = descriptionForMatchType(row.type);
@@ -117,68 +163,94 @@ function typeExample(row: InlineRuleRow): string {
 
 <template>
   <div class="inline-rules-control">
-    <div v-for="(row, index) in rows" :key="index" class="inline-rules-item">
-      <div class="inline-rules-row">
-        <el-select
-          :model-value="row.type"
-          filterable
-          popper-class="inline-rules-type-popper"
-          :placeholder="typePlaceholder"
-          class="inline-rules-type"
-          @update:model-value="updateType(row, $event)"
-        >
-          <el-option
-            v-for="opt in MATCH_TYPE_OPTIONS"
-            :key="opt.value"
-            :value="opt.value"
-            :label="opt.label"
+    <template v-if="mode === 'rows'">
+      <div v-for="(row, index) in rows" :key="index" class="inline-rules-item">
+        <div class="inline-rules-row">
+          <el-select
+            :model-value="row.type"
+            filterable
+            popper-class="inline-rules-type-popper"
+            :placeholder="typePlaceholder"
+            class="inline-rules-type"
+            @update:model-value="updateType(row, $event)"
           >
-            <div class="inline-rules-option">
-              <span class="inline-rules-option-label">{{ opt.label }}</span>
-              <span class="inline-rules-option-desc">{{ isZh() ? opt.description.zh : opt.description.en }}</span>
-              <span class="inline-rules-option-example">{{ opt.example }}</span>
-            </div>
-          </el-option>
-        </el-select>
-        <el-input
-          :model-value="row.value"
-          class="inline-rules-value"
-          :placeholder="placeholderForMatchType(row.type) || (isZh() ? '值' : 'value')"
-          clearable
-          @update:model-value="updateValue(row, $event)"
-        />
-        <el-select
-          :model-value="row.group"
-          filterable
-          allow-create
-          default-first-option
-          :loading="loading"
-          :placeholder="groupPlaceholder"
-          class="inline-rules-group"
-          @update:model-value="updateGroup(row, $event)"
-        >
-          <el-option v-for="opt in groupOptions" :key="opt.value" :value="opt.value" :label="opt.label" />
-        </el-select>
-        <el-button
-          :icon="Delete"
-          circle
-          plain
-          size="small"
-          :aria-label="isZh() ? '删除规则' : 'Delete rule'"
-          @click="removeRow(index)"
-        />
+            <el-option
+              v-for="opt in MATCH_TYPE_OPTIONS"
+              :key="opt.value"
+              :value="opt.value"
+              :label="opt.label"
+            >
+              <div class="inline-rules-option">
+                <span class="inline-rules-option-label">{{ opt.label }}</span>
+                <span class="inline-rules-option-desc">{{ isZh() ? opt.description.zh : opt.description.en }}</span>
+                <span class="inline-rules-option-example">{{ opt.example }}</span>
+              </div>
+            </el-option>
+          </el-select>
+          <el-input
+            :model-value="row.value"
+            class="inline-rules-value"
+            :placeholder="placeholderForMatchType(row.type) || (isZh() ? '值' : 'value')"
+            clearable
+            @update:model-value="updateValue(row, $event)"
+          />
+          <el-select
+            :model-value="row.group"
+            filterable
+            allow-create
+            default-first-option
+            :loading="loading"
+            :placeholder="groupPlaceholder"
+            class="inline-rules-group"
+            @update:model-value="updateGroup(row, $event)"
+          >
+            <el-option v-for="opt in groupOptions" :key="opt.value" :value="opt.value" :label="opt.label" />
+          </el-select>
+          <el-button
+            :icon="Delete"
+            circle
+            plain
+            size="small"
+            :aria-label="isZh() ? '删除规则' : 'Delete rule'"
+            @click="removeRow(index)"
+          />
+        </div>
+        <div v-if="row.type" class="inline-rules-type-hint">
+          <span class="inline-rules-type-hint-desc">{{ typeDescription(row) }}</span>
+          <span v-if="typeExample(row)" class="inline-rules-type-hint-example">
+            {{ isZh() ? '示例' : 'e.g.' }}: <code>{{ typeExample(row) }}</code>
+          </span>
+        </div>
       </div>
-      <div v-if="row.type" class="inline-rules-type-hint">
-        <span class="inline-rules-type-hint-desc">{{ typeDescription(row) }}</span>
-        <span v-if="typeExample(row)" class="inline-rules-type-hint-example">
-          {{ isZh() ? '示例' : 'e.g.' }}: <code>{{ typeExample(row) }}</code>
-        </span>
-      </div>
-    </div>
+    </template>
+    <template v-else>
+      <el-input
+        :model-value="textValue"
+        class="inline-rules-text"
+        type="textarea"
+        :rows="8"
+        resize="vertical"
+        spellcheck="false"
+        :placeholder="textPlaceholder"
+        @update:model-value="onTextInput"
+      />
+      <span v-if="invalidLines > 0" class="inline-rules-hint inline-rules-hint-warn">
+        {{ t('form.inlineRulesInvalidLines', { count: invalidLines }) }}
+      </span>
+    </template>
     <div class="inline-rules-meta">
-      <el-button size="small" plain @click="addRow">{{ isZh() ? '＋ 添加规则' : '＋ Add rule' }}</el-button>
+      <el-button v-if="mode === 'rows'" size="small" plain @click="addRow">{{ isZh() ? '＋ 添加规则' : '＋ Add rule' }}</el-button>
       <span v-if="error" class="inline-rules-hint">{{ isZh() ? '组名加载失败，可手动输入' : 'Failed to load group names, you can type manually' }}</span>
       <span v-else-if="!hasConfig" class="inline-rules-hint">{{ isZh() ? '选择远程配置后自动加载组名' : 'Group names load automatically after selecting a remote config' }}</span>
+      <el-button
+        class="inline-rules-mode-toggle"
+        link
+        size="small"
+        :icon="mode === 'rows' ? Document : List"
+        @click="switchMode(mode === 'rows' ? 'text' : 'rows')"
+      >
+        {{ mode === 'rows' ? t('form.inlineRulesToText') : t('form.inlineRulesToRows') }}
+      </el-button>
     </div>
   </div>
 </template>
@@ -215,6 +287,14 @@ function typeExample(row: InlineRuleRow): string {
 }
 .inline-rules-meta { display: flex; align-items: center; gap: 10px; }
 .inline-rules-hint { color: var(--el-text-color-secondary); font-size: 0.8rem; }
+.inline-rules-hint-warn { color: var(--el-color-warning); }
+/* Pushes the mode toggle to the trailing edge of the meta row. */
+.inline-rules-mode-toggle { margin-left: auto; }
+.inline-rules-text :deep(.el-textarea__inner) {
+  font-family: 'JetBrains Mono', 'Consolas', monospace;
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
 </style>
 
 <style>

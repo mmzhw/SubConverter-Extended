@@ -223,3 +223,68 @@ export function serializeInlineRuleRows(rows: InlineRuleRow[]): string {
 export function placeholderForMatchType(type: string): string {
   return MATCH_TYPE_PLACEHOLDERS[type] ?? DEFAULT_PLACEHOLDER;
 }
+
+export interface InlineRuleLineParse {
+  rows: InlineRuleRow[];
+  /**
+   * Lines that were neither blank nor a comment but could not be read as a
+   * rule. The caller keeps the text so the user can fix them, and reports
+   * the count.
+   */
+  invalidLines: number;
+}
+
+/**
+ * Parses the text-editor format into rows: one rule per line as
+ * `TYPE,value,Group`, for example `DOMAIN-SUFFIX,foo.com,Domestic`.
+ *
+ * The first comma ends the match type and the last comma starts the group,
+ * so a value that itself contains commas (`DOMAIN-REGEX,^a,b$,Domestic`) is
+ * kept intact instead of being split at the wrong place.
+ *
+ * Blank lines and `#` comments are skipped and are NOT counted as invalid,
+ * so a commented or spaced-out file does not raise a spurious warning. A
+ * line with fewer than three fields, or with an empty type, value or group,
+ * is counted in `invalidLines` and left out of `rows`.
+ */
+export function parseInlineRuleLines(text: string): InlineRuleLineParse {
+  const rows: InlineRuleRow[] = [];
+  let invalidLines = 0;
+  for (const rawLine of text.split('\n')) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith('#')) continue;
+    const first = line.indexOf(',');
+    const last = line.lastIndexOf(',');
+    // One comma means only two fields: the group is missing.
+    if (first < 0 || first === last) {
+      invalidLines += 1;
+      continue;
+    }
+    const type = line.slice(0, first).trim();
+    const value = line.slice(first + 1, last).trim();
+    const group = line.slice(last + 1).trim();
+    if (!type || !value || !group) {
+      invalidLines += 1;
+      continue;
+    }
+    rows.push({ type, value, group });
+  }
+  return { rows, invalidLines };
+}
+
+/**
+ * Serializes rows into the text-editor format, one rule per line. Rows where
+ * any of type / value / group is empty are dropped, matching the row editor
+ * and the wire format, so both editors treat half-filled rows identically.
+ */
+export function serializeInlineRuleLines(rows: InlineRuleRow[]): string {
+  return rows
+    .map((row) => ({
+      type: row.type.trim(),
+      value: row.value.trim(),
+      group: row.group.trim(),
+    }))
+    .filter((row) => row.type && row.value && row.group)
+    .map((row) => `${row.type},${row.value},${row.group}`)
+    .join('\n');
+}
