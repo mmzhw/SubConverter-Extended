@@ -299,6 +299,21 @@ export const OPTION_DEFS: OptionDef[] = [
     },
   },
   {
+    key: 'inline_rules',
+    type: 'string',
+    label: { en: 'Inline rules', zh: '内联规则' },
+    description: {
+      en: 'Append rule lines directly to existing groups of the chosen preset without hosting an external ruleset file. Pick the match type, type the value, and choose the target group; the URL parameter is assembled for you. Use this for one-off domain or keyword routing. For shared rulesets hosted elsewhere, use Extra rulesets above.',
+      zh: '直接在 UI 里录入规则行追加到所选 preset 的策略组，无需自建并托管规则文件。选择匹配模式、输入值、选定目标组，URL 参数由 UI 自动拼装。适合一次性域名 / 关键词路由。需要共享的远程规则集请用上面的"额外规则集"。',
+    },
+    group: 'rule',
+    defaultValue: '',
+    placeholder: {
+      en: 'Domestic:DOMAIN-SUFFIX,foo.com|DOMAIN-KEYWORD,bar',
+      zh: 'Domestic:DOMAIN-SUFFIX,foo.com|DOMAIN-KEYWORD,bar',
+    },
+  },
+  {
     key: 'list',
     type: 'boolean',
     label: { en: 'Output node list only', zh: '只输出节点列表' },

@@ -99,6 +99,69 @@ void parseExtRuleset(const std::string &raw,
   }
 }
 
+// Parses the inline_rules= URL parameter into ordered group sections.
+//
+// Wire format: "Group:TYPE,value|TYPE,value;Group2:TYPE,value".
+//   ';' separates group sections.
+//   ':' (first occurrence in a section) separates the group header from
+//   its rule list.
+//   '|' separates rules within a group (avoids Clash rule-internal ','
+//   collisions and stays URL-safe).
+//   Whitespace is trimmed; empty sections and '#' comments are ignored.
+//   Rules with no value (e.g. "DOMAIN-SUFFIX,") are dropped here and
+//   re-validated by parseExternalClashRules downstream.
+void parseInlineRules(
+    const std::string &raw,
+    std::vector<std::pair<std::string, std::vector<std::string>>> &out) {
+  out.clear();
+  auto trim = [](std::string s) {
+    size_t b = 0;
+    while (b < s.size() &&
+           std::isspace(static_cast<unsigned char>(s[b])))
+      ++b;
+    size_t e = s.size();
+    while (e > b &&
+           std::isspace(static_cast<unsigned char>(s[e - 1])))
+      --e;
+    return s.substr(b, e - b);
+  };
+  size_t start = 0;
+  while (start <= raw.size()) {
+    size_t end = raw.find(';', start);
+    if (end == std::string::npos) end = raw.size();
+    std::string section = trim(raw.substr(start, end - start));
+    if (!section.empty() && section[0] != '#') {
+      size_t colon = section.find(':');
+      std::string group;
+      std::string rules_blob;
+      if (colon == std::string::npos) {
+        group = trim(section);
+        rules_blob.clear();
+      } else {
+        group = trim(section.substr(0, colon));
+        rules_blob = section.substr(colon + 1);
+      }
+      if (!group.empty()) {
+        std::vector<std::string> rules;
+        size_t r_start = 0;
+        while (r_start <= rules_blob.size()) {
+          size_t r_end = rules_blob.find('|', r_start);
+          if (r_end == std::string::npos) r_end = rules_blob.size();
+          std::string rule = trim(rules_blob.substr(r_start, r_end - r_start));
+          if (!rule.empty() && rule[0] != '#') rules.push_back(std::move(rule));
+          if (r_end == rules_blob.size()) break;
+          r_start = r_end + 1;
+        }
+        if (!rules.empty()) {
+          out.emplace_back(std::move(group), std::move(rules));
+        }
+      }
+    }
+    if (end == raw.size()) break;
+    start = end + 1;
+  }
+}
+
 std::set<std::string> collectExternalGroupNames(const ExternalConfig &ext) {
   std::set<std::string> names;
   for (const auto &group : ext.custom_proxy_group) {
@@ -3618,6 +3681,14 @@ struct ParsedSubRequest {
   // preset is loaded. Group names must already exist in the preset.
   std::vector<std::pair<std::string, std::string>> ext_rulesets;
 
+  // Each entry: <proxy_group_name, [rule lines]>
+  // Populated from the inline_rules= URL parameter. Each rule line is
+  // a plain "TYPE,value" Clash rule (no trailing target); the system
+  // appends ",<group>" itself before pushing into rule_append. Group
+  // names must already exist in the preset. Order is preserved.
+  std::vector<std::pair<std::string, std::vector<std::string>>>
+      inline_rules;
+
   tribool upload;
   tribool emoji;
   tribool add_emoji;
@@ -3722,6 +3793,7 @@ static std::string parseSubRequestArguments(Request &request,
   parsed.provider_headers = getUrlArg(argument, "provider_headers");
   parsed.dns_template = getUrlArg(argument, "dns_template");
   parseExtRuleset(getUrlArg(argument, "ext_ruleset"), parsed.ext_rulesets);
+  parseInlineRules(getUrlArg(argument, "inline_rules"), parsed.inline_rules);
 
   parsed.upload = getUrlArg(argument, "upload");
   parsed.emoji = getUrlArg(argument, "emoji");
@@ -4299,6 +4371,96 @@ static std::string buildExternalConfigFetchPlan(
     }
     for (const std::string &line : ext_rule_lines) {
       policy.generator.rule_append.push_back(line);
+    }
+  }
+
+  // inline_rules: append user-supplied rule lines directly to rule_append.
+  // Same target/group/list/script gate as ext_ruleset=. No URL fetch is
+  // involved — the rule body lives in the request itself. Rules are
+  // emitted in the order they appear in the URL parameter (group section
+  // order, then intra-group order), so they land after any ext_ruleset
+  // contributions above.
+  if (!parsed.inline_rules.empty()) {
+    if (parsed.target != "clash" && parsed.target != "clashr") {
+      response.status_code = 400;
+      return "Invalid request: inline_rules is supported only for "
+             "target=clash/clashr.\n"
+             "无效请求：inline_rules 仅支持 target=clash/clashr。";
+    }
+    if (parsed.generate_node_list.get(false)) {
+      response.status_code = 400;
+      return "Invalid request: inline_rules does not support list=true.\n"
+             "无效请求：inline_rules 不支持 list=true。";
+    }
+    if (parsed.generate_clash_script.get(false)) {
+      response.status_code = 400;
+      return "Invalid request: inline_rules does not support script=true.\n"
+             "无效请求：inline_rules 不支持 script=true。";
+    }
+    size_t inline_rule_total = 0;
+    for (const auto &[group, rules] : parsed.inline_rules) {
+      inline_rule_total += rules.size();
+    }
+    if (settings.maxAllowedRulesets && inline_rule_total > settings.maxAllowedRulesets) {
+      response.status_code = 400;
+      return "Invalid request: inline_rules contains more rules than "
+             "max_allowed_rulesets (" +
+             std::to_string(settings.maxAllowedRulesets) + ").\n"
+             "无效请求：inline_rules 规则总数超过 max_allowed_rulesets 限制（" +
+             std::to_string(settings.maxAllowedRulesets) + "）。";
+    }
+    for (const auto &[group, rules] : parsed.inline_rules) {
+      if (ext_ruleset_valid_groups.find(group) ==
+          ext_ruleset_valid_groups.end()) {
+        // Reuse the same sorted-group list helper text as ext_ruleset
+        // so the operator sees one consistent error shape.
+        std::vector<std::string> sorted_groups(
+            ext_ruleset_valid_groups.begin(),
+            ext_ruleset_valid_groups.end());
+        std::string list_str;
+        const size_t kMaxListed = 20;
+        for (size_t i = 0;
+             i < sorted_groups.size() && i < kMaxListed; ++i) {
+          if (i) list_str += ", ";
+          list_str += sorted_groups[i];
+        }
+        if (sorted_groups.size() > kMaxListed) {
+          list_str += " (" +
+                      std::to_string(sorted_groups.size() - kMaxListed) +
+                      " more, see preset for full list)";
+        }
+        response.status_code = 400;
+        return "Invalid request: inline_rules references unknown group '" +
+               group + "'. The chosen preset defines these groups: " +
+               list_str + ".\n"
+               "无效请求：inline_rules 引用了不存在的策略组 '" + group +
+               "'。所选 preset 已定义的策略组：" + list_str + "。";
+      }
+      for (size_t i = 0; i < rules.size(); ++i) {
+        const std::string source_identifier =
+            "inline_rules section '" + group + "' rule #" +
+            std::to_string(i + 1);
+        // Use the same validator as ext_ruleset: accept rules without a
+        // trailing ",<target>" because the system appends ",<group>"
+        // itself below. parseExternalClashRules' error is already
+        // bilingual; pass it straight through to match the ext_ruleset
+        // failure shape.
+        ExternalRuleParseResult parsed_rule = parseExternalClashRules(
+            rules[i], source_identifier, ClashRuleTypes,
+            /*require_target=*/false);
+        if (!parsed_rule.ok) {
+          response.status_code = 400;
+          return parsed_rule.error;
+        }
+      }
+    }
+    // Validation passed; append each tagged rule to rule_append in
+    // input order. Inline rules follow ext_ruleset= contributions above,
+    // so the relative order matches what the user supplied.
+    for (const auto &[group, rules] : parsed.inline_rules) {
+      for (const std::string &raw_line : rules) {
+        policy.generator.rule_append.push_back(raw_line + "," + group);
+      }
     }
   }
 

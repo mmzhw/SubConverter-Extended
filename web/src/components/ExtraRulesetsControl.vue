@@ -8,6 +8,7 @@ import {
   type ExtRulesetRow,
 } from '../lib/ext-rulesets';
 import { useGroupNames } from '../composables/useGroupNames';
+import { useFormState } from '../composables/useFormState';
 
 const props = defineProps<{
   modelValue: string;
@@ -20,11 +21,14 @@ const emit = defineEmits<{
 }>();
 
 const { locale } = useI18n();
+const form = useFormState();
 
 const rows = ref<ExtRulesetRow[]>(parseExtRulesetRows(props.modelValue));
 const { groups, loading, error, refresh } = useGroupNames(
   () => props.configUrl,
   props.backendBase,
+  () => form.state.githubProxy,
+  () => form.state.customGithubProxy,
 );
 
 watch(() => props.modelValue, (value) => {

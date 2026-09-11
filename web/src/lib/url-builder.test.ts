@@ -202,3 +202,27 @@ describe('buildSubUrl with ext_ruleset', () => {
     expect(url).not.toContain('ext_ruleset=');
   });
 });
+
+describe('buildSubUrl with inline_rules', () => {
+  it('passes inline_rules through with the wire separators URL-encoded', () => {
+    const url = buildSubUrl(base({
+      sourceUrl: 'https://s',
+      options: {
+        inline_rules:
+          'Domestic:DOMAIN-SUFFIX,foo.com|DOMAIN-KEYWORD,bar;'
+          + 'Proxy:IP-CIDR,10.0.0.0/8',
+      },
+    }));
+    expect(url).toContain(
+      'inline_rules=Domestic%3ADOMAIN-SUFFIX%2Cfoo.com%7CDOMAIN-KEYWORD%2Cbar%3BProxy%3AIP-CIDR%2C10.0.0.0%2F8',
+    );
+  });
+
+  it('omits the parameter when inline_rules is empty', () => {
+    const url = buildSubUrl(base({
+      sourceUrl: 'https://s',
+      options: { inline_rules: '' },
+    }));
+    expect(url).not.toContain('inline_rules=');
+  });
+});

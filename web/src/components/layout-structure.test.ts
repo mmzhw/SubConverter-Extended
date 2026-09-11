@@ -80,4 +80,18 @@ describe('responsive layout structure', () => {
     expect(source).toContain('saveDnsTemplateDialog');
     expect(source).toContain("def.key === 'clash.dns'");
   });
+
+  it('lets the inline-rules match-type dropdown show multi-line descriptions', () => {
+    const source = componentSource('InlineRulesControl.vue');
+
+    // The dropdown is teleported to <body>, so the multi-line option
+    // content can only be styled through a popper-class + global CSS.
+    expect(source).toContain('popper-class="inline-rules-type-popper"');
+    expect(source).toContain('.inline-rules-type-popper .el-select-dropdown__item');
+    // Element Plus pins items to 34px/nowrap/ellipsis; the override must
+    // undo all three or the description collapses back to one line.
+    expect(source).toContain('height: auto;');
+    expect(source).toContain('white-space: normal;');
+    expect(source).toContain('text-overflow: clip;');
+  });
 });

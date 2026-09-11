@@ -74,4 +74,62 @@ describe('useGroupNames', () => {
     expect(state.error.value).toBe(true);
     expect(state.groups.value).toEqual(['Proxy', 'Direct', 'GLOBAL', 'REJECT', 'MyGroup']);
   });
+
+  it('rewrites the config URL through the GitHub proxy before fetching', async () => {
+    respondWith(['Proxy']);
+    const state = useGroupNames(
+      () => 'https://raw.githubusercontent.com/Aethersailor/Custom_OpenClash_Rules/refs/heads/main/cfg/Custom_Clash.ini',
+      '',
+      () => 'https://gh-proxy.com/',
+      () => '',
+    );
+    state.refresh();
+    await vi.advanceTimersByTimeAsync(300);
+    await nextTick();
+    const [url] = (fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0];
+    const sentConfig = new URL(String(url)).searchParams.get('config');
+    expect(sentConfig).toBe(
+      'https://gh-proxy.com/https://raw.githubusercontent.com/Aethersailor/Custom_OpenClash_Rules/refs/heads/main/cfg/Custom_Clash.ini',
+    );
+  });
+
+  it('caches the rewritten URL, not the raw one', async () => {
+    respondWith(['Proxy']);
+    const state = useGroupNames(
+      () => 'https://raw.githubusercontent.com/A/B/c.ini',
+      '',
+      () => 'https://gh-proxy.com/',
+      () => '',
+    );
+    state.refresh();
+    await vi.advanceTimersByTimeAsync(300);
+    await nextTick();
+    expect(fetch).toHaveBeenCalledTimes(1);
+    // Same raw URL, same proxy — should hit cache, no second fetch.
+    state.refresh();
+    await vi.advanceTimersByTimeAsync(300);
+    await nextTick();
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('surfaces error and stops loading when the fetch times out', async () => {
+    // Simulate a fetch that respects the AbortSignal (real fetch does).
+    (fetch as unknown as ReturnType<typeof vi.fn>).mockImplementation(
+      (_url: string, init?: RequestInit) => new Promise((_, reject) => {
+        init?.signal?.addEventListener('abort', () => {
+          reject(new DOMException('aborted', 'AbortError'));
+        });
+      }),
+    );
+    const state = useGroupNames(() => 'https://c/preset.ini');
+    state.refresh();
+    await vi.advanceTimersByTimeAsync(300);
+    await nextTick();
+    expect(state.loading.value).toBe(true);
+    // Advance past the 8s fetch timeout.
+    await vi.advanceTimersByTimeAsync(8100);
+    await nextTick();
+    expect(state.loading.value).toBe(false);
+    expect(state.error.value).toBe(true);
+  });
 });

@@ -6,6 +6,7 @@ import { Connection, EditPen, Finished, MagicStick, QuestionFilled, RefreshRight
 import { TARGET_FORMATS, OPTION_DEFS, OptionDef } from '../config/options';
 import { useFormState } from '../composables/useFormState';
 import ExtraRulesetsControl from './ExtraRulesetsControl.vue';
+import InlineRulesControl from './InlineRulesControl.vue';
 import {
   applyGitHubProxy,
   GITHUB_PROXY_CUSTOM,
@@ -468,6 +469,13 @@ function updateSourceUrl(value: string) {
             />
             <ExtraRulesetsControl
               v-else-if="def.type === 'string' && def.key === 'ext_ruleset'"
+              :model-value="String(optionValue(def.key))"
+              :config-url="String(optionValue('config') ?? '')"
+              :backend-base="form.state.backendBase"
+              @update:model-value="(v: string) => setOption(def.key, v)"
+            />
+            <InlineRulesControl
+              v-else-if="def.type === 'string' && def.key === 'inline_rules'"
               :model-value="String(optionValue(def.key))"
               :config-url="String(optionValue('config') ?? '')"
               :backend-base="form.state.backendBase"

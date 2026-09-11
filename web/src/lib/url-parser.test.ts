@@ -36,4 +36,13 @@ describe('parseSubUrl', () => {
     const { state: parsed } = parseSubUrl('http://host/sub' + query);
     expect(parsed.options.ext_ruleset).toBe('Proxy,https://a/p.list\nDomestic,https://b/d.list');
   });
+
+  it('round-trips inline_rules via URL `:` and `|` separators back to its wire format', () => {
+    const query = '?target=clash&url=https%3A%2F%2Fs&inline_rules=Domestic%3ADOMAIN-SUFFIX%2Cfoo.com%7CDOMAIN-KEYWORD%2Cbar%3BProxy%3AIP-CIDR%2C10.0.0.0%2F8';
+    const { state: parsed } = parseSubUrl('http://host/sub' + query);
+    expect(parsed.options.inline_rules).toBe(
+      'Domestic:DOMAIN-SUFFIX,foo.com|DOMAIN-KEYWORD,bar;'
+      + 'Proxy:IP-CIDR,10.0.0.0/8',
+    );
+  });
 });
