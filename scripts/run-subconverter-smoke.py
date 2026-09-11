@@ -1363,6 +1363,24 @@ def short_link_admin_headers(password: str | None) -> dict[str, str]:
     return {"X-Short-Link-Password": token} if token else {}
 
 
+def short_link_admin_locked(
+    base_url: str, timeout: int, password: str | None
+) -> bool:
+    """True when the short-link admin endpoints demand a password we do
+    not have.
+
+    The container generates a random password when
+    SUBCONVERTER_SHORT_LINK_PASSWORD is empty, so a smoke run that was not
+    handed the credential cannot exercise the admin surface at all. Only
+    treat that as "skip"; a 401 while a password *was* supplied stays a
+    failure.
+    """
+    if (password or "").strip():
+        return False
+    status, _ = request_status(base_url, "/short/list", None, timeout)
+    return status == 401
+
+
 def smoke_sub_url(base_url: str, inline_rules: str) -> str:
     """Builds a complete /sub?... URL for short-link fixtures.
 
@@ -1724,15 +1742,25 @@ def run_checks(
             base_url, timeout, ext_ruleset_success_url
         )
 
-    # Editable short links: PATCH /short replaces the target URL while
-    # the code stays stable. These need the short-link admin password
-    # when the deployment sets SUBCONVERTER_SHORT_LINK_PASSWORD.
-    assert_short_link_update_ok(base_url, timeout, short_link_password)
-    assert_short_link_update_not_found(base_url, timeout, short_link_password)
-    assert_short_link_update_invalid_url(base_url, timeout, short_link_password)
-    assert_short_link_update_missing_url(
-        base_url, timeout, short_link_password
-    )
+    # Editable short links: PATCH /short replaces the target URL while the
+    # code stays stable. These drive admin endpoints, so they need the
+    # short-link admin password when the deployment has one.
+    if short_link_admin_locked(base_url, timeout, short_link_password):
+        print(
+            "note: short-link admin endpoints require a password and none was "
+            "supplied; skipping the short-link update cases. "
+            "Pass --short-link-password (or set "
+            "SUBCONVERTER_SHORT_LINK_PASSWORD) to run them."
+        )
+    else:
+        assert_short_link_update_ok(base_url, timeout, short_link_password)
+        assert_short_link_update_not_found(base_url, timeout, short_link_password)
+        assert_short_link_update_invalid_url(
+            base_url, timeout, short_link_password
+        )
+        assert_short_link_update_missing_url(
+            base_url, timeout, short_link_password
+        )
 
     if verify_non_clash:
         assert_parser_route_isolation(base_url, timeout)

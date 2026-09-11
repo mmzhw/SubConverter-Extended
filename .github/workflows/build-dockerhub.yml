@@ -675,7 +675,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v6
         with:
-          token: ${{ github.event_name == 'pull_request' && github.token || secrets.PAT_TOKEN }}
+          # Match the other checkout steps: prefer PAT_TOKEN when the
+          # repository has one, but fall back to the built-in token. A fork
+          # without PAT_TOKEN previously got an empty value here, and
+          # actions/checkout fails hard with "Input required and not
+          # supplied: token".
+          token: ${{ secrets.PAT_TOKEN || github.token }}
           fetch-depth: 0
 
       - name: Download dependency snapshot
