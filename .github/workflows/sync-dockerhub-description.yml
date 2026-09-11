@@ -6,6 +6,9 @@ on:
       - master
     paths:
       - .github/DOCKERHUB_DESCRIPTION.md
+      # A change to the sync steps themselves should re-run the sync, so the
+      # published description is refreshed with the new logic.
+      - .github/workflows/sync-dockerhub-description.yml
   workflow_dispatch:
 
 permissions:
@@ -42,7 +45,17 @@ jobs:
 
           username = os.environ.get("DOCKERHUB_USERNAME", "")
           secret = os.environ.get("DOCKERHUB_TOKEN", "")
-          token = dockerhub_token(username, secret)
+          # GitHub stores a secret byte-for-byte, so a stray trailing newline
+          # or space survives. docker/login-action trims it, which is why the
+          # release workflow works, but a raw API call rejects it with 401.
+          username = username.strip()
+          secret = secret.strip()
+          try:
+              token = dockerhub_token(username, secret)
+          except CleanupError as exc:
+              print(f"::error::Docker Hub authentication failed: {exc}. "
+                    f"username_set={bool(username)} secret_length={len(secret)}")
+              raise SystemExit(1)
           # The namespace must be the account that owns this image. It was
           # left as the upstream namespace, so the PATCH targeted a
           # repository this token cannot write to and the description never
@@ -57,16 +70,29 @@ jobs:
                   ".github/DOCKERHUB_DESCRIPTION.md"
               ).read_text(encoding="utf-8"),
           }
-          _request(
-              "PATCH",
-              url,
-              headers={"Authorization": f"Bearer {token}"},
-              payload=expected,
-              expected=(200, 202, 204),
-          )
-          current, _headers = _json_request("GET", url)
+          try:
+              _request(
+                  "PATCH",
+                  url,
+                  headers={"Authorization": f"Bearer {token}"},
+                  payload=expected,
+                  expected=(200, 202, 204),
+              )
+              current, _headers = _json_request("GET", url)
+          except CleanupError as exc:
+              print(f"::error::Docker Hub description update failed: {exc}")
+              raise SystemExit(1)
           if not isinstance(current, dict) or any(
               current.get(key) != value for key, value in expected.items()
           ):
-              raise CleanupError("Docker Hub description readback mismatch")
+              mismatched = [
+                  key for key, value in expected.items()
+                  if not isinstance(current, dict) or current.get(key) != value
+              ]
+              print(
+                  "::error::Docker Hub description readback mismatch on: "
+                  + ", ".join(mismatched)
+              )
+              raise SystemExit(1)
+          print("Docker Hub description synced.")
           PY
