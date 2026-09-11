@@ -1,59 +1,92 @@
 # SubConverter-Extended
 
-SubConverter-Extended 是面向多种代理客户端的订阅转换后端增强版，重点完善 Mihomo 节点解析、Proxy Provider、多客户端远程资源、请求诊断和公网部署边界。
+SubConverter-Extended 是一个订阅转换服务，基于 subconverter 深度演进，面向 Mihomo / Clash Meta / OpenClash 以及 Surge、Quantumult X、Loon、Stash、Surfboard、Sing-box 等客户端生成可用配置。
 
-![SubConverter-Extended Web 配置界面](https://raw.githubusercontent.com/mmzhw/SubConverter-Extended/master/docs/images/dockerhub-web-ui.jpg)
+![SubConverter-Extended Web UI](https://raw.githubusercontent.com/mmzhw/SubConverter-Extended/master/docs/images/dockerhub-web-ui.jpg)
 
-## Web 配置界面
+## 项目来源
 
-镜像内置 Vue 3 可视化工作台：打开发布端口根路径即可组装真实可复制的订阅 URL。界面使用显式“生成”按钮，避免输入一个字符就更新链接；生成后可复制长链接、生成二维码，也可创建服务端短链。
+- 当前定制源码：[mmzhw/SubConverter-Extended](https://github.com/mmzhw/SubConverter-Extended)
+- 基于项目：[Aethersailor/SubConverter-Extended](https://github.com/Aethersailor/SubConverter-Extended)
+- 上游基础：[asdlokj1qpi233/subconverter](https://github.com/asdlokj1qpi233/subconverter)
 
-- **内联规则**：直接录入“匹配模式 + 值 + 目标组”，无需另外托管一份规则文件。例如把某个域名走指定策略组时，填一次即可。
-- **额外规则集**：需要共享的远程规则源可追加到所选预设的已有策略组，组名下拉自动从预设加载。
-- **短链内容可编辑**：短链地址（`/s?id=...`）保持不变即可修改其目标内容，增删规则后客户端无需重新导入订阅。
-- **生成历史与服务端短链**：本地历史可回显，服务端短链可刷新、复制、载入、编辑和删除。
+## 主要能力
 
-## 支持范围
-
-- 为 Mihomo/Clash 生成 Proxy Provider，并使用 Mihomo 解析桥处理节点链接。
-- 为 Surge、Quantumult X、Loon、Surfboard 和 Stash 生成客户端原生远程资源或兼容输出。
-- 支持 Sing-box、Quantumult 以及多种传统订阅和分享链接目标。
-- 提供 `explain=true`、`/inspect`、`X-Request-ID`、安全档位和可选运行统计。
-
-不同目标格式的能力和限制不同。完整范围见 [Wiki 的客户端与目标格式](https://github.com/Aethersailor/SubConverter-Extended/wiki/Compatibility)。
+- 内置 Web 配置界面，打开容器端口即可通过表单生成真实可复制的订阅 URL。
+- Web 前端与转换后端共用同一个容器端口，访问该端口即可打开页面，生成的 `/sub`、`/s` 等链接也直接走同一服务地址。
+- 支持远程配置预设，包含 Aethersailor Custom_OpenClash_Rules 与 ACL4SSR 常用模板入口。
+- 支持 Mihomo Proxy Provider，也可关闭 Provider 模式改为后端代抓订阅并内联节点。
+- 支持节点包含 / 排除正则、节点排序、废弃节点过滤、节点 Emoji、节点类型标记、规则展开等常用参数。
+- 支持 GitHub Proxy 配置与延迟测试，用于改善远程配置和规则集在国内服务器上的访问。
+- **内联规则**：直接录入“匹配模式 + 值 + 目标组”即可把域名、关键词或网段打到指定策略组，无需另外托管一份规则文件。
+- **额外规则集**：可把远程规则源追加到所选预设已有的策略组，组名下拉自动从预设加载，无需手写 `组名,URL` 格式。
+- 支持服务端短链，把很长的 `/sub?...` 链接保存为 `/s?id=...`，并提供短链列表、复制、载入、编辑和删除管理。
+- **短链内容可编辑**：短链地址保持不变即可修改其目标内容，增删规则后客户端无需重新导入订阅。
+- 支持单链接 DNS 模板，Web UI 可读取默认模板、编辑保存，并通过 `dns_template=<id>` 只作用于当前链接。
+- Docker 镜像默认使用 Asia/Shanghai 时区，默认对外端口为 `25500`。
 
 ## 快速启动
-
-> [!WARNING]
-> 下方命令只用于本机首次检查，不会持久化自定义配置或统计数据，并且只把端口绑定到宿主机回环地址。需要让局域网或公网访问时，请先阅读 [Docker 部署文档](https://github.com/Aethersailor/SubConverter-Extended/wiki/Docker-Deployment)，再配置持久化、安全档位、访问控制和 TLS。
 
 ```bash
 docker run -d \
   --name SubConverter-Extended \
-  -p 127.0.0.1:25500:25500 \
+  -p 25500:25500 \
+  -e TZ=Asia/Shanghai \
+  -e SUBCONVERTER_SHORT_LINK_PASSWORD=请改成你的管理密码 \
+  -v ./short-links:/base/short-links \
+  -v ./stats:/base/stats \
+  -v ./dns-templates:/base/dns-templates \
   --restart unless-stopped \
   mmzhw51/subconverter-extended:latest
 ```
 
-然后访问：
+启动后访问：
 
 ```text
-http://localhost:25500/version
-http://localhost:25500/healthz
+http://服务器IP:25500/
+http://服务器IP:25500/version
+http://服务器IP:25500/healthz
 ```
 
-`latest` 对应已验证的最新正式 Release；`vX.Y.Z` 标签用于固定版本和回滚。
+## 常用环境变量
 
-不要把宿主机整个 `base` 目录挂载到容器的 `/base`；这会遮盖镜像内的模板、规则和 snippets。需要持久化时，请按 Docker 部署文档只挂载需要修改的配置文件和数据目录。
+| 变量 | 说明 |
+| --- | --- |
+| `WEB_PORT` | nginx 对外监听端口，默认 `25500`。 |
+| `SUBCONVERTER_LISTEN_PORT` | 容器内后端监听端口，默认 `25501`。 |
+| `TZ` | 容器时区，默认建议 `Asia/Shanghai`。 |
+| `SUBCONVERTER_SHORT_LINK_PASSWORD` | 服务器短链管理密码。留空时会自动生成随机 token，并在启动日志中打印。 |
+| `SUBCONVERTER_SHORT_LINKS_FILE` | 短链存储文件，默认 `/base/short-links/links.json`。 |
+| `SUBCONVERTER_SHORT_LINK_MAX_ENTRIES` | 短链最大保存数量，默认 `500`。 |
+| `SUBCONVERTER_DNS_TEMPLATES_DIR` | DNS 模板保存目录，默认 `/base/dns-templates`。 |
 
-## 文档
+## 短链密码说明
 
-- [README](https://github.com/mmzhw/SubConverter-Extended)
-- [完整 Wiki](https://github.com/Aethersailor/SubConverter-Extended/wiki)
-- [最新 Release](https://github.com/mmzhw/SubConverter-Extended/releases/latest)
-- [安全与隐私](https://github.com/Aethersailor/SubConverter-Extended/wiki/Security-and-Privacy)
-- [故障排查](https://github.com/Aethersailor/SubConverter-Extended/wiki/Troubleshooting)
+`/s?id=...` 是客户端订阅更新入口，保持免密；服务器短链的管理接口需要密码：
 
-## 许可证
+- `GET /short/list`：查看短链列表。
+- `PATCH /short?id=<code>`：原地修改短链的目标内容（短链地址不变）。
+- `DELETE /short?id=<code>`：删除短链。
 
-SubConverter-Extended 按 [GNU General Public License v3.0](https://github.com/mmzhw/SubConverter-Extended/blob/master/LICENSE) 发布。Mihomo 解析桥所使用的 Mihomo 依赖同样遵循 GPL-3.0。
+Web UI 会把输入的管理密码作为 `X-Short-Link-Password` 请求头发送。命令行也可以使用：
+
+```bash
+curl -H "X-Short-Link-Password: 你的密码" http://服务器IP:25500/short/list
+```
+
+如果没有设置 `SUBCONVERTER_SHORT_LINK_PASSWORD`，容器会在 `/base/short-links/admin-password` 生成随机 token，并在启动日志中明文打印当前短链管理密码。
+
+## 镜像标签
+
+- `latest`：最新正式 Release 的镜像，在该 Release 完成全部验证后推进。
+- `vX.Y.Z`：正式版本标签，用于固定版本和回滚。
+- `YYYY.MM.DD-<commit>`：早期按日期和提交号固定的构建。
+
+## 说明
+
+本项目只做订阅格式转换和配置生成，不提供代理节点或订阅服务。自行部署时请根据网络环境配置防火墙、反向代理、TLS 和访问控制。公开部署请务必设置短链管理密码，并妥善保护日志和持久化目录。
+
+## 安全、合规与使用边界
+
+- 本镜像仅发布软件本身，不运营面向公众的订阅转换服务，不提供、销售、推荐或托管任何代理节点、机场订阅或网络访问服务。
+- 自行部署者需要自行管理 TLS、访问控制、防火墙、日志、备份和更新；如将服务暴露到公网，还需要自行确认备案、许可、数据保护和所在地法律法规要求。
