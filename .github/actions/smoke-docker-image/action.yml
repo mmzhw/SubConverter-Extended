@@ -100,8 +100,25 @@ runs:
               /tmp/subconverter-security-default.log
             grep -F "SECURITY_UPLOAD_EFFECTIVE profile=lan configured_allow_public_upload=false source=file:toml effective=allowed reason=lan-compatibility" \
               /tmp/subconverter-security-default.log
-            grep -F "SECURITY_EXPOSURE_POSSIBLE profile=lan bind=0.0.0.0:${CONTAINER_PORT} public_reachability=unknown" \
-              /tmp/subconverter-security-default.log
+            # The backend runs behind nginx and listens on 127.0.0.1 only, so
+            # the backend-layer wildcard-bind warning cannot fire. Assert the
+            # property it guarded instead: the backend must never bind a
+            # wildcard address. nginx is the only wildcard listener.
+            if grep -Fq "SECURITY_EXPOSURE_POSSIBLE" /tmp/subconverter-security-default.log; then
+              echo "The subconverter backend must not bind a wildcard address behind nginx." >&2
+              exit 1
+            fi
+            LISTEN_OUTPUT="$(docker exec "$CID" netstat -ltn 2>/dev/null || true)"
+            if [ -n "$LISTEN_OUTPUT" ]; then
+              printf '%s\n' "$LISTEN_OUTPUT" | awk '
+                $4 ~ /:25501$/ && $4 !~ /^127\./ { bad = 1 }
+                END {
+                  if (bad) {
+                    print "Backend port 25501 is not bound to loopback." > "/dev/stderr"
+                    exit 1
+                  }
+                }'
+            fi
 
             POLICY_CID="$(docker run -d --platform "$PLATFORM" \
               -e PORT=25501 \

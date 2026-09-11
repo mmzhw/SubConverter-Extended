@@ -27,6 +27,14 @@ server {
         proxy_send_timeout 300s;
     }
 
+    # The bundled Custom_OpenClash_Rules runtime assets were removed from the
+    # image, so this path must not resolve. Without an explicit rule it falls
+    # through to the SPA fallback below and answers 200 with index.html, which
+    # the image smoke test rejects.
+    location ~ ^/Custom_OpenClash_Rules(/|$) {
+        return 404;
+    }
+
     location /assets/ {
         expires 30d;
         add_header Cache-Control "public, immutable";
