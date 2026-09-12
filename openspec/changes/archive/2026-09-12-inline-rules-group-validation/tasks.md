@@ -38,4 +38,4 @@
 - [x] 5.1 `README.md` 内联规则段落补充：合法组名以预设实际声明的组为准，`DIRECT`/`REJECT` 为内置可用；并说明未选预设时的例外
 - [x] 5.2 `CHANGELOG.md` 写明这是有意的收紧（历史链接可能由"200 + 坏配置"变为"400 + 可用组名"）
 - [x] 5.3 同步主 spec 并归档 change
-- [ ] 5.4 commit + push + 附注 tag 发版，按 `docs/RELEASE-RUNBOOK.md` 第 6 节验收
+- [x] 5.4 commit + push + 附注 tag 发版，按 `docs/RELEASE-RUNBOOK.md` 第 6 节验收

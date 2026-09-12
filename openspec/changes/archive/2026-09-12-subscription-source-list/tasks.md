@@ -42,5 +42,5 @@
 
 - [x] 5.1 `README.md` 订阅源地址部分说明：多源一行一个，生成时用 `|` 连接；
   逗号不是多源分隔符
-- [ ] 5.2 与 `inline-rules-group-validation` 一起收尾：同步主 spec、归档、
+- [x] 5.2 与 `inline-rules-group-validation` 一起收尾：同步主 spec、归档、
   CHANGELOG、commit/push、发版
