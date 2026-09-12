@@ -196,6 +196,11 @@ NO_RULESET_PRESET_CONFIG = "data:text/plain;base64," + base64.urlsafe_b64encode(
         (
             b"enable_rule_generator=true",
             b"custom_proxy_group=Proxy`select`DIRECT",
+            # Group validation only accepts what the config actually declares
+            # (plus the DIRECT/REJECT built-ins), so the cases below need a
+            # second declared group to target. "Direct" is deliberately NOT
+            # declared: the case that used it now asserts it is rejected.
+            b"custom_proxy_group=Domestic`select`[]DIRECT",
         )
     )
 ).decode("ascii")
@@ -1125,7 +1130,7 @@ def assert_getgroupnames_missing_config(base_url: str, timeout: int) -> None:
 
 
 def assert_inline_rules_valid(base_url: str, timeout: int) -> None:
-    """inline_rules= with valid groups and rules succeeds and the
+    """inline_rules= with groups the preset declares succeeds and the
     user-supplied rule lines appear in the output rules: block."""
     output = fetch(
         base_url,
@@ -1136,7 +1141,7 @@ def assert_inline_rules_valid(base_url: str, timeout: int) -> None:
             "config": NO_RULESET_PRESET_CONFIG,
             "inline_rules": (
                 "Proxy:DOMAIN-SUFFIX,foo.com|DOMAIN-KEYWORD,bar;"
-                "Direct:DOMAIN-SUFFIX,lan.internal"
+                "Domestic:DOMAIN-SUFFIX,lan.internal"
             ),
         },
         timeout,
@@ -1148,12 +1153,74 @@ def assert_inline_rules_valid(base_url: str, timeout: int) -> None:
     expected_lines = (
         "DOMAIN-SUFFIX,foo.com,Proxy",
         "DOMAIN-KEYWORD,bar,Proxy",
-        "DOMAIN-SUFFIX,lan.internal,Direct",
+        "DOMAIN-SUFFIX,lan.internal,Domestic",
     )
     for line in expected_lines:
         if line not in output:
             raise AssertionError(
                 f"inline_rules output missing expected rule line: {line}"
+            )
+
+
+def assert_inline_rules_undeclared_fallback_rejected(
+    base_url: str, timeout: int
+) -> None:
+    """A group the preset does not declare is rejected, even when the name
+    looks like one of the old hardcoded fallbacks.
+
+    "Direct" used to be accepted unconditionally while no generated Clash
+    config contains such a group, so the output was a config the client
+    refuses to load ("proxy [Direct] not found"). Only "Proxy" and "Domestic"
+    are declared by the preset under test.
+    """
+    status, body = request_status(
+        base_url,
+        "/sub",
+        {
+            "target": "clash",
+            "url": SAMPLE_SS_LINK,
+            "config": NO_RULESET_PRESET_CONFIG,
+            "inline_rules": "Direct:DOMAIN-SUFFIX,lan.internal",
+        },
+        timeout,
+    )
+    if status != 400:
+        raise AssertionError(
+            "inline_rules targeting an undeclared fallback group must "
+            f"return 400, got {status}: {body[:200]}"
+        )
+
+
+def assert_inline_rules_builtin_policy_accepted(
+    base_url: str, timeout: int
+) -> None:
+    """Clash resolves DIRECT and REJECT without a group definition, so they
+    are valid targets even though the preset declares neither.
+
+    The uppercase spelling matters: the old fallback list contained "Direct",
+    so the correct "DIRECT" was rejected with 400.
+    """
+    output = fetch(
+        base_url,
+        "/sub",
+        {
+            "target": "clash",
+            "url": SAMPLE_SS_LINK,
+            "config": NO_RULESET_PRESET_CONFIG,
+            "inline_rules": (
+                "DIRECT:DOMAIN-KEYWORD,direct-target;"
+                "REJECT:DOMAIN-KEYWORD,reject-target"
+            ),
+        },
+        timeout,
+    )
+    for line in (
+        "DOMAIN-KEYWORD,direct-target,DIRECT",
+        "DOMAIN-KEYWORD,reject-target,REJECT",
+    ):
+        if line not in output:
+            raise AssertionError(
+                f"inline_rules output missing built-in policy rule: {line}"
             )
 
 
@@ -1730,6 +1797,8 @@ def run_checks(
     assert_inline_rules_valid(base_url, timeout)
     assert_inline_rules_empty(base_url, timeout)
     assert_inline_rules_unknown_group(base_url, timeout)
+    assert_inline_rules_undeclared_fallback_rejected(base_url, timeout)
+    assert_inline_rules_builtin_policy_accepted(base_url, timeout)
     assert_inline_rules_unknown_type(base_url, timeout)
     assert_inline_rules_match_forbidden(base_url, timeout)
     assert_inline_rules_with_list_true(base_url, timeout)
