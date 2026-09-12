@@ -1104,7 +1104,14 @@ def assert_getgroupnames_ok(base_url: str, timeout: int) -> None:
     groups = payload.get("groups")
     if not isinstance(groups, list):
         raise AssertionError(f"/getgroupnames did not return a groups array: {body!r}")
-    expected = sorted({"Direct", "GLOBAL", "MyGroup", "Proxy", "REJECT", "Streaming"})
+    # The preset declares MyGroup and Streaming. Group validation accepts
+    # exactly what a config declares plus the Clash built-in policy names
+    # DIRECT and REJECT, which Clash resolves without a group definition.
+    # The old expectation added Proxy/Direct/GLOBAL as unconditional
+    # fallbacks; none of those exists in a generated Clash config ("Proxy" is
+    # Stash-only, "GLOBAL" is Sing-box-only, "Direct" is not a built-in), and
+    # accepting them produced rules the client rejected.
+    expected = sorted({"DIRECT", "MyGroup", "REJECT", "Streaming"})
     if groups != expected:
         raise AssertionError(f"unexpected groups: {groups!r} != {expected!r}")
 
