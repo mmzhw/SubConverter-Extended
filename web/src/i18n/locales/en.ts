@@ -2,8 +2,10 @@ export default {
   app: { title: 'SubConverter Config Builder', subtitle: 'Assemble your subscription URL visually', kicker: 'Subscription conversion workspace', ready: 'Ready', waiting: 'Waiting', generatedCount: 'Generated {count}' },
   form: {
     target: 'Node Type', sourceUrl: 'Subscription Source URL',
-    sourceUrlPlaceholder: 'https://sub.example.com/...', sourceUrlInvalid: 'Enter a valid http(s) URL',
-    sourceUrlHelp: 'Enter the original provider or node subscription URL. Supported prefixes can be used here, such as provider:HK,interval:21600,https://example.com/sub for provider name and refresh interval.',
+    sourceUrlPlaceholder: 'https://sub.example.com/...\nOne source per line', sourceUrlInvalid: 'Enter a valid http(s) URL',
+    sourceUrlInvalidLine: 'Line {line} is not a valid http(s) URL',
+    sourceUrlCommaSeparated: 'Several sources on one line separated by commas. A comma separates a source prefix from its URL, not one source from another — put each source on its own line.',
+    sourceUrlHelp: 'Enter the original provider or node subscription URL. Put one source per line; the generated link joins them with |. Supported prefixes can be used here, such as provider:HK,interval:21600,https://example.com/sub for provider name and refresh interval.',
     subscriptionName: 'Subscription name',
     subscriptionNamePlaceholder: 'For example My Plan',
     subscriptionNameHelp: 'Generates filename= and makes the backend return a Content-Disposition filename. Many Clash/Mihomo clients use it as the imported subscription profile name; blank links may appear as sub.',

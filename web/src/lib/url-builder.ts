@@ -1,5 +1,6 @@
 import { OPTION_DEFS } from '../config/options';
 import { applyGitHubProxy, githubProxyPrefixFor } from './github-proxy';
+import { joinSourceUrlsForWire } from './source-urls';
 
 export interface FormState {
   target: string;
@@ -36,7 +37,10 @@ export function buildSubUrl(state: FormState): string {
   const params = new URLSearchParams();
   const githubProxyPrefix = githubProxyPrefixFor(state.githubProxy, state.customGithubProxy);
   params.set('target', state.target);
-  params.set('url', state.sourceUrl);
+  // The form holds one source per line; the wire format separates them with
+  // '|'. A comma would be read as a per-source prefix separator, so the whole
+  // list would collapse into a single unusable URL.
+  params.set('url', joinSourceUrlsForWire(state.sourceUrl));
   if (state.subscriptionName.trim()) {
     params.set('filename', state.subscriptionName.trim());
   }

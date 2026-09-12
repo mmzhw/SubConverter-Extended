@@ -1,5 +1,6 @@
 import { OPTION_DEFS } from '../config/options';
 import { parseExtRulesetRows } from './ext-rulesets';
+import { wireToSourceUrls } from './source-urls';
 import { FormState } from './url-builder';
 
 export interface ParsedSubLink {
@@ -15,10 +16,12 @@ export function parseSubUrl(input: string): ParsedSubLink {
     throw new Error('invalid-link');
   }
   const target = url.searchParams.get('target');
-  const sourceUrl = url.searchParams.get('url');
+  const wireSourceUrl = url.searchParams.get('url');
   const subscriptionName = url.searchParams.get('filename') || '';
   const dnsTemplateId = url.searchParams.get('dns_template') || '';
-  if (!target || !sourceUrl) throw new Error('invalid-link');
+  if (!target || !wireSourceUrl) throw new Error('invalid-link');
+  // '|' separates sources on the wire; the form edits them one per line.
+  const sourceUrl = wireToSourceUrls(wireSourceUrl);
 
   const options: FormState['options'] = {};
   const unknown: Record<string, string> = {};

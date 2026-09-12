@@ -9,6 +9,10 @@ function componentSource(name: string) {
   return readFileSync(resolve(currentDir, name), 'utf8');
 }
 
+function libSource(name: string) {
+  return readFileSync(resolve(currentDir, '..', 'lib', name), 'utf8');
+}
+
 describe('responsive layout structure', () => {
   it('keeps preview actions in a stable two-column grid', () => {
     const source = componentSource('UrlPreview.vue');
@@ -108,5 +112,15 @@ describe('responsive layout structure', () => {
     expect(source).toContain('inlineRulesToRows');
     // Unparsable lines are surfaced rather than silently dropped.
     expect(source).toContain('inlineRulesInvalidLines');
+  });
+
+  it('edits subscription sources as a multi-line list', () => {
+    // One source per line, joined with '|' at the URL boundary. A single-line
+    // input sent comma-joined sources through as one unusable URL.
+    expect(componentSource('ConfigForm.vue')).toContain('source-textarea');
+    expect(componentSource('ConfigForm.vue')).toContain('type="textarea"');
+    expect(libSource('url-builder.ts')).toContain('joinSourceUrlsForWire(');
+    expect(libSource('url-parser.ts')).toContain('wireToSourceUrls(');
+    expect(componentSource('ConfigForm.vue')).toContain('form.sourceUrlCommaSeparated');
   });
 });

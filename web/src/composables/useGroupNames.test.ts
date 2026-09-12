@@ -55,11 +55,11 @@ describe('useGroupNames', () => {
     expect(fetch).toHaveBeenCalledTimes(1);
   });
 
-  it('sets error on failure and keeps last groups', async () => {
+  it('sets error on failure and clears groups instead of guessing', async () => {
     (fetch as unknown as ReturnType<typeof vi.fn>)
       .mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ groups: ['Proxy', 'Direct', 'GLOBAL', 'REJECT', 'MyGroup'] }),
+        json: async () => ({ groups: ['MyGroup'] }),
       })
       .mockResolvedValueOnce({ ok: false, status: 400 });
     let configUrl = 'https://c/preset.ini';
@@ -67,12 +67,41 @@ describe('useGroupNames', () => {
     state.refresh();
     await vi.advanceTimersByTimeAsync(300);
     await nextTick();
+    expect(state.groups.value).toEqual(['MyGroup']);
     configUrl = 'https://c/other.ini';
     state.refresh();
     await vi.advanceTimersByTimeAsync(300);
     await nextTick();
     expect(state.error.value).toBe(true);
-    expect(state.groups.value).toEqual(['Proxy', 'Direct', 'GLOBAL', 'REJECT', 'MyGroup']);
+    // The previously loaded groups belong to a different config, and the
+    // fallback names would be a guess. Neither may be offered, because a
+    // wrong group name yields a config the client refuses to load.
+    expect(state.groups.value).toEqual([]);
+  });
+
+  it('clears groups when the config declares none, rather than falling back', async () => {
+    respondWith([]);
+    const state = useGroupNames(() => 'https://c/preset.ini');
+    expect(state.groups.value).toEqual(FALLBACK_GROUP_NAMES);
+    state.refresh();
+    await vi.advanceTimersByTimeAsync(300);
+    await nextTick();
+    expect(state.error.value).toBe(false);
+    expect(state.groups.value).toEqual([]);
+  });
+
+  it('does not leave fallback names on screen when the first load fails', async () => {
+    (fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: false,
+      status: 500,
+    });
+    const state = useGroupNames(() => 'https://c/preset.ini');
+    state.refresh();
+    await vi.advanceTimersByTimeAsync(300);
+    await nextTick();
+    expect(state.error.value).toBe(true);
+    expect(state.groups.value).not.toEqual(FALLBACK_GROUP_NAMES);
+    expect(state.groups.value).toEqual([]);
   });
 
   it('rewrites the config URL through the GitHub proxy before fetching', async () => {

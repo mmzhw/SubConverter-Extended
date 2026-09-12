@@ -25,6 +25,25 @@ describe('parseSubUrl', () => {
     expect(unknown.ruleset).toBe('abc');
   });
 
+  it('splits a pipe-separated source list into one source per line', () => {
+    const { state } = parseSubUrl(
+      'http://host/sub?target=clash&url=https%3A%2F%2Fa.example%2Fsub%7Chttps%3A%2F%2Fb.example%2Fsub',
+    );
+    expect(state.sourceUrl).toBe('https://a.example/sub\nhttps://b.example/sub');
+  });
+
+  it('leaves a single source on one line', () => {
+    const { state } = parseSubUrl('http://host/sub?target=clash&url=https%3A%2F%2Fa.example%2Fsub');
+    expect(state.sourceUrl).toBe('https://a.example/sub');
+  });
+
+  it('keeps a per-source prefix with its own source', () => {
+    const { state } = parseSubUrl(
+      'http://host/sub?target=clash&url=interval%3A21600%2Chttps%3A%2F%2Fa.example%2Fsub%7Chttps%3A%2F%2Fb.example%2Fsub',
+    );
+    expect(state.sourceUrl).toBe('interval:21600,https://a.example/sub\nhttps://b.example/sub');
+  });
+
   it('throws invalid-link for non-subconverter URLs', () => {
     expect(() => parseSubUrl('https://example.com/not-a-sub-link')).toThrow('invalid-link');
     expect(() => parseSubUrl('http://host/sub?target=clash')).toThrow('invalid-link');

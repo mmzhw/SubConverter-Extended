@@ -213,7 +213,12 @@ proxy_direct:false,https://example.com/sub
 规则和外部配置还支持：
 
 - `ext_ruleset=Group,URL[;Group,URL]...`：在所选 preset 已定义的策略组后追加远程规则来源；`Group` 必须已存在于 preset（`Proxy` / `Domestic` 等），未知组名返回 400 并列出合法组名；仅 `target=clash`，与 `ruleprepend` / `ruleappend` 共享 `max_allowed_rulesets` 配额，单条 URL 抓取失败或解析为空时整批拒绝（atomic 失败语义）。Web UI 的"额外规则集"为行式控件：组名下拉自动从所选 preset 加载（后端 `GET /getgroupnames?config=<url>` 返回合法组名），每行一个 URL 输入框，无需手动拼写 `组名,URL` 格式。
-- `inline_rules=Group:TYPE,value|TYPE,value[;Group2:...]`：直接在 URL 里录入 Clash 规则行追加到指定策略组，无需自建并公网托管一份规则文件。`:` 分组名/规则列表，`|` 分同组内规则，`;` 分组。`Group` 必须已存在于 preset（与 `ext_ruleset=` 共用 `collectExternalGroupNames`），规则类型须在 `ClashRuleTypes` 内（`MATCH` / `FINAL` 拒绝），值非空；不校验是否已存在同名规则。与 `ext_ruleset=` 的区别：远程规则集适合多人共享、长期维护；内联规则适合一次性把某个域名 / 关键词直接打到某个组。Web UI 的"内联规则"控件每行 = 匹配模式下拉（`DOMAIN` / `DOMAIN-SUFFIX` / `DOMAIN-KEYWORD` / `DOMAIN-REGEX` / `GEOIP` / `GEOSITE` / `IP-CIDR` / `IP-CIDR6` / `SRC-IP-CIDR`）+ 值输入框（按匹配模式给 placeholder）+ 组名下拉（复用 `/getgroupnames` 自动加载），同样复用 `max_allowed_rulesets` 配额。该控件支持两种编辑模式，用底部的"批量编辑 / 逐行编辑"按钮切换：**逐行编辑**（默认）适合逐条增删；**批量编辑**是一个大文本框，一行一条规则、格式为 `匹配模式,值,组名`（例如 `DOMAIN-SUFFIX,foo.com,Domestic`，与生成配置里 `rules:` 段同形），适合从别处批量粘贴。解析时按首个逗号切模式、末个逗号切组名，因此值里含逗号（如 `DOMAIN-REGEX,^a,b$,Domestic`）不会被切错；空行与 `#` 注释行忽略。无法解析的行（字段不足、字段为空）保留在文本框里并提示"有 N 行无法识别"，但不会写入链接；切回逐行编辑会丢弃这些行。示例：`inline_rules=Domestic:DOMAIN-SUFFIX,foo.com|DOMAIN-KEYWORD,bar;Proxy:IP-CIDR,10.0.0.0/8`。
+- `inline_rules=Group:TYPE,value|TYPE,value[;Group2:...]`：直接在 URL 里录入 Clash 规则行追加到指定策略组，无需自建并公网托管一份规则文件。`:` 分组名/规则列表，`|` 分同组内规则，`;` 分组。`Group` 必须是所选 preset **实际声明**的策略组（与 `ext_ruleset=` 共用同一套校验），规则类型须在 `ClashRuleTypes` 内（`MATCH` / `FINAL` 拒绝），值非空；不校验是否已存在同名规则。
+
+> [!IMPORTANT]
+> 组名按**预设真实声明的组**校验，另外始终接受 Clash 内置策略名 **`DIRECT`（全大写）** 与 **`REJECT`**。
+> 注意 `Direct`（首字母大写）**不是**内置名，也不是这些预设里的组名 —— 写它过去会被放行，但生成的配置里并不存在该组，客户端会以 `proxy [Direct] not found` 拒绝加载整个配置；现在会在生成前直接报错并列出可用组名。
+> `Proxy` / `GLOBAL` 同理不在 Clash 输出中（`Proxy` 只会为 Stash 输出自动补，`GLOBAL` 只会加到 Sing-box 输出）。仅在**未选择远程配置**、后端无从校验时，才继续接受这几个兜底名。与 `ext_ruleset=` 的区别：远程规则集适合多人共享、长期维护；内联规则适合一次性把某个域名 / 关键词直接打到某个组。Web UI 的"内联规则"控件每行 = 匹配模式下拉（`DOMAIN` / `DOMAIN-SUFFIX` / `DOMAIN-KEYWORD` / `DOMAIN-REGEX` / `GEOIP` / `GEOSITE` / `IP-CIDR` / `IP-CIDR6` / `SRC-IP-CIDR`）+ 值输入框（按匹配模式给 placeholder）+ 组名下拉（复用 `/getgroupnames` 自动加载），同样复用 `max_allowed_rulesets` 配额。该控件支持两种编辑模式，用底部的"批量编辑 / 逐行编辑"按钮切换：**逐行编辑**（默认）适合逐条增删；**批量编辑**是一个大文本框，一行一条规则、格式为 `匹配模式,值,组名`（例如 `DOMAIN-SUFFIX,foo.com,Domestic`，与生成配置里 `rules:` 段同形），适合从别处批量粘贴。解析时按首个逗号切模式、末个逗号切组名，因此值里含逗号（如 `DOMAIN-REGEX,^a,b$,Domestic`）不会被切错；空行与 `#` 注释行忽略。无法解析的行（字段不足、字段为空）保留在文本框里并提示"有 N 行无法识别"，但不会写入链接；切回逐行编辑会丢弃这些行。示例：`inline_rules=Domestic:DOMAIN-SUFFIX,foo.com|DOMAIN-KEYWORD,bar;Proxy:IP-CIDR,10.0.0.0/8`。
 - `ruleprepend` / `ruleappend`：向 Clash 完整规则的首尾插入远程规则来源；
 - `28800|no-resolve`：为 `clash-ipcidr` 规则集引用增加 `no-resolve`；
 - `provider_headers`：从当前请求中选择允许的请求头，并写入 Clash 或 Stash Provider；
@@ -278,6 +283,7 @@ http://localhost:25500/healthz
 Web UI 目前覆盖这些高频流程：
 
 - 选择目标客户端、填写订阅源地址和订阅名称，生成 `/sub?...` URL；
+- **订阅源地址是多行文本域，一行一个**。多个机场 / 订阅链接请分多行填写，生成链接时会用 `|` 连接成一个 `url=` 参数（这是 subconverter 表示多源的分隔符）。逗号**不是**多源分隔符 —— 它在 `url=` 里分隔单个订阅源的「源前缀选项」与源 URL（如 `interval:21600,https://example.com/sub`），用逗号分隔会整串被当成一个地址、导致只有一个源生效；界面会对此给出提示。
 - 导入已有 `/sub?...` 链接并回显到表单，便于继续调整；
 - 节点选项、规则选项和高级选项默认展开，开关项带详细 Tooltip；
 - “包含节点”和“排除节点”使用标签输入，最终以 `|` 拼接为后端正则参数；

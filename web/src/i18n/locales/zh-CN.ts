@@ -2,8 +2,10 @@ export default {
   app: { title: 'SubConverter 配置组装', subtitle: '可视化组装你的订阅链接', kicker: '订阅转换工作台', ready: '已生成', waiting: '待输入', generatedCount: '已生成 {count}' },
   form: {
     target: '节点类型', sourceUrl: '订阅源地址',
-    sourceUrlPlaceholder: 'https://订阅地址/...', sourceUrlInvalid: '请输入合法的 http(s) 地址',
-    sourceUrlHelp: '填写原始机场订阅或节点订阅地址。也可以使用支持的前缀，例如 provider:HK,interval:21600,https://example.com/sub 来指定 Provider 名称和更新间隔。',
+    sourceUrlPlaceholder: 'https://订阅地址/...\n每行一个订阅源', sourceUrlInvalid: '请输入合法的 http(s) 地址',
+    sourceUrlInvalidLine: '第 {line} 行不是合法的 http(s) 地址',
+    sourceUrlCommaSeparated: '检测到多个订阅源写在同一行并用逗号分隔。逗号在订阅参数里是“源前缀”的分隔符，不是订阅源之间的分隔符，请改成一行一个。',
+    sourceUrlHelp: '填写原始机场订阅或节点订阅地址。多个订阅源请一行一个，生成链接时会用 | 连接。也可以使用支持的前缀，例如 provider:HK,interval:21600,https://example.com/sub 来指定 Provider 名称和更新间隔。',
     subscriptionName: '订阅名称',
     subscriptionNamePlaceholder: '例如 我的订阅',
     subscriptionNameHelp: '生成 filename= 参数，并让后端返回 Content-Disposition 文件名。很多 Clash/Mihomo 客户端导入时会用它作为订阅配置名称；留空则可能显示为 sub。',

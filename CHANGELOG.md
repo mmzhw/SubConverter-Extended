@@ -8,6 +8,72 @@
 
 版本线独立于上游：本 fork 从 `v1.10.0` 起计，数值高于上游当前版本，避免与上游的 `1.9.x` 混淆。
 
+## [未发布]
+
+### 新增
+
+#### 订阅源地址改为多行输入，支持多个订阅源
+
+- 订阅源地址由单行输入框改为**多行文本域，一行一个**，多个机场 / 订阅链接不用再手工拼分隔符。
+- 生成链接时把多行用 `|` 连接成一个 `url=` 参数；导入含 `|` 的链接时还原成多行，保证「导入 → 再生成」往返一致。
+- **逗号不是多源分隔符**：它在 `url=` 里分隔单个订阅源的「源前缀选项」与源 URL（如 `interval:21600,https://example.com/sub`）。此前用逗号分隔多个订阅源时，整串会被当作一个地址发出去，最终只有一个源生效 —— 因为 `new URL('https://a/x,https://b/y')` 并不报错（逗号在路径中合法），校验静默通过。现在界面会明确提示应一行一个。
+- 校验改为逐行进行，报错会指出**第几行**不合法。
+
+### 修复
+
+#### 内联规则 / 额外规则集的组名校验（含行为收紧）
+
+`collectExternalGroupNames` 过去**无条件**把 `Proxy`、`Direct`、`REJECT`、`GLOBAL` 四个名字并入合法组集合，但它服务的是只对 Clash/ClashR 生效的 `inline_rules=` 与 `ext_ruleset=`。后果分两个方向：
+
+- **放行了不存在的组**：`Proxy` 只会为 **Stash** 输出自动补，`GLOBAL` 只会加到 **Sing-box** 输出，`Direct` 在任何 Clash 输出里都不存在。用了远程预设时写这些名字会通过校验，但生成的配置里没有对应策略组，客户端直接拒绝整个配置：`rules[95] [DOMAIN-KEYWORD,was.ink,Direct] error: proxy [Direct] not found`。
+- **拒绝了正确的写法**：Clash 内置策略名是 **`DIRECT`（全大写）**，此前会被 HTTP 400 拒绝。
+
+现在：
+
+- 远程配置**声明了**策略组时，合法组 = 该配置声明的组 ∪ {`DIRECT`, `REJECT`}；`Proxy` / `Direct` / `GLOBAL` 不再被接受，请求会在**生成前**返回 400 并列出可用组名。
+- 远程配置**未声明**任何组时维持原有宽容（此时后端没有可校验的真实组名）。
+- `DIRECT` / `REJECT` 在两种情况下都接受。
+- 前端：已选远程配置但组名**加载失败**时，下拉框不再回落到那四个兜底名（它们只是猜测，且猜错就会产出坏配置），改为空列表并保留「加载失败，可手动输入」提示；兜底名只在未选远程配置时出现。
+
+> **这是有意的破坏性收紧。** 历史链接若用 `Direct` / `Proxy` / `GLOBAL` 指向远程预设，会从「200 + 客户端加载不了的配置」变为「400 + 可用组名列表」。
+
+## [v1.11.0] - 2026-09-11
+
+### 新增
+
+#### 内联规则支持逐行 / 批量双模式编辑
+
+- 内联规则控件新增「批量编辑」模式：一个多行文本框，一行一条 `匹配模式,值,组名`（例如 `DOMAIN-SUFFIX,foo.com,Domestic`），可从别处直接粘贴；与既有「逐行编辑」随时切换，当前规则自动带过去。
+- 解析按**首个逗号**切匹配模式、**末个逗号**切组名，因此值里含逗号（如 `DOMAIN-REGEX,^a,b$,Domestic`）不会被切错；空行与 `#` 注释行忽略。
+- 无法识别的行保留在文本框中并提示「有 N 行无法识别」，不会写入链接；切回逐行编辑会丢弃这些行。
+- URL 协议、后端与 localStorage 预设格式零改动。
+
+### 修复
+
+#### CI 与 Docker Hub 同步
+
+- `sync-dockerhub-description.yml` 的 API 地址被拆成两行，命名空间仍是上游的 `aethersailor`，导致描述同步**从未生效**；已改指本 fork。
+- `cleanup_container_registry.py` 的默认 owner / namespace 仍指向上游，而每日定时任务不传参就执行 `--prune-all --apply`；已改指本 fork（该任务只清理 `ci-` / `buildcache-` 前缀的临时标签，不会动正式版本）。
+- `docker/Dockerfile.debian`、`docker/Dockerfile.armv7-cross` 的 `maintainer` 标签仍是上游；已改。
+- 描述同步遇到 Docker Hub 的既有平台限制（**personal access token 无权写仓库描述**，[docker/hub-feedback#1927](https://github.com/docker/hub-feedback/issues/1927)）时，改为输出 warning 并以 0 退出，不再让 CI 常红；如需自动化可另配 `DOCKERHUB_PASSWORD`。
+- secrets 使用前一律 `strip()`：GitHub 原样保存密钥，粘贴带入的换行会让裸 API 调用 401，而 `docker/login-action` 会自动去除，所以此前表现为「镜像能推、脚本认证失败」。
+- 镜像 smoke 断言按**镜像形态**区分：amd64/arm64 用 `./Dockerfile`（nginx 前置、后端只听回环），armv7 用 `./docker/Dockerfile.armv7-cross`（**没有 nginx**，后端直接对外），因此通配符绑定告警在 armv7 上本就应当出现。
+- nginx 模板为 `/Custom_OpenClash_Rules(/|$)` 增加显式 404：该路径此前会落到 SPA 回退并返回 200，与镜像 smoke 断言冲突。
+
+### 文档
+
+- Docker Hub 的 Overview 改为以仓库内 `.github/DOCKERHUB_DESCRIPTION.md` 为唯一来源，并刷新界面截图。
+- 新增 `docs/RELEASE-RUNBOOK.md`（维护与发布手册）与 `AGENTS.md`（AI agent 入口）。
+
+## [v1.10.1] - 2026-09-11
+
+### 修复
+
+#### 首次发布不再被 `releases/latest` 阻塞
+
+- `gh api ... --jq` 在 404 时会把错误 JSON 写到 **stdout**，命令替换因此拿到 `{"message":"Not Found",...}` 而不是空串，首次发布的空值判断永远不会命中，发布在 `create-release` 阶段失败。
+- 改为用 `curl -o file -w '%{http_code}'` 显式读状态码：`404` 视为首次发布，`200` 解析 `tag_name`，其余报错退出。
+
 ## [v1.10.0] - 2026-09-11
 
 ### 变更

@@ -167,12 +167,26 @@ std::set<std::string> collectExternalGroupNames(const ExternalConfig &ext) {
   for (const auto &group : ext.custom_proxy_group) {
     if (!group.Name.empty()) names.insert(group.Name);
   }
-  // Keep this list in sync with the hardcoded fallback group names
-  // used by the built-in Clash template.
-  names.insert("Proxy");
-  names.insert("Direct");
+  if (names.empty()) {
+    // The loaded config declares no groups, so there is nothing real to
+    // validate against. Keep accepting the historical fallback names used by
+    // the built-in template; without them every group name would be refused
+    // in this shape.
+    names.insert("Proxy");
+    names.insert("Direct");
+    names.insert("GLOBAL");
+  }
+  // Clash and ClashR resolve these two policy names as rule targets without a
+  // proxy-groups definition, so they are always valid. Note the uppercase
+  // spelling: "Direct" is NOT one of them, and accepting it produced rules
+  // that clients reject with "proxy [Direct] not found".
+  //
+  // "Proxy" and "GLOBAL" are deliberately not added above: the generator only
+  // synthesises "Proxy" for Stash output and only adds "GLOBAL" to Sing-box
+  // output, neither of which applies here -- inline_rules and ext_ruleset are
+  // gated to the Clash targets.
+  names.insert("DIRECT");
   names.insert("REJECT");
-  names.insert("GLOBAL");
   return names;
 }
 

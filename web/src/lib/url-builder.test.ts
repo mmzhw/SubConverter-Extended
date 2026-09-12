@@ -28,6 +28,27 @@ describe('buildSubUrl', () => {
     expect(url).toBe('http://localhost:3000/sub?target=clash&url=https%3A%2F%2Fsub.example.com%2Fa%3Ftoken%3Dx%26y%3D1');
   });
 
+  it('joins one-source-per-line input with a pipe, not a comma', () => {
+    // A comma would be read as a per-source prefix separator, collapsing the
+    // list into a single address the backend cannot fetch.
+    const url = new URL(buildSubUrl(base({
+      sourceUrl: 'https://a.example/sub\nhttps://b.example/sub',
+    })));
+    expect(url.searchParams.get('url')).toBe('https://a.example/sub|https://b.example/sub');
+  });
+
+  it('drops blank lines so no empty source reaches the wire', () => {
+    const url = new URL(buildSubUrl(base({
+      sourceUrl: 'https://a.example/sub\n\n  \nhttps://b.example/sub',
+    })));
+    expect(url.searchParams.get('url')).toBe('https://a.example/sub|https://b.example/sub');
+  });
+
+  it('leaves a single source untouched', () => {
+    const url = new URL(buildSubUrl(base({ sourceUrl: 'https://a.example/sub' })));
+    expect(url.searchParams.get('url')).toBe('https://a.example/sub');
+  });
+
   it('serializes true options as true and drops falsy options', () => {
     const url = buildSubUrl(base({
       target: 'clashr', sourceUrl: 'https://s',

@@ -76,14 +76,21 @@ export function useGroupNames(
         );
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const payload = (await response.json()) as { groups?: string[] };
-        const list = payload.groups && payload.groups.length
-          ? payload.groups
-          : [...FALLBACK_GROUP_NAMES];
+        // A config that declares no groups, or a response we cannot read,
+        // means we do not know the real group names. Showing the fallback
+        // names here is how a user ends up targeting a group that does not
+        // exist in their generated config, so leave the list empty instead.
+        const list = payload.groups && payload.groups.length ? payload.groups : [];
         cache.set(rewrittenUrl, list);
         groups.value = list;
         error.value = false;
       } catch {
         error.value = true;
+        // Do not keep the fallback names on screen: a config is selected, so
+        // they are a guess, and a wrong guess produces a config the client
+        // refuses to load. The control shows a "load failed, type manually"
+        // hint and allow-create still lets the user enter a name.
+        groups.value = [];
       } finally {
         clearTimeout(timeoutId);
         loading.value = false;

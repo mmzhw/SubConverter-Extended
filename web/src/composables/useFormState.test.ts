@@ -31,7 +31,7 @@ describe('useFormState', () => {
     const form = useFormState();
     form.state.sourceUrl = 'not a url';
     expect(form.validateSource()).toBe(false);
-    expect(form.sourceError.value).toBe('invalid');
+    expect(form.sourceError.value).toBe('invalid:1');
     form.state.sourceUrl = 'https://ok.example.com';
     expect(form.validateSource()).toBe(true);
     expect(form.sourceError.value).toBe('');
@@ -42,7 +42,7 @@ describe('useFormState', () => {
     const form = useFormState();
     form.state.sourceUrl = 'not a url';
     form.validateSource();
-    expect(form.sourceError.value).toBe('invalid');
+    expect(form.sourceError.value).toBe('invalid:1');
     form.applyParsed({ target: 'clashr', sourceUrl: 'https://parsed.example.com', subscriptionName: 'Parsed Name', backendBase: '', options: { emoji: true } });
     expect(form.sourceError.value).toBe('');
     expect(form.state.target).toBe('clashr');
@@ -77,7 +77,7 @@ describe('useFormState', () => {
     const form = useFormState();
     form.state.sourceUrl = 'not a url';
     form.validateSource();
-    expect(form.sourceError.value).toBe('invalid');
+    expect(form.sourceError.value).toBe('invalid:1');
     form.state.sourceUrl = '';
     expect(form.validateSource()).toBe(true);
     expect(form.sourceError.value).toBe('');
@@ -88,7 +88,7 @@ describe('useFormState', () => {
     const form = useFormState();
     form.state.sourceUrl = 'ftp://example.com/x';
     expect(form.validateSource()).toBe(false);
-    expect(form.sourceError.value).toBe('invalid');
+    expect(form.sourceError.value).toBe('invalid:1');
   });
 
   it('prepends a custom backend base when generating', async () => {
@@ -124,7 +124,7 @@ describe('useFormState', () => {
     form.state.sourceUrl = 'not a url';
     expect(form.generateUrl()).toBe(false);
 
-    expect(form.sourceError.value).toBe('invalid');
+    expect(form.sourceError.value).toBe('invalid:1');
     expect(form.builtUrl.value).toBe('');
   });
 
@@ -136,5 +136,51 @@ describe('useFormState', () => {
     a.state.sourceUrl = 'https://shared.example.com';
     a.generateUrl();
     expect(b.builtUrl.value).toContain('https%3A%2F%2Fshared.example.com');
+  });
+
+  it('joins several sources with | in the generated url parameter', async () => {
+    const { useFormState } = await freshFormState();
+    const form = useFormState();
+    form.state.target = 'clash';
+    form.state.options = {};
+    form.state.subscriptionName = '';
+    form.state.backendBase = 'http://127.0.0.1:25500';
+    form.state.sourceUrl = 'https://a.example/sub\nhttps://b.example/sub';
+    expect(form.validateSource()).toBe(true);
+    expect(form.generateUrl()).toBe(true);
+    const url = new URL(form.builtUrl.value);
+    // One parameter, two sources, no newline: the backend splits on '|'.
+    expect(url.searchParams.get('url')).toBe('https://a.example/sub|https://b.example/sub');
+  });
+
+  it('ignores blank lines between sources', async () => {
+    const { useFormState } = await freshFormState();
+    const form = useFormState();
+    form.state.target = 'clash';
+    form.state.options = {};
+    form.state.subscriptionName = '';
+    form.state.backendBase = 'http://127.0.0.1:25500';
+    form.state.sourceUrl = 'https://a.example/sub\n\n   \nhttps://b.example/sub';
+    form.generateUrl();
+    expect(new URL(form.builtUrl.value).searchParams.get('url'))
+      .toBe('https://a.example/sub|https://b.example/sub');
+  });
+
+  it('flags comma-joined sources instead of accepting them', async () => {
+    const { useFormState } = await freshFormState();
+    const form = useFormState();
+    // This passes `new URL()` because commas are legal in a path, which is
+    // exactly how it used to slip through as a single unusable source.
+    form.state.sourceUrl = 'https://a.example/sub,https://b.example/sub';
+    expect(form.validateSource()).toBe(false);
+    expect(form.sourceError.value).toBe('comma');
+  });
+
+  it('reports which line of a multi-line source list is invalid', async () => {
+    const { useFormState } = await freshFormState();
+    const form = useFormState();
+    form.state.sourceUrl = 'https://ok.example/sub\nnot a url';
+    expect(form.validateSource()).toBe(false);
+    expect(form.sourceError.value).toBe('invalid:2');
   });
 });

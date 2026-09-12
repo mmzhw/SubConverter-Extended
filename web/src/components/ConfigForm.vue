@@ -41,7 +41,13 @@ const targetOptions = computed(() => TARGET_FORMATS.map((tgt) => ({
   value: tgt.value,
   label: isZh() ? tgt.label.zh : tgt.label.en,
 })));
-const sourceErrorMessage = computed(() => (form.sourceError.value ? t('form.sourceUrlInvalid') : ''));
+const sourceErrorMessage = computed(() => {
+  const code = form.sourceError.value;
+  if (!code) return '';
+  if (code === 'comma') return t('form.sourceUrlCommaSeparated');
+  const line = code.startsWith('invalid:') ? code.slice('invalid:'.length) : '';
+  return line ? t('form.sourceUrlInvalidLine', { line }) : t('form.sourceUrlInvalid');
+});
 const selectedConfigUrl = computed(() => String(optionValue('config') || ''));
 const configUsesGitHub = computed(() => isGitHubConfigUrl(selectedConfigUrl.value));
 const proxyLatencies = ref<Record<string, ProxyLatency>>({});
@@ -265,15 +271,14 @@ function updateSourceUrl(value: string) {
         <el-input
           :model-value="form.state.sourceUrl"
           :placeholder="t('form.sourceUrlPlaceholder')"
-          size="large"
-          clearable
+          type="textarea"
+          :rows="3"
+          resize="vertical"
+          spellcheck="false"
+          class="source-textarea"
           @update:model-value="updateSourceUrl"
           @blur="form.validateSource()"
-        >
-          <template #prefix>
-            <el-icon><Connection /></el-icon>
-          </template>
-        </el-input>
+        />
       </el-form-item>
 
       <el-form-item class="subscription-name-field">
