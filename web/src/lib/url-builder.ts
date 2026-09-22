@@ -1,5 +1,12 @@
 import { OPTION_DEFS } from '../config/options';
 import { applyGitHubProxy, githubProxyPrefixFor } from './github-proxy';
+import {
+  PLACEMENT_KEYS,
+  isPlacementKey,
+  placementOf,
+  ruleParamFor,
+  rulePlacementKey,
+} from './rule-target';
 import { joinSourceUrlsForWire } from './source-urls';
 
 export interface FormState {
@@ -53,28 +60,40 @@ export function buildSubUrl(state: FormState): string {
   }
   // ext_ruleset: textarea stores one "Group,URL" per line. Join with
   // ';' and skip blanks + '#' comments so the URL parameter value
-  // is canonicalised.
+  // is canonicalised. The family's placement picks the parameter name.
   const extRaw = state.options['ext_ruleset'];
   if (typeof extRaw === 'string') {
     const lines = extRaw
       .split('\n')
       .map((line) => line.trim())
       .filter((line) => line && !line.startsWith('#'));
-    if (lines.length) params.set('ext_ruleset', lines.join(';'));
+    if (lines.length) {
+      params.set(
+        ruleParamFor('ext_ruleset', placementOf(state.options, 'ext_ruleset')),
+        lines.join(';'),
+      );
+    }
   }
   for (const [key, value] of Object.entries(state.options)) {
     if (key === 'provider' && state.target !== 'clash' && state.target !== 'clashr') continue;
     if (key === 'ext_ruleset') continue;  // handled above
+    // A family's placement is UI state, not a backend parameter: it only
+    // selects which parameter name carries that family's rules, so the
+    // shadow key itself must never be serialized.
+    if (PLACEMENT_KEYS.some((family) => key === rulePlacementKey(family))) continue;
     if (value === undefined || value === '') continue;
+    const paramName = isPlacementKey(key)
+      ? ruleParamFor(key, placementOf(state.options, key))
+      : key;
     if (value === false) {
-      if (explicitFalseKeys.has(key)) params.set(key, 'false');
+      if (explicitFalseKeys.has(paramName)) params.set(paramName, 'false');
       continue;
     }
-    if (key === 'config' && typeof value === 'string') {
-      params.set(key, applyGitHubProxy(value, githubProxyPrefix));
+    if (paramName === 'config' && typeof value === 'string') {
+      params.set(paramName, applyGitHubProxy(value, githubProxyPrefix));
       continue;
     }
-    params.set(key, value === true ? (trueAsOneKeys.has(key) ? '1' : 'true') : String(value));
+    params.set(paramName, value === true ? (trueAsOneKeys.has(paramName) ? '1' : 'true') : String(value));
   }
   const base = backendBaseForState(state);
   return `${base}/sub?${params.toString()}`;

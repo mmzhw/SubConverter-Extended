@@ -220,6 +220,24 @@ proxy_direct:false,https://example.com/sub
 > 注意 `Direct`（首字母大写）**不是**内置名，也不是这些预设里的组名 —— 写它过去会被放行，但生成的配置里并不存在该组，客户端会以 `proxy [Direct] not found` 拒绝加载整个配置；现在会在生成前直接报错并列出可用组名。
 > `Proxy` / `GLOBAL` 同理不在 Clash 输出中（`Proxy` 只会为 Stash 输出自动补，`GLOBAL` 只会加到 Sing-box 输出）。仅在**未选择远程配置**、后端无从校验时，才继续接受这几个兜底名。与 `ext_ruleset=` 的区别：远程规则集适合多人共享、长期维护；内联规则适合一次性把某个域名 / 关键词直接打到某个组。Web UI 的"内联规则"控件每行 = 匹配模式下拉（`DOMAIN` / `DOMAIN-SUFFIX` / `DOMAIN-KEYWORD` / `DOMAIN-REGEX` / `GEOIP` / `GEOSITE` / `IP-CIDR` / `IP-CIDR6` / `SRC-IP-CIDR`）+ 值输入框（按匹配模式给 placeholder）+ 组名下拉（复用 `/getgroupnames` 自动加载），同样复用 `max_allowed_rulesets` 配额。该控件支持两种编辑模式，用底部的"批量编辑 / 逐行编辑"按钮切换：**逐行编辑**（默认）适合逐条增删；**批量编辑**是一个大文本框，一行一条规则、格式为 `匹配模式,值,组名`（例如 `DOMAIN-SUFFIX,foo.com,Domestic`，与生成配置里 `rules:` 段同形），适合从别处批量粘贴。解析时按首个逗号切模式、末个逗号切组名，因此值里含逗号（如 `DOMAIN-REGEX,^a,b$,Domestic`）不会被切错；空行与 `#` 注释行忽略。无法解析的行（字段不足、字段为空）保留在文本框里并提示"有 N 行无法识别"，但不会写入链接；切回逐行编辑会丢弃这些行。示例：`inline_rules=Domestic:DOMAIN-SUFFIX,foo.com|DOMAIN-KEYWORD,bar;Proxy:IP-CIDR,10.0.0.0/8`。
 - `ruleprepend` / `ruleappend`：向 Clash 完整规则的首尾插入远程规则来源；
+- `inline_rules_prepend=` / `ext_ruleset_prepend=`：与 `inline_rules=` / `ext_ruleset=` **线格式完全相同**，只改变落点。默认的追加落点排在 preset 规则集展开之后、终结规则（`MATCH`）之前；置顶落点排在最终规则表的**最前面**，比 preset 的 `ruleprepend` 来源和所有原有规则都更优先。完整顺序（仅 `target=clash` / `clashr` 支持这两个参数，与各自的追加参数一致）：
+
+  ```text
+  置顶规则（ext_ruleset_prepend= 在前，inline_rules_prepend= 在后）
+  → preset 的 ruleprepend 来源
+  → 远程配置原有的非终结规则
+  → preset 的 ruleset= 展开结果
+  → 追加规则（inline_rules= / ext_ruleset=）
+  → 远程配置原有的终结规则（MATCH / FINAL）
+  → 展开结果里的终结规则
+  ```
+
+  校验、gating 与配额完全复用追加参数：组名同样按 preset 真实声明的组校验（未知组名返回 400 并列出可用组名），规则类型同样不能是 `MATCH` / `FINAL`，`inline_rules=` + `inline_rules_prepend=` 的条数之和、`ext_ruleset=` + `ext_ruleset_prepend=` 的来源数之和分别受 `max_allowed_rulesets` 限制 —— **限额按参数族求和**，不会因为改用置顶而翻倍。未使用这两个参数的旧链接行为逐字节不变。
+
+  > [!WARNING]
+  > 置顶会**越过 preset 自带的内网直连规则**（例如 `GEOSITE,private,DIRECT` / `GEOIP,private,DIRECT,no-resolve`）。如果置顶规则会命中内网流量（如 `DOMAIN-SUFFIX,lan,DIRECT` 之外的代理规则），本机访问内网可能被改走代理。只在确实需要抢在 preset 的端口规则（如 `DST-PORT,...`）或其它更早的规则之前命中时才用置顶。
+
+  Web UI 的"额外规则集"与"内联规则"控件顶部都有"规则位置：末尾 / 置顶"开关，默认"末尾"（与旧链接一致）；选"置顶"后生成的链接改用 `*_prepend=` 参数名，规则内容不变。导入链接时若 `*_prepend=` 与追加参数同时存在，以 `*_prepend=` 为准，另一侧的值会保留在"未知参数"里而不是被静默丢弃。
 - `28800|no-resolve`：为 `clash-ipcidr` 规则集引用增加 `no-resolve`；
 - `provider_headers`：从当前请求中选择允许的请求头，并写入 Clash 或 Stash Provider；
 - `provider=true/false`：逐次请求覆盖 proxy-provider 模式的开关（仅 `target=clash`、`clashr`）；

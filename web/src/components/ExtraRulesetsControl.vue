@@ -9,18 +9,21 @@ import {
 } from '../lib/ext-rulesets';
 import { useGroupNames } from '../composables/useGroupNames';
 import { useFormState } from '../composables/useFormState';
+import type { RulePlacement } from '../lib/rule-target';
 
 const props = defineProps<{
   modelValue: string;
   configUrl: string;
   backendBase: string;
+  placement: RulePlacement;
 }>();
 
 const emit = defineEmits<{
   (event: 'update:modelValue', value: string): void;
+  (event: 'update:placement', value: RulePlacement): void;
 }>();
 
-const { locale } = useI18n();
+const { t, locale } = useI18n();
 const form = useFormState();
 
 const rows = ref<ExtRulesetRow[]>(parseExtRulesetRows(props.modelValue));
@@ -90,10 +93,28 @@ const hasConfig = computed(() => Boolean(props.configUrl.trim()));
 const groupPlaceholder = computed(() => (hasConfig.value
   ? (isZh() ? '选择组名' : 'Select group')
   : (isZh() ? '组名' : 'Group name')));
+
+function setPlacement(value: string | number | boolean | undefined) {
+  emit('update:placement', value === 'prepend' ? 'prepend' : 'append');
+}
 </script>
 
 <template>
   <div class="ext-rulesets-control">
+    <div class="ext-rulesets-placement">
+      <span class="ext-rulesets-placement-label">{{ t('form.rulePlacement') }}</span>
+      <el-radio-group
+        :model-value="placement"
+        size="small"
+        @update:model-value="setPlacement"
+      >
+        <el-radio-button value="append">{{ t('form.rulePlacementAppend') }}</el-radio-button>
+        <el-radio-button value="prepend">{{ t('form.rulePlacementPrepend') }}</el-radio-button>
+      </el-radio-group>
+      <span v-if="placement === 'prepend'" class="ext-rulesets-placement-hint">
+        {{ t('form.rulePlacementPrependHint') }}
+      </span>
+    </div>
     <div v-for="(row, index) in rows" :key="index" class="ext-rulesets-row">
       <el-select
         :model-value="row.group"
@@ -133,6 +154,19 @@ const groupPlaceholder = computed(() => (hasConfig.value
 
 <style scoped>
 .ext-rulesets-control { display: grid; gap: 8px; }
+.ext-rulesets-placement {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.ext-rulesets-placement-label { color: var(--el-text-color-regular); font-size: 0.82rem; }
+.ext-rulesets-placement-hint {
+  flex: 1 1 100%;
+  color: var(--el-color-warning);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
 .ext-rulesets-row {
   display: grid;
   grid-template-columns: minmax(120px, 200px) 1fr auto;

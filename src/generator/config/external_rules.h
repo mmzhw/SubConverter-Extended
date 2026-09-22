@@ -22,12 +22,20 @@ parseExternalClashRules(const std::string &content,
                         const string_array &allowed_rule_types,
                         bool require_target = true);
 
-string_array mergeClashRules(const string_array &prepend,
+// user_prepend carries rules the request itself asked to place first
+// (inline_rules_prepend= / ext_ruleset_prepend=). It is a separate slot
+// from prepend, which carries the remote config's own [ruleprepend]
+// block, so the two origins stay distinguishable. Result order:
+//   user_prepend | prepend | original(non-terminal) | generated
+//   | append | original(terminal) | generated(terminal)
+string_array mergeClashRules(const string_array &user_prepend,
+                             const string_array &prepend,
                              const string_array &original,
                              const string_array &generated,
                              const string_array &append);
 
-bool mergeClashRulesWithinLimit(const string_array &prepend,
+bool mergeClashRulesWithinLimit(const string_array &user_prepend,
+                                const string_array &prepend,
                                 const string_array &original,
                                 const string_array &generated,
                                 const string_array &append,

@@ -190,6 +190,26 @@ std::set<std::string> collectExternalGroupNames(const ExternalConfig &ext) {
   return names;
 }
 
+// Renders the valid group names for an "unknown group" rejection: sorted,
+// truncated to 20 entries, with a "... (N more, see preset for full list)"
+// tail. Shared by every rule-family validator so the operator sees one
+// consistent error shape.
+std::string describeValidGroups(const std::set<std::string> &valid_groups) {
+  std::vector<std::string> sorted_groups(valid_groups.begin(),
+                                         valid_groups.end());
+  std::string list_str;
+  const size_t kMaxListed = 20;
+  for (size_t i = 0; i < sorted_groups.size() && i < kMaxListed; ++i) {
+    if (i) list_str += ", ";
+    list_str += sorted_groups[i];
+  }
+  if (sorted_groups.size() > kMaxListed) {
+    list_str += " (" + std::to_string(sorted_groups.size() - kMaxListed) +
+                " more, see preset for full list)";
+  }
+  return list_str;
+}
+
 #include "utils/base64/base64.h"
 #include "utils/bounded_executor.h"
 #include "utils/cooperative_cpu.h"
@@ -3695,6 +3715,11 @@ struct ParsedSubRequest {
   // preset is loaded. Group names must already exist in the preset.
   std::vector<std::pair<std::string, std::string>> ext_rulesets;
 
+  // Same shape, populated from ext_ruleset_prepend=. These land in the
+  // user-prepend slot, i.e. ahead of every preset rule including the
+  // remote config's own [ruleprepend] block.
+  std::vector<std::pair<std::string, std::string>> ext_rulesets_prepend;
+
   // Each entry: <proxy_group_name, [rule lines]>
   // Populated from the inline_rules= URL parameter. Each rule line is
   // a plain "TYPE,value" Clash rule (no trailing target); the system
@@ -3702,6 +3727,11 @@ struct ParsedSubRequest {
   // names must already exist in the preset. Order is preserved.
   std::vector<std::pair<std::string, std::vector<std::string>>>
       inline_rules;
+
+  // Same shape, populated from inline_rules_prepend=; lands in the
+  // user-prepend slot for the same reason as ext_rulesets_prepend.
+  std::vector<std::pair<std::string, std::vector<std::string>>>
+      inline_rules_prepend;
 
   tribool upload;
   tribool emoji;
@@ -3807,7 +3837,11 @@ static std::string parseSubRequestArguments(Request &request,
   parsed.provider_headers = getUrlArg(argument, "provider_headers");
   parsed.dns_template = getUrlArg(argument, "dns_template");
   parseExtRuleset(getUrlArg(argument, "ext_ruleset"), parsed.ext_rulesets);
+  parseExtRuleset(getUrlArg(argument, "ext_ruleset_prepend"),
+                  parsed.ext_rulesets_prepend);
   parseInlineRules(getUrlArg(argument, "inline_rules"), parsed.inline_rules);
+  parseInlineRules(getUrlArg(argument, "inline_rules_prepend"),
+                   parsed.inline_rules_prepend);
 
   parsed.upload = getUrlArg(argument, "upload");
   parsed.emoji = getUrlArg(argument, "emoji");
@@ -4300,9 +4334,16 @@ static std::string buildExternalConfigFetchPlan(
   }
 
   // ext_ruleset: append user's custom ruleset URLs to the end of the
-  // generated rule list. Each entry's group must already exist in the
-  // loaded preset (strict validation; see spec.md).
-  if (!parsed.ext_rulesets.empty()) {
+  // generated rule list. ext_ruleset_prepend= uses the same wire format,
+  // validation and fetch path, but lands in the user-prepend slot so its
+  // rules outrank every preset rule. Each entry's group must already
+  // exist in the loaded preset (strict validation; see spec.md).
+  // Group-source limits are per parameter family: both variants count
+  // against the same budget.
+  if (!parsed.ext_rulesets.empty() ||
+      !parsed.ext_rulesets_prepend.empty()) {
+    const size_t ext_source_total =
+        parsed.ext_rulesets.size() + parsed.ext_rulesets_prepend.size();
     if (parsed.target != "clash") {
       response.status_code = 400;
       return "Invalid request: ext_ruleset is supported only for "
@@ -4321,7 +4362,7 @@ static std::string buildExternalConfigFetchPlan(
              "无效请求：ext_ruleset 不支持 script=true。";
     }
     if (settings.maxAllowedRulesets &&
-        parsed.ext_rulesets.size() > settings.maxAllowedRulesets) {
+        ext_source_total > settings.maxAllowedRulesets) {
       response.status_code = 400;
       return "Invalid request: ext_ruleset contains more sources than "
              "max_allowed_rulesets (" +
@@ -4330,71 +4371,65 @@ static std::string buildExternalConfigFetchPlan(
              "限制（" +
              std::to_string(settings.maxAllowedRulesets) + "）。";
     }
-    for (const auto &[group, url] : parsed.ext_rulesets) {
-      if (ext_ruleset_valid_groups.find(group) ==
-          ext_ruleset_valid_groups.end()) {
-        response.status_code = 400;
-        // Build a sorted, truncated list of valid groups for the
-        // error message (top 20, then " (N more, see preset for
-        // full list)").
-        std::vector<std::string> sorted_groups(
-            ext_ruleset_valid_groups.begin(),
-            ext_ruleset_valid_groups.end());
-        std::string list_str;
-        const size_t kMaxListed = 20;
-        for (size_t i = 0;
-             i < sorted_groups.size() && i < kMaxListed; ++i) {
-          if (i) list_str += ", ";
-          list_str += sorted_groups[i];
+    // ext_rulesets_prepend= first, then ext_ruleset=, so the user-prepend
+    // slot keeps the parameter order the spec fixes across both families.
+    for (const auto *ext_family :
+         {&parsed.ext_rulesets_prepend, &parsed.ext_rulesets}) {
+      for (const auto &[group, url] : *ext_family) {
+        if (ext_ruleset_valid_groups.find(group) ==
+            ext_ruleset_valid_groups.end()) {
+          response.status_code = 400;
+          const std::string list_str =
+              describeValidGroups(ext_ruleset_valid_groups);
+          return "Invalid request: ext_ruleset references unknown group '" +
+                 group + "'. The chosen preset defines these groups: " +
+                 list_str + ".\n"
+                 "无效请求：ext_ruleset 引用了不存在的策略组 '" + group +
+                 "'。所选 preset 已定义的策略组：" + list_str + "。";
         }
-        if (sorted_groups.size() > kMaxListed) {
-          list_str += " (" +
-                      std::to_string(sorted_groups.size() - kMaxListed) +
-                      " more, see preset for full list)";
+      }
+      // All groups valid; fetch each URL with atomic-failure semantics.
+      std::string ext_error;
+      string_array ext_rule_lines;
+      for (const auto &[group, url] : *ext_family) {
+        string_array chunk;
+        // ext_ruleset sources are plain rule-set content lines
+        // ("TYPE,content") without a trailing target policy; the group
+        // is appended below from the URL parameter itself.
+        if (!fetchExternalRuleSources({url}, "ext_ruleset",
+                                      FetchContext::PublicRequest,
+                                      chunk, ext_error,
+                                      /*require_target=*/false,
+                                      /*skip_on_fetch_failure=*/false)) {
+          response.status_code = 400;
+          return ext_error;
         }
-        return "Invalid request: ext_ruleset references unknown group '" +
-               group + "'. The chosen preset defines these groups: " +
-               list_str + ".\n"
-               "无效请求：ext_ruleset 引用了不存在的策略组 '" + group +
-               "'。所选 preset 已定义的策略组：" + list_str + "。";
+        // Tag each rule line with the target group so Clash dispatches
+        // hits from this URL to the right group.
+        for (const std::string &raw_line : chunk) {
+          ext_rule_lines.push_back(raw_line + "," + group);
+        }
       }
-    }
-    // All groups valid; fetch each URL with atomic-failure semantics.
-    std::string ext_error;
-    string_array ext_rule_lines;
-    for (const auto &[group, url] : parsed.ext_rulesets) {
-      string_array chunk;
-      // ext_ruleset sources are plain rule-set content lines
-      // ("TYPE,content") without a trailing target policy; the group
-      // is appended below from the URL parameter itself.
-      if (!fetchExternalRuleSources({url}, "ext_ruleset",
-                                    FetchContext::PublicRequest,
-                                    chunk, ext_error,
-                                    /*require_target=*/false,
-                                    /*skip_on_fetch_failure=*/false)) {
-        response.status_code = 400;
-        return ext_error;
+      string_array &destination =
+          ext_family == &parsed.ext_rulesets_prepend
+              ? policy.generator.rule_user_prepend
+              : policy.generator.rule_append;
+      for (const std::string &line : ext_rule_lines) {
+        destination.push_back(line);
       }
-      // Tag each rule line with the target group so Clash dispatches
-      // hits from this URL to the right group. Append each tagged
-      // line to rule_append so it lands at the end of the merged
-      // rule list (downstream in subexport.cpp).
-      for (const std::string &raw_line : chunk) {
-        ext_rule_lines.push_back(raw_line + "," + group);
-      }
-    }
-    for (const std::string &line : ext_rule_lines) {
-      policy.generator.rule_append.push_back(line);
     }
   }
 
-  // inline_rules: append user-supplied rule lines directly to rule_append.
-  // Same target/group/list/script gate as ext_ruleset=. No URL fetch is
-  // involved — the rule body lives in the request itself. Rules are
-  // emitted in the order they appear in the URL parameter (group section
-  // order, then intra-group order), so they land after any ext_ruleset
-  // contributions above.
-  if (!parsed.inline_rules.empty()) {
+  // inline_rules: place user-supplied rule lines into the generated rule
+  // list. inline_rules_prepend= uses the same wire format, validation and
+  // gating, but lands in the user-prepend slot (ahead of every preset
+  // rule); inline_rules= keeps its historical append slot after the
+  // ext_ruleset= contributions above. No URL fetch is involved — the rule
+  // body lives in the request itself. Rules are emitted in the order they
+  // appear in the URL parameter (group section order, then intra-group
+  // order, prepend family first).
+  if (!parsed.inline_rules.empty() ||
+      !parsed.inline_rules_prepend.empty()) {
     if (parsed.target != "clash" && parsed.target != "clashr") {
       response.status_code = 400;
       return "Invalid request: inline_rules is supported only for "
@@ -4411,9 +4446,15 @@ static std::string buildExternalConfigFetchPlan(
       return "Invalid request: inline_rules does not support script=true.\n"
              "无效请求：inline_rules 不支持 script=true。";
     }
+    // Both parameter variants count against one max_allowed_rulesets
+    // budget, because the limit bounds the work one request can ask for
+    // and placement does not change that work.
     size_t inline_rule_total = 0;
-    for (const auto &[group, rules] : parsed.inline_rules) {
-      inline_rule_total += rules.size();
+    for (const auto *family :
+         {&parsed.inline_rules_prepend, &parsed.inline_rules}) {
+      for (const auto &[group, rules] : *family) {
+        inline_rule_total += rules.size();
+      }
     }
     if (settings.maxAllowedRulesets && inline_rule_total > settings.maxAllowedRulesets) {
       response.status_code = 400;
@@ -4423,54 +4464,48 @@ static std::string buildExternalConfigFetchPlan(
              "无效请求：inline_rules 规则总数超过 max_allowed_rulesets 限制（" +
              std::to_string(settings.maxAllowedRulesets) + "）。";
     }
-    for (const auto &[group, rules] : parsed.inline_rules) {
-      if (ext_ruleset_valid_groups.find(group) ==
-          ext_ruleset_valid_groups.end()) {
-        // Reuse the same sorted-group list helper text as ext_ruleset
-        // so the operator sees one consistent error shape.
-        std::vector<std::string> sorted_groups(
-            ext_ruleset_valid_groups.begin(),
-            ext_ruleset_valid_groups.end());
-        std::string list_str;
-        const size_t kMaxListed = 20;
-        for (size_t i = 0;
-             i < sorted_groups.size() && i < kMaxListed; ++i) {
-          if (i) list_str += ", ";
-          list_str += sorted_groups[i];
-        }
-        if (sorted_groups.size() > kMaxListed) {
-          list_str += " (" +
-                      std::to_string(sorted_groups.size() - kMaxListed) +
-                      " more, see preset for full list)";
-        }
-        response.status_code = 400;
-        return "Invalid request: inline_rules references unknown group '" +
-               group + "'. The chosen preset defines these groups: " +
-               list_str + ".\n"
-               "无效请求：inline_rules 引用了不存在的策略组 '" + group +
-               "'。所选 preset 已定义的策略组：" + list_str + "。";
-      }
-      for (size_t i = 0; i < rules.size(); ++i) {
-        const std::string source_identifier =
-            "inline_rules section '" + group + "' rule #" +
-            std::to_string(i + 1);
-        // Use the same validator as ext_ruleset: accept rules without a
-        // trailing ",<target>" because the system appends ",<group>"
-        // itself below. parseExternalClashRules' error is already
-        // bilingual; pass it straight through to match the ext_ruleset
-        // failure shape.
-        ExternalRuleParseResult parsed_rule = parseExternalClashRules(
-            rules[i], source_identifier, ClashRuleTypes,
-            /*require_target=*/false);
-        if (!parsed_rule.ok) {
+    for (const auto *family :
+         {&parsed.inline_rules_prepend, &parsed.inline_rules}) {
+      for (const auto &[group, rules] : *family) {
+        if (ext_ruleset_valid_groups.find(group) ==
+            ext_ruleset_valid_groups.end()) {
+          // Reuse the same sorted-group list helper text as ext_ruleset
+          // so the operator sees one consistent error shape.
+          const std::string list_str =
+              describeValidGroups(ext_ruleset_valid_groups);
           response.status_code = 400;
-          return parsed_rule.error;
+          return "Invalid request: inline_rules references unknown group '" +
+                 group + "'. The chosen preset defines these groups: " +
+                 list_str + ".\n"
+                 "无效请求：inline_rules 引用了不存在的策略组 '" + group +
+                 "'。所选 preset 已定义的策略组：" + list_str + "。";
+        }
+        for (size_t i = 0; i < rules.size(); ++i) {
+          const std::string source_identifier =
+              "inline_rules section '" + group + "' rule #" +
+              std::to_string(i + 1);
+          // Use the same validator as ext_ruleset: accept rules without a
+          // trailing ",<target>" because the system appends ",<group>"
+          // itself below. parseExternalClashRules' error is already
+          // bilingual; pass it straight through to match the ext_ruleset
+          // failure shape.
+          ExternalRuleParseResult parsed_rule = parseExternalClashRules(
+              rules[i], source_identifier, ClashRuleTypes,
+              /*require_target=*/false);
+          if (!parsed_rule.ok) {
+            response.status_code = 400;
+            return parsed_rule.error;
+          }
         }
       }
     }
-    // Validation passed; append each tagged rule to rule_append in
-    // input order. Inline rules follow ext_ruleset= contributions above,
-    // so the relative order matches what the user supplied.
+    // Validation passed; emit each tagged rule in input order, prepend
+    // family first, so both slots keep the order the spec fixes.
+    for (const auto &[group, rules] : parsed.inline_rules_prepend) {
+      for (const std::string &raw_line : rules) {
+        policy.generator.rule_user_prepend.push_back(raw_line + "," + group);
+      }
+    }
     for (const auto &[group, rules] : parsed.inline_rules) {
       for (const std::string &raw_line : rules) {
         policy.generator.rule_append.push_back(raw_line + "," + group);

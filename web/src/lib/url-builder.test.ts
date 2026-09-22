@@ -247,3 +247,83 @@ describe('buildSubUrl with inline_rules', () => {
     expect(url).not.toContain('inline_rules=');
   });
 });
+
+describe('buildSubUrl with rule placement', () => {
+  it('writes the plain parameter for the default append placement', () => {
+    const url = buildSubUrl(base({
+      sourceUrl: 'https://s',
+      options: {
+        ext_ruleset: 'Proxy,https://a/p.list',
+        inline_rules: 'Proxy:DOMAIN-KEYWORD,foo',
+      },
+    }));
+    expect(url).toContain('inline_rules=');
+    expect(url).toContain('ext_ruleset=');
+    expect(url).not.toContain('_prepend=');
+  });
+
+  it('writes the _prepend parameter when a family is placed first', () => {
+    const url = buildSubUrl(base({
+      sourceUrl: 'https://s',
+      options: {
+        ext_ruleset: 'Proxy,https://a/p.list',
+        ext_ruleset_mode: 'prepend',
+        inline_rules: 'Proxy:DOMAIN-KEYWORD,foo',
+        inline_rules_mode: 'prepend',
+      },
+    }));
+    expect(url).toContain('ext_ruleset_prepend=Proxy%2Chttps%3A%2F%2Fa%2Fp.list');
+    expect(url).toContain('inline_rules_prepend=Proxy%3ADOMAIN-KEYWORD%2Cfoo');
+    // The plain spellings must not appear alongside the prepend ones.
+    expect(url).not.toMatch(/[?&]inline_rules=/);
+    expect(url).not.toMatch(/[?&]ext_ruleset=/);
+  });
+
+  it('places the two families independently', () => {
+    const url = buildSubUrl(base({
+      sourceUrl: 'https://s',
+      options: {
+        ext_ruleset: 'Proxy,https://a/p.list',
+        inline_rules: 'Proxy:DOMAIN-KEYWORD,foo',
+        inline_rules_mode: 'prepend',
+      },
+    }));
+    expect(url).toContain('inline_rules_prepend=');
+    expect(url).toMatch(/[?&]ext_ruleset=/);
+  });
+
+  it('never serializes the placement shadow key itself', () => {
+    const url = buildSubUrl(base({
+      sourceUrl: 'https://s',
+      options: {
+        ext_ruleset: 'Proxy,https://a/p.list',
+        ext_ruleset_mode: 'prepend',
+        inline_rules: 'Proxy:DOMAIN-KEYWORD,foo',
+        inline_rules_mode: 'append',
+      },
+    }));
+    expect(url).not.toContain('_mode');
+  });
+
+  it('keeps the canonicalised ext_ruleset value under the prepend name', () => {
+    const url = buildSubUrl(base({
+      sourceUrl: 'https://s',
+      options: {
+        ext_ruleset: '\n# comment\nProxy,https://a/p.list\n\nDomestic,https://b/d.list\n',
+        ext_ruleset_mode: 'prepend',
+      },
+    }));
+    expect(decodeURIComponent(url)).toContain(
+      'ext_ruleset_prepend=Proxy,https://a/p.list;Domestic,https://b/d.list',
+    );
+  });
+
+  it('omits the parameter when a prepend-placed family is empty', () => {
+    const url = buildSubUrl(base({
+      sourceUrl: 'https://s',
+      options: { inline_rules: '', inline_rules_mode: 'prepend' },
+    }));
+    expect(url).not.toContain('inline_rules_prepend=');
+    expect(url).not.toContain('inline_rules=');
+  });
+});

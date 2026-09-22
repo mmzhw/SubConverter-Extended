@@ -119,6 +119,10 @@ enum class V2RayClientTarget { V2RayN, V2RayNG };
 struct extra_settings {
   bool enable_rule_generator = true;
   bool overwrite_original_rules = true;
+  // Rules the request asked to place at the very top of the final rule
+  // list (inline_rules_prepend= / ext_ruleset_prepend=), ahead of the
+  // remote config's own rule_prepend block.
+  string_array rule_user_prepend;
   string_array rule_prepend;
   string_array rule_append;
   std::string external_rule_error;

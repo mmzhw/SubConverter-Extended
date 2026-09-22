@@ -8,6 +8,21 @@
 
 版本线独立于上游：本 fork 从 `v1.10.0` 起计，数值高于上游当前版本，避免与上游的 `1.9.x` 混淆。
 
+## [未发布]
+
+### 新增
+
+#### 内联规则 / 额外规则集支持「置顶」，不再被预设规则抢先命中
+
+起因是一个真实案例：某订阅的 preset 在第 100 条放了 `DST-PORT,444-65535,🔀 非标准端口`，而用户用 `inline_rules=` 写的 `DOMAIN-KEYWORD,netmarble,♻️ 自动选择` 落在第 103 条 —— 位置本身没错（追加落点确实在 preset 规则集之后、`MATCH` 之前），但非标端口先命中，内联规则成了死代码。想要它生效，只能自建一份规则文件挂到 preset 的 `[ruleprepend]`。
+
+- 新增 `inline_rules_prepend=` 与 `ext_ruleset_prepend=`：线格式与原参数**逐字节相同**，只改落点。置顶的规则排在最终 Clash 规则表的**最前面**，优先于 preset 的 `ruleprepend` 来源；原来的追加落点（默认）不变，仍是「preset 规则集展开之后、终结规则之前」。
+- 合并顺序固定为：置顶规则（`ext_ruleset_prepend=` 在前、`inline_rules_prepend=` 在后）→ preset `ruleprepend` → 原有非终结规则 → preset 规则集展开 → 追加规则 → 原有终结规则 → 展开结果的终结规则。
+- 校验（组名、`MATCH` / `FINAL` 拒绝）、target gating（`inline_rules` 族 = clash/clashr，`ext_ruleset` 族 = clash）、以及 `max_allowed_rulesets` 配额全部复用追加侧实现。限额**按参数族求和**：`inline_rules=` + `inline_rules_prepend=` 的条数之和、`ext_ruleset=` + `ext_ruleset_prepend=` 的来源数之和各自受同一个上限约束，不会因为分列两个参数而翻倍。
+- Web UI 的「额外规则集」与「内联规则」控件顶部新增「规则位置：末尾 / 置顶」开关，默认「末尾」，选「置顶」时提示其优先级最高；切换落点不改变已填写的规则内容。导入链接时若 `*_prepend=` 与追加参数同时出现，以 `*_prepend=` 为准，另一侧的值进入「未知参数」而不是被静默丢弃。
+- 未使用这两个参数的旧链接行为**逐字节不变**（单元测试断言了空置顶槽位的输出与改动前逐条一致）。
+- 取舍：置顶会越过 preset 自带的内网直连规则（`GEOSITE,private,DIRECT` 等），只在确实需要抢在端口类规则之前命中时使用。
+
 ## [v1.11.1] - 2026-09-12
 
 ### 新增

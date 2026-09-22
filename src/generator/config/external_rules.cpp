@@ -269,7 +269,8 @@ parseExternalClashRules(const std::string &content,
                        allowed_rule_types, require_target);
 }
 
-string_array mergeClashRules(const string_array &prepend,
+string_array mergeClashRules(const string_array &user_prepend,
+                             const string_array &prepend,
                              const string_array &original,
                              const string_array &generated,
                              const string_array &append) {
@@ -279,8 +280,9 @@ string_array mergeClashRules(const string_array &prepend,
       splitAtFirstTerminal(generated);
 
   string_array result;
-  result.reserve(prepend.size() + original.size() + generated.size() +
-                 append.size());
+  result.reserve(user_prepend.size() + prepend.size() + original.size() +
+                 generated.size() + append.size());
+  result.insert(result.end(), user_prepend.begin(), user_prepend.end());
   result.insert(result.end(), prepend.begin(), prepend.end());
   result.insert(result.end(), original_non_terminal.begin(),
                 original_non_terminal.end());
@@ -294,12 +296,14 @@ string_array mergeClashRules(const string_array &prepend,
   return result;
 }
 
-bool mergeClashRulesWithinLimit(const string_array &prepend,
+bool mergeClashRulesWithinLimit(const string_array &user_prepend,
+                                const string_array &prepend,
                                 const string_array &original,
                                 const string_array &generated,
                                 const string_array &append,
                                 std::size_t max_rules,
                                 string_array &result) {
-  result = mergeClashRules(prepend, original, generated, append);
+  result =
+      mergeClashRules(user_prepend, prepend, original, generated, append);
   return !max_rules || result.size() <= max_rules;
 }
