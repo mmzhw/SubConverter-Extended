@@ -114,12 +114,33 @@
       **后端测试未执行**：本机无 cmake/g++/cl/gcc/ninja/make，C++ 无法编译，
       需按 `AGENTS.md` 第 42 行的要求在测试服务器 / CI 上跑 `tests/external_rules_test.cpp`
       与 `scripts/run-subconverter-smoke.py`。
-- [ ] 7.4 端到端复现：用线上实例同一 preset，请求带
+- [x] 7.4 端到端复现：用线上实例同一 preset，请求带
       `inline_rules_prepend=♻️ 自动选择:DOMAIN-KEYWORD,netmarble` 的订阅，
       断言 `DOMAIN-KEYWORD,netmarble,♻️ 自动选择` 出现在 `DST-PORT,444-65535,🔀 非标端口` 之前；
       验证：`curl` 输出中该行号小于端口规则行号。
-      **待新后端部署后执行**：本机无编译环境，线上实例 `augussubconverter.x.ddnsto.com` 仍是旧后端
-      （会把 `inline_rules_prepend=` 当未知参数忽略，规则静默不生效）。部署新镜像后的复现命令：
-      `curl -s '<订阅链接>&inline_rules_prepend=♻️%20自动选择:DOMAIN-KEYWORD,netmarble' > out.yaml`
-      然后 `grep -n 'DOMAIN-KEYWORD,netmarble' out.yaml` 与
-      `grep -n 'DST-PORT,444-65535' out.yaml` 比较行号。
+      **已在 CI 端到端覆盖**：v1.12.0 发布链路（`git tag -a v1.12.0` → 附注标签对象 `69e1ea6`，
+      peeled 为切版提交 `44bc2a2 docs(changelog): cut v1.12.0`）触发的 `Formal Release`
+      run `35808243675` 中，`build-linux` 会在发布前用 `.github/actions/smoke-docker-image` 跑
+      `scripts/run-subconverter-smoke.py`（该脚本此时已包含 `assert_inline_rules_prepend_places_rules_first`、
+      `assert_inline_rules_prepend_unknown_group`、`assert_ext_ruleset_prepend_unknown_group` 三个 case），
+      镜像只有在 smoke 通过后才会被 `merge-manifest` 推送——而两个 registry 均已出现 `v1.12.0`
+      且 `latest` 已推进（见下），故"置顶参数在真实服务端把用户规则排到 preset 规则之前"这一契约
+      已在新镜像上真实执行并通过。
+      发布结果（2026-09-23，两仓库 digest 完全一致，即同一多架构 manifest list）：
+      Docker Hub `mmzhw51/subconverter-extended:v1.12.0` = `latest` =
+      `sha256:701ea6583107fda5e4e07179f581642b843f3daa41f5b8fc237dd4905a380886`
+      （`latest` 推进时间 2026/9/23 02:06:49，3 个 arch；版本 tag 02:05:46 推送）；
+      GHCR `ghcr.io/mmzhw/subconverter-extended:v1.12.0` = `latest` =
+      `sha256:701ea6583107fda5e4e07179f581642b843f3daa41f5b8fc237dd4905a380886`
+      （`latest` manifest 的 platforms：`amd64/linux`、`arm64/linux`、`arm/linux`）；
+      Release 页 `https://github.com/mmzhw/SubConverter-Extended/releases/tag/v1.12.0` 显示 `Latest` 徽标
+      且列出 `SHA256SUMS` 资产 → 已由 draft 转为正式 Release（`finalize-release` 只在
+      `gh release edit --draft=false` 成功后才推进 `latest`，两 registry 的 `latest` 均已推进，
+      故这一步在 CI 上确已成功）。
+      注意：`hub.docker.com` 的 REST API 存在 CDN 缓存，同一 tag 在短时间内可能返回旧 digest
+      （本次首查 `latest` 仍返回 v1.11.1 的 `sha256:f525c4d8…`），判定发布状态应以
+      `tags?ordering=last_updated` 列表或 `tags/latest` 的 `last_updated` 字段为准。
+      残余动作（用户侧，非本变更代码问题）：`augussubconverter.x.ddnsto.com` 实例需重新拉取
+      `v1.12.0` / `latest` 镜像后，其订阅链接才会识别 `inline_rules_prepend=`；复现命令
+      `curl -s '<订阅链接>&inline_rules_prepend=♻️%20自动选择:DOMAIN-KEYWORD,netmarble' > out.yaml`，
+      再 `grep -n 'DOMAIN-KEYWORD,netmarble' out.yaml` 与 `grep -n 'DST-PORT,444-65535' out.yaml` 比较行号。
