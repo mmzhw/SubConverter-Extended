@@ -15,6 +15,7 @@ import {
   isGitHubConfigUrl,
 } from '../lib/github-proxy';
 import { backendBaseForState } from '../lib/url-builder';
+import { applyPlacement, placementOf, type RulePlacement } from '../lib/rule-target';
 import { measurePreferredProxyLatency, ProxyLatency, ProxyLatencySource } from '../lib/github-proxy-latency';
 import { loadDnsTemplate, saveDnsTemplate } from '../lib/dns-template';
 
@@ -475,16 +476,20 @@ function updateSourceUrl(value: string) {
             <ExtraRulesetsControl
               v-else-if="def.type === 'string' && def.key === 'ext_ruleset'"
               :model-value="String(optionValue(def.key))"
+              :placement="placementOf(form.state.options, def.key)"
               :config-url="String(optionValue('config') ?? '')"
               :backend-base="form.state.backendBase"
               @update:model-value="(v: string) => setOption(def.key, v)"
+              @update:placement="(v: RulePlacement) => applyPlacement(form.state.options, def.key, v)"
             />
             <InlineRulesControl
               v-else-if="def.type === 'string' && def.key === 'inline_rules'"
               :model-value="String(optionValue(def.key))"
+              :placement="placementOf(form.state.options, def.key)"
               :config-url="String(optionValue('config') ?? '')"
               :backend-base="form.state.backendBase"
               @update:model-value="(v: string) => setOption(def.key, v)"
+              @update:placement="(v: RulePlacement) => applyPlacement(form.state.options, def.key, v)"
             />
             <el-input
               v-else-if="def.type === 'string'"

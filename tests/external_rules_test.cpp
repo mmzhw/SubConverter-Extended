@@ -97,7 +97,9 @@ int main() {
       "DOMAIN,append-1.example,DIRECT",
       "DOMAIN,append-2.example,DIRECT"};
 
-  assert(mergeClashRules(prepend, original, generated, append) ==
+  // An empty user_prepend slot must reproduce the pre-change order
+  // element for element (legacy requests never set it).
+  assert(mergeClashRules({}, prepend, original, generated, append) ==
          string_array({"DOMAIN,prepend-1.example,DIRECT",
                        "DOMAIN,prepend-2.example,DIRECT",
                        "DOMAIN,base.example,DIRECT",
@@ -109,7 +111,7 @@ int main() {
                        "FINAL,Generated",
                        "DOMAIN,generated-after-final.example,DIRECT"}));
 
-  assert(mergeClashRules(prepend, {}, generated, append) ==
+  assert(mergeClashRules({}, prepend, {}, generated, append) ==
          string_array({"DOMAIN,prepend-1.example,DIRECT",
                        "DOMAIN,prepend-2.example,DIRECT",
                        "RULE-SET,generated,Proxy",
@@ -118,7 +120,7 @@ int main() {
                        "FINAL,Generated",
                        "DOMAIN,generated-after-final.example,DIRECT"}));
 
-  assert(mergeClashRules(prepend,
+  assert(mergeClashRules({}, prepend,
                         {"DOMAIN,base.example,DIRECT", "MATCH,Base"},
                         {}, append) ==
          string_array({"DOMAIN,prepend-1.example,DIRECT",
@@ -130,21 +132,47 @@ int main() {
 
   // Source order and duplicates are intentionally preserved.
   assert(mergeClashRules(
-             {"DOMAIN,duplicate.example,DIRECT",
-              "DOMAIN,duplicate.example,DIRECT"},
+             {}, {"DOMAIN,duplicate.example,DIRECT",
+                  "DOMAIN,duplicate.example,DIRECT"},
              {}, {}, {}) ==
          string_array({"DOMAIN,duplicate.example,DIRECT",
                        "DOMAIN,duplicate.example,DIRECT"}));
 
+  // The user_prepend slot (inline_rules_prepend= / ext_ruleset_prepend=)
+  // is the absolute head of the list: it must beat the remote config's
+  // own [ruleprepend] block, and stay empty-safe for legacy requests.
+  const string_array user_prepend = {
+      "DOMAIN-KEYWORD,top.example,Proxy"};
+  assert(mergeClashRules(user_prepend, prepend, original, generated,
+                         append) ==
+         string_array({"DOMAIN-KEYWORD,top.example,Proxy",
+                       "DOMAIN,prepend-1.example,DIRECT",
+                       "DOMAIN,prepend-2.example,DIRECT",
+                       "DOMAIN,base.example,DIRECT",
+                       "RULE-SET,generated,Proxy",
+                       "DOMAIN,append-1.example,DIRECT",
+                       "DOMAIN,append-2.example,DIRECT",
+                       "MATCH,Base",
+                       "DOMAIN,base-after-match.example,DIRECT",
+                       "FINAL,Generated",
+                       "DOMAIN,generated-after-final.example,DIRECT"}));
+
   string_array limited;
   assert(mergeClashRulesWithinLimit(
-      {"DOMAIN,one.example,DIRECT"}, {}, {},
+      {}, {"DOMAIN,one.example,DIRECT"}, {}, {},
       {"DOMAIN,two.example,DIRECT"}, 2, limited));
   assert(limited.size() == 2);
   assert(!mergeClashRulesWithinLimit(
-      {"DOMAIN,one.example,DIRECT"}, {}, {},
+      {}, {"DOMAIN,one.example,DIRECT"}, {}, {},
       {"DOMAIN,two.example,DIRECT"}, 1, limited));
   assert(limited.size() == 2);
+
+  // user_prepend counts toward the same limit as every other slot.
+  assert(!mergeClashRulesWithinLimit(
+      {"DOMAIN,user.example,DIRECT"}, {"DOMAIN,one.example,DIRECT"}, {}, {},
+      {"DOMAIN,two.example,DIRECT"}, 2, limited));
+  assert(limited.size() == 3);
+  assert(limited.front() == "DOMAIN,user.example,DIRECT");
 
   return 0;
 }

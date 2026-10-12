@@ -15,15 +15,18 @@ import {
 } from '../lib/inline-rules';
 import { useGroupNames } from '../composables/useGroupNames';
 import { useFormState } from '../composables/useFormState';
+import type { RulePlacement } from '../lib/rule-target';
 
 const props = defineProps<{
   modelValue: string;
   configUrl: string;
   backendBase: string;
+  placement: RulePlacement;
 }>();
 
 const emit = defineEmits<{
   (event: 'update:modelValue', value: string): void;
+  (event: 'update:placement', value: RulePlacement): void;
 }>();
 
 const { t, locale } = useI18n();
@@ -159,10 +162,31 @@ function typeDescription(row: InlineRuleRow): string {
 function typeExample(row: InlineRuleRow): string {
   return exampleForMatchType(row.type);
 }
+
+function setPlacement(value: string | number | boolean | undefined) {
+  emit('update:placement', value === 'prepend' ? 'prepend' : 'append');
+}
 </script>
 
 <template>
   <div class="inline-rules-control">
+    <!-- Placement sits outside both editor branches: the choice applies to
+         the whole family and must stay reachable (and visible) whichever
+         editor is active. -->
+    <div class="inline-rules-placement">
+      <span class="inline-rules-placement-label">{{ t('form.rulePlacement') }}</span>
+      <el-radio-group
+        :model-value="placement"
+        size="small"
+        @update:model-value="setPlacement"
+      >
+        <el-radio-button value="append">{{ t('form.rulePlacementAppend') }}</el-radio-button>
+        <el-radio-button value="prepend">{{ t('form.rulePlacementPrepend') }}</el-radio-button>
+      </el-radio-group>
+      <span v-if="placement === 'prepend'" class="inline-rules-placement-hint">
+        {{ t('form.rulePlacementPrependHint') }}
+      </span>
+    </div>
     <template v-if="mode === 'rows'">
       <div v-for="(row, index) in rows" :key="index" class="inline-rules-item">
         <div class="inline-rules-row">
@@ -257,6 +281,19 @@ function typeExample(row: InlineRuleRow): string {
 
 <style scoped>
 .inline-rules-control { display: grid; gap: 10px; }
+.inline-rules-placement {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.inline-rules-placement-label { color: var(--el-text-color-regular); font-size: 0.82rem; }
+.inline-rules-placement-hint {
+  flex: 1 1 100%;
+  color: var(--el-color-warning);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
 .inline-rules-item { display: grid; gap: 4px; }
 .inline-rules-row {
   display: grid;

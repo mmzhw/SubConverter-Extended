@@ -216,6 +216,24 @@ EXT_RULESET_SUCCESS_URL_DEFAULT = (
     "https://raw.githubusercontent.com/Aethersailor/Custom_OpenClash_Rules/"
     "refs/heads/main/rule/Custom_Direct.list"
 )
+# Rule-placement probes. The preset declares groups only and no
+# ruleset=, so the cases never fetch a remote ruleset. A preset cannot
+# contribute a literal ruleprepend line either -- ruleprepend= only
+# accepts HTTP(S) URLs -- so the "user prepend outranks the preset
+# ruleprepend block" ordering is asserted on the merge primitive in
+# tests/external_rules_test.cpp rather than from here.
+RULE_PLACEMENT_PRESET_CONFIG = (
+    "data:text/plain;base64,"
+    + base64.urlsafe_b64encode(
+        b"\n".join(
+            (
+                b"enable_rule_generator=true",
+                b"custom_proxy_group=Proxy`select`DIRECT",
+                b"custom_proxy_group=Domestic`select`[]DIRECT",
+            )
+        )
+    ).decode("ascii")
+)
 # Unreachable URL for the fetch-failure smoke case.
 EXT_RULESET_UNREACHABLE_URL = "https://nonexistent-host-1234567890.invalid/p.list"
 PROVIDER_FILTER_CONFIG = "data:text/plain;base64," + base64.urlsafe_b64encode(
@@ -1251,6 +1269,95 @@ def assert_inline_rules_empty(base_url: str, timeout: int) -> None:
         )
 
 
+def assert_inline_rules_prepend_places_rules_first(
+    base_url: str, timeout: int
+) -> None:
+    """inline_rules_prepend= puts its rules at the head of the final rule
+    list, ahead of every preset rule and ahead of the appended family."""
+    output = fetch(
+        base_url,
+        "/sub",
+        {
+            "target": "clash",
+            "url": SAMPLE_SS_LINK,
+            "config": RULE_PLACEMENT_PRESET_CONFIG,
+            "inline_rules_prepend": "Proxy:DOMAIN-KEYWORD,prepend-probe",
+            "inline_rules": "Domestic:DOMAIN-SUFFIX,append-probe.example",
+        },
+        timeout,
+    )
+    lines = output.splitlines()
+    rules_start = next(
+        (i for i, line in enumerate(lines) if line.strip() == "rules:"), None
+    )
+    if rules_start is None:
+        raise AssertionError(
+            "inline_rules_prepend output is missing a rules: section"
+        )
+    first_rule = None
+    for line in lines[rules_start + 1 :]:
+        stripped = line.strip()
+        if stripped.startswith("- "):
+            first_rule = stripped[2:].strip().strip("\"'")
+            break
+    if first_rule != "DOMAIN-KEYWORD,prepend-probe,Proxy":
+        raise AssertionError(
+            "inline_rules_prepend rule must be the first rule in the "
+            f"generated list, got: {first_rule!r}"
+        )
+    if "DOMAIN-SUFFIX,append-probe.example,Domestic" not in output:
+        raise AssertionError(
+            "inline_rules= must keep its own appended placement alongside "
+            "the prepend family"
+        )
+
+
+def assert_ext_ruleset_prepend_unknown_group(
+    base_url: str, timeout: int
+) -> None:
+    """ext_ruleset_prepend= reaches the same group validator as the appended
+    parameter, and is rejected the same way.
+
+    The preset's own ruleprepend= can only point at an HTTP(S) URL (see
+    fetchExternalRuleSources), so the "user prepend beats the preset
+    ruleprepend block" ordering cannot be driven from this offline harness;
+    tests/external_rules_test.cpp asserts that ordering on the merge
+    primitive instead. Group validation runs before any fetch, so this case
+    still proves the second parameter is parsed and wired to the validator.
+    """
+    assert_rejected(
+        base_url,
+        "/sub",
+        {
+            "target": "clash",
+            "url": SAMPLE_SS_LINK,
+            "config": RULE_PLACEMENT_PRESET_CONFIG,
+            "ext_ruleset_prepend": "NoSuchGroup,https://example.invalid/x.list",
+        },
+        timeout,
+        "ext_ruleset_prepend with an undeclared group",
+    )
+
+
+def assert_inline_rules_prepend_unknown_group(
+    base_url: str, timeout: int
+) -> None:
+    """inline_rules_prepend= referencing a group not in the preset returns
+    400, exactly like the appended parameter."""
+    assert_rejected(
+        base_url,
+        "/sub",
+        {
+            "target": "clash",
+            "url": SAMPLE_SS_LINK,
+            "config": RULE_PLACEMENT_PRESET_CONFIG,
+            "inline_rules_prepend": "NoSuchGroup:DOMAIN-KEYWORD,prepend-probe",
+        },
+        timeout,
+        "inline_rules_prepend with an undeclared group",
+    )
+
+
 def assert_inline_rules_unknown_group(
     base_url: str, timeout: int
 ) -> None:
@@ -1813,6 +1920,13 @@ def run_checks(
     assert_inline_rules_wrong_target(base_url, timeout)
     assert_inline_rules_exceeds_quota(base_url, timeout)
     assert_inline_rules_empty_value(base_url, timeout)
+    # Rule placement (inline_rules_prepend= / ext_ruleset_prepend=): the
+    # user-prepend slot must head the final rule list, and both prepend
+    # parameters must reuse the appended parameter's validation. Also
+    # network-free: the prepend cases never fetch a remote ruleset.
+    assert_inline_rules_prepend_places_rules_first(base_url, timeout)
+    assert_inline_rules_prepend_unknown_group(base_url, timeout)
+    assert_ext_ruleset_prepend_unknown_group(base_url, timeout)
     if ext_ruleset_success_url is not None:
         assert_inline_rules_coexists_with_ext_ruleset(
             base_url, timeout, ext_ruleset_success_url

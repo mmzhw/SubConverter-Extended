@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { buildSubUrl } from './url-builder';
 import { parseSubUrl } from './url-parser';
 
 describe('parseSubUrl', () => {
@@ -63,5 +64,124 @@ describe('parseSubUrl', () => {
       'Domestic:DOMAIN-SUFFIX,foo.com|DOMAIN-KEYWORD,bar;'
       + 'Proxy:IP-CIDR,10.0.0.0/8',
     );
+  });
+});
+
+describe('parseSubUrl with rule placement', () => {
+  it('defaults to the append placement when only the plain parameter is present', () => {
+    const { state, unknown } = parseSubUrl(
+      'http://host/sub?target=clash&url=https%3A%2F%2Fs&inline_rules=Proxy%3ADOMAIN-KEYWORD%2Cfoo',
+    );
+    expect(state.options.inline_rules).toBe('Proxy:DOMAIN-KEYWORD,foo');
+    expect(state.options.inline_rules_mode).toBeUndefined();
+    expect(unknown.inline_rules).toBeUndefined();
+  });
+
+  it('normalizes inline_rules_prepend onto the family option', () => {
+    const { state, unknown } = parseSubUrl(
+      'http://host/sub?target=clash&url=https%3A%2F%2Fs'
+      + '&inline_rules_prepend=Proxy%3ADOMAIN-KEYWORD%2Cfoo%7CDOMAIN-SUFFIX%2Cbar.example',
+    );
+    expect(state.options.inline_rules).toBe('Proxy:DOMAIN-KEYWORD,foo|DOMAIN-SUFFIX,bar.example');
+    expect(state.options.inline_rules_mode).toBe('prepend');
+    expect(unknown.inline_rules_prepend).toBeUndefined();
+  });
+
+  it('normalizes ext_ruleset_prepend through the row parser', () => {
+    const { state } = parseSubUrl(
+      'http://host/sub?target=clash&url=https%3A%2F%2Fs'
+      + '&ext_ruleset_prepend=Proxy%2Chttps%3A%2F%2Fa%2Fp.list%3BDomestic%2Chttps%3A%2F%2Fb%2Fd.list',
+    );
+    expect(state.options.ext_ruleset).toBe('Proxy,https://a/p.list\nDomestic,https://b/d.list');
+    expect(state.options.ext_ruleset_mode).toBe('prepend');
+  });
+
+  it('keeps each family placement independent', () => {
+    const { state } = parseSubUrl(
+      'http://host/sub?target=clash&url=https%3A%2F%2Fs'
+      + '&inline_rules_prepend=Proxy%3ADOMAIN-KEYWORD%2Cfoo'
+      + '&ext_ruleset=Proxy%2Chttps%3A%2F%2Fa%2Fp.list',
+    );
+    expect(state.options.inline_rules_mode).toBe('prepend');
+    expect(state.options.ext_ruleset_mode).toBeUndefined();
+  });
+
+  it('lets the prepend parameter win and reports the other side as unknown', () => {
+    // Both spellings of one family must never be silently merged or dropped.
+    const { state, unknown } = parseSubUrl(
+      'http://host/sub?target=clash&url=https%3A%2F%2Fs'
+      + '&inline_rules=Proxy%3ADOMAIN-KEYWORD%2Cappend-side'
+      + '&inline_rules_prepend=Proxy%3ADOMAIN-KEYWORD%2Cprepend-side',
+    );
+    expect(state.options.inline_rules).toBe('Proxy:DOMAIN-KEYWORD,prepend-side');
+    expect(state.options.inline_rules_mode).toBe('prepend');
+    expect(unknown.inline_rules).toBe('Proxy:DOMAIN-KEYWORD,append-side');
+  });
+
+  it('resolves the winner regardless of parameter order', () => {
+    const { state, unknown } = parseSubUrl(
+      'http://host/sub?target=clash&url=https%3A%2F%2Fs'
+      + '&ext_ruleset_prepend=Proxy%2Chttps%3A%2F%2Fa%2Fp.list'
+      + '&ext_ruleset=Proxy%2Chttps%3A%2F%2Fb%2Fd.list',
+    );
+    expect(state.options.ext_ruleset).toBe('Proxy,https://a/p.list');
+    expect(state.options.ext_ruleset_mode).toBe('prepend');
+    expect(unknown.ext_ruleset).toBe('Proxy,https://b/d.list');
+  });
+
+  it('round-trips a prepend-placed link through the builder', () => {
+    const built = buildSubUrl({
+      target: 'clash',
+      sourceUrl: 'https://s',
+      subscriptionName: '',
+      backendBase: 'http://host',
+      options: {
+        ext_ruleset: 'Proxy,https://a/p.list',
+        ext_ruleset_mode: 'prepend',
+        inline_rules: 'Domestic:DOMAIN-SUFFIX,foo.com',
+        inline_rules_mode: 'prepend',
+      },
+    });
+    const { state, unknown } = parseSubUrl(built);
+    expect(state.options.inline_rules_mode).toBe('prepend');
+    expect(state.options.ext_ruleset_mode).toBe('prepend');
+    expect(state.options.inline_rules).toBe('Domestic:DOMAIN-SUFFIX,foo.com');
+    expect(state.options.ext_ruleset).toBe('Proxy,https://a/p.list');
+    expect(unknown.inline_rules).toBeUndefined();
+    expect(unknown.ext_ruleset).toBeUndefined();
+  });
+
+  it('round-trips an append-placed link back to the append default', () => {
+    const built = buildSubUrl({
+      target: 'clash',
+      sourceUrl: 'https://s',
+      subscriptionName: '',
+      backendBase: 'http://host',
+      options: { inline_rules: 'Domestic:DOMAIN-SUFFIX,foo.com' },
+    });
+    const { state } = parseSubUrl(built);
+    expect(state.options.inline_rules_mode).toBeUndefined();
+    expect(state.options.inline_rules).toBe('Domestic:DOMAIN-SUFFIX,foo.com');
+  });
+
+  it('leaves a legacy link without placement parameters untouched', () => {
+    const legacy = 'http://host/sub?target=clash&url=https%3A%2F%2Fs'
+      + '&ext_ruleset=Proxy%2Chttps%3A%2F%2Fa%2Fp.list'
+      + '&inline_rules=Domestic%3ADOMAIN-SUFFIX%2Cfoo.com';
+    const { state, unknown } = parseSubUrl(legacy);
+    expect(state.options.ext_ruleset).toBe('Proxy,https://a/p.list');
+    expect(state.options.inline_rules).toBe('Domestic:DOMAIN-SUFFIX,foo.com');
+    expect(state.options.ext_ruleset_mode).toBeUndefined();
+    expect(state.options.inline_rules_mode).toBeUndefined();
+    expect(unknown).toEqual({});
+    // Re-building the parsed state must reproduce the same link.
+    const rebuilt = buildSubUrl({
+      target: state.target,
+      sourceUrl: state.sourceUrl,
+      subscriptionName: state.subscriptionName,
+      backendBase: 'http://host',
+      options: state.options,
+    });
+    expect(rebuilt).toBe(legacy);
   });
 });

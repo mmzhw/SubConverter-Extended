@@ -2065,8 +2065,9 @@ std::string proxyToClash(std::vector<Proxy> &nodes,
     return finalizeCanonicalClashYaml(result);
   };
 
-  const bool has_external_rules =
-      !ext.rule_prepend.empty() || !ext.rule_append.empty();
+  const bool has_external_rules = !ext.rule_user_prepend.empty() ||
+                                  !ext.rule_prepend.empty() ||
+                                  !ext.rule_append.empty();
   const std::string rules_field_name =
       ext.clash_new_field_name ? "rules" : "Rule";
   string_array original_rules;
@@ -2081,8 +2082,8 @@ std::string proxyToClash(std::vector<Proxy> &nodes,
         ext.overwrite_original_rules ? string_array{} : original_rules;
     string_array merged;
     if (!mergeClashRulesWithinLimit(
-            ext.rule_prepend, kept_original, generated_rules,
-            ext.rule_append, max_allowed_rules, merged)) {
+            ext.rule_user_prepend, ext.rule_prepend, kept_original,
+            generated_rules, ext.rule_append, max_allowed_rules, merged)) {
       ext.external_rule_error =
           "Invalid request: the final Clash rule count exceeds "
           "max_allowed_rules (" +
@@ -3707,14 +3708,18 @@ static std::string proxyToStashImpl(
                  std::to_string(ext.stash_rule_stats.emitted_rules) +
                  " unsupported=0");
   }
-  if (!ext.rule_prepend.empty() || !ext.rule_append.empty()) {
+  if (!ext.rule_user_prepend.empty() || !ext.rule_prepend.empty() ||
+      !ext.rule_append.empty()) {
     string_array current_rules;
     if (root["rules"].IsDefined() && root["rules"].IsSequence())
       current_rules = safe_as<string_array>(root["rules"]);
     string_array merged;
+    // inline_rules= / ext_ruleset= are gated to clash/clashr, so a Stash
+    // request can never carry user_prepend rules; the slot is passed
+    // explicitly empty to make that contract visible rather than implied.
     if (!mergeClashRulesWithinLimit(
-            ext.rule_prepend, {}, current_rules, ext.rule_append,
-            effectiveSettings().maxAllowedRules, merged)) {
+            ext.rule_user_prepend, ext.rule_prepend, {}, current_rules,
+            ext.rule_append, effectiveSettings().maxAllowedRules, merged)) {
       ext.external_rule_error =
           "Invalid request: the final Stash rule count exceeds "
           "max_allowed_rules.\n"
