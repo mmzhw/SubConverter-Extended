@@ -5,12 +5,15 @@ from __future__ import annotations
 
 import argparse
 import base64
+import contextlib
 import importlib.util
 import json
 import re
 import subprocess
 import tempfile
+import threading
 import urllib.parse
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 import compatibility_security_baseline as baseline
@@ -107,15 +110,46 @@ def ruleset_output_baseline(base_url: str) -> None:
         ("6", "DOMAIN-REGEX,^a // b$,Proxy"),
     ):
         source = "data:text/plain," + urllib.parse.quote(rule + "\n", safe="")
+        # The legacy group,url,interval parser treats the last comma as the
+        # interval separator. Keep the data URI intact with an explicit zero.
         status, body, _ = baseline.request(base_url, "/getruleset", {
-            "url": baseline._urlsafe_b64(source), "type": output_type,
+            "url": baseline._urlsafe_b64(source + ",0"), "type": output_type,
         })
         if status != 200 or rule not in body.decode("utf-8"):
             raise AssertionError(f"literal slashes lost in ruleset output: HTTP {status}: {body!r}")
     print("PASS: URL and regex double slashes in /getruleset")
 
 
-def fork_rule_baseline(base_url: str, password: str) -> None:
+@contextlib.contextmanager
+def external_rules_fixture():
+    class Handler(BaseHTTPRequestHandler):
+        def do_GET(self) -> None:
+            if self.path == "/rules.list":
+                body = b"DOMAIN-SUFFIX,external-regression.example\n"
+                self.send_response(200)
+            else:
+                body = b"fixture fetch failure"
+                self.send_response(503)
+            self.send_header("Content-Type", "text/plain")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def log_message(self, *args) -> None:
+            pass
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        yield f"http://127.0.0.1:{server.server_port}"
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=5)
+
+
+def fork_rule_baseline(base_url: str, password: str, fixture_base: str) -> None:
     module_path = baseline.REPOSITORY / "scripts" / "run-subconverter-smoke.py"
     spec = importlib.util.spec_from_file_location("fork_smoke", module_path)
     assert spec is not None and spec.loader is not None
@@ -138,9 +172,7 @@ def fork_rule_baseline(base_url: str, password: str) -> None:
         getattr(smoke, name)(base_url, 20)
     print(f"PASS: {len(names)} existing fork rule/group regressions")
 
-    external = "data:text/plain," + urllib.parse.quote(
-        "DOMAIN-SUFFIX,external-regression.example\n", safe=""
-    )
+    external = fixture_base + "/rules.list"
     params = {
         "target": "clash", "url": smoke.SAMPLE_SS_LINK,
         "config": smoke.NO_RULESET_PRESET_CONFIG,
@@ -158,11 +190,16 @@ def fork_rule_baseline(base_url: str, password: str) -> None:
         raise AssertionError(f"external/inline prepend order changed: HTTP {status}: {output!r}")
     params.pop("ext_ruleset_prepend")
     params.pop("inline_rules_prepend")
-    params["ext_ruleset"] = f"Proxy,{external};Domestic,data:,"
+    params["ext_ruleset"] = f"Proxy,{external};Domestic,{fixture_base}/failure"
     status, _, _ = baseline.request(base_url, "/sub", params)
     if status != 400:
         raise AssertionError(f"external rule fetch failure was not atomic: HTTP {status}")
     print("PASS: external/inline coexistence, prepend order and atomic failure")
+
+    params["ext_ruleset"] = "Proxy,data:,DOMAIN-SUFFIX%2Cexample.com"
+    status, _, _ = baseline.request(base_url, "/sub", params)
+    if status != 400:
+        raise AssertionError(f"external rule data URI restriction changed: HTTP {status}")
 
     pref = (baseline.COMPAT_FIXTURES / "legacy-pref.toml").read_text(encoding="utf-8")
     quota = re.search(r"(?m)^max_allowed_rulesets = ([0-9]+)$", pref)
@@ -202,10 +239,11 @@ def main() -> None:
             "SUBCONVERTER_SHORT_LINKS_FILE": str(Path(temporary) / "links.json"),
             "SUBCONVERTER_SHORT_LINK_PASSWORD": password,
         }
-        with baseline.running_service(binary, environment=environment) as base_url:
-            provider_url_baseline(base_url)
-            ruleset_output_baseline(base_url)
-            fork_rule_baseline(base_url, password)
+        with external_rules_fixture() as fixture_base:
+            with baseline.running_service(binary, environment=environment) as base_url:
+                provider_url_baseline(base_url)
+                ruleset_output_baseline(base_url)
+                fork_rule_baseline(base_url, password, fixture_base)
 
 
 if __name__ == "__main__":

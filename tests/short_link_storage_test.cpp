@@ -204,13 +204,16 @@ int main() {
   // record keeps working and updated_at reads back as 0.
   {
     const std::string legacy_path = "legacy-short-links.json";
-    (void)fileWrite(legacy_path,
-                    "{\"legacy01\":{\"url\":\"" + url +
-                        "\",\"name\":\"Legacy\",\"created_at\":8100,"
-                        "\"last_access_at\":8200}}",
-                    true);
+    // The legacy fixture must use the same valid alphabet as generated codes.
+    const std::string legacy_code = "abcdeXYZ";
+    require(!fileCommitFailed(fileWrite(legacy_path,
+                      "{\"" + legacy_code + "\":{\"url\":\"" + url +
+                          "\",\"name\":\"Legacy\",\"created_at\":8100,"
+                          "\"last_access_at\":8200}}",
+                      true)),
+            "legacy short-link fixture could not be written");
     setShortLinkStoragePathForTests(legacy_path);
-    ShortLinkResolveResult legacy = resolveShortLink("legacy01", 8300);
+    ShortLinkResolveResult legacy = resolveShortLink(legacy_code, 8300);
     require(legacy.ok, "legacy record without updated_at failed to load");
     require(legacy.record.url == url, "legacy record URL changed");
     require(legacy.record.name == "Legacy", "legacy record name changed");
@@ -220,9 +223,9 @@ int main() {
             "missing updated_at did not default to 0");
     // The record is still updatable, which backfills updated_at.
     ShortLinkUpdateResult migrated =
-        updateShortLink("legacy01", url + "&emoji=true", "", false, 8400);
+        updateShortLink(legacy_code, url + "&emoji=true", "", false, 8400);
     require(migrated.ok, "legacy record could not be updated");
-    ShortLinkResolveResult after = resolveShortLink("legacy01", 8500);
+    ShortLinkResolveResult after = resolveShortLink(legacy_code, 8500);
     require(after.ok && after.record.updated_at == 8400,
             "legacy record did not gain updated_at on update");
     setShortLinkStoragePathForTests("");

@@ -297,6 +297,7 @@ IF(BUILD_TESTS)
     ADD_EXECUTABLE(settings_snapshot_test_helper
         ${SETTINGS_SNAPSHOT_RUNTIME_SOURCES}
         src/handler/settings_snapshot.cpp
+        tests/runtime_test_stubs.cpp
         tests/settings_snapshot_test_helper.cpp)
     ADD_DEPENDENCIES(settings_snapshot_test_helper dashboard_resource)
     TARGET_INCLUDE_DIRECTORIES(settings_snapshot_test_helper PRIVATE
@@ -537,6 +538,7 @@ IF(BUILD_TESTS)
         src/parser/mihomo_bridge.cpp)
     ADD_EXECUTABLE(parse_ext_ruleset_test
         tests/parse_ext_ruleset_test.cpp
+        tests/runtime_test_stubs.cpp
         ${PARSE_EXT_RULESET_TEST_SOURCES})
     TARGET_INCLUDE_DIRECTORIES(parse_ext_ruleset_test PRIVATE
         $<TARGET_PROPERTY:${BUILD_TARGET_NAME},INCLUDE_DIRECTORIES>)
@@ -557,6 +559,7 @@ IF(BUILD_TESTS)
         src/parser/mihomo_bridge.cpp)
     ADD_EXECUTABLE(collect_external_group_names_test
         tests/collect_external_group_names_test.cpp
+        tests/runtime_test_stubs.cpp
         ${COLLECT_EXTERNAL_GROUP_NAMES_TEST_SOURCES})
     TARGET_INCLUDE_DIRECTORIES(collect_external_group_names_test PRIVATE
         $<TARGET_PROPERTY:${BUILD_TARGET_NAME},INCLUDE_DIRECTORIES>)
@@ -739,6 +742,7 @@ IF(BUILD_TESTS)
         github_proxy_test
         short_link_auth_test
         ruleset_options_test
+        ruleset_comment_test
         ruleset_output_test
         external_rules_test
         clash_proxy_test

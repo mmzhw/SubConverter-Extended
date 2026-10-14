@@ -5723,12 +5723,12 @@ def dashboard_baseline(binary: Path, fixture_base: str) -> None:
         )
         if status != 200 or b"SubConverter-Extended Dashboard" not in body:
             raise AssertionError("Dashboard valid-auth baseline failed")
-        if (
-            len(body) != 100487
-            or hashlib.sha256(body).hexdigest()
-            != "265cbce59394ec1e966bdd137bd79e993768eaf7f95260700ee287957b503908"
-        ):
-            raise AssertionError("Dashboard HTTP response bytes changed")
+        expected_page = (REPOSITORY / "resources" / "dashboard" / "index.html").read_bytes()
+        if body != expected_page:
+            raise AssertionError(
+                "Dashboard HTTP response differs from the embedded source: "
+                f"expected {len(expected_page)} bytes, got {len(body)}"
+            )
         expected_page_headers = {
             "cache-control": (
                 "no-store, no-cache, must-revalidate, proxy-revalidate, "

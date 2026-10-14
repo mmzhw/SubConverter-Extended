@@ -372,6 +372,7 @@ int main() {
   httplib::Client client("127.0.0.1", args.port);
   client.set_connection_timeout(0, 100000);
   client.set_read_timeout(2, 0);
+  client.set_keep_alive(true);
   httplib::Result response;
   const httplib::Headers request_headers = {
       {"Authorization", "Bearer authorization-header-secret"},
@@ -398,6 +399,21 @@ int main() {
   const httplib::Result options = client.Options("/ok");
   const httplib::Result explain_error = client.Get("/throw?explain=true");
 
+  // Receiving the body can precede post-routing telemetry. Do not turn the
+  // final response into a shutdown cancellation before its send completes.
+  bool responses_finished = false;
+  for (int attempt = 0; attempt < 1000; ++attempt) {
+    const RequestLifecycleMetricsSnapshot snapshot =
+        requestLifecycleMetricsSnapshot();
+    uint64_t terminals = 0;
+    for (uint64_t count : snapshot.terminal)
+      terminals += count;
+    if (terminals == 10 && requestAdmissionSnapshot().active_entries == 0) {
+      responses_finished = true;
+      break;
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(2));
+  }
   server.stop_web_server();
   server_thread.join();
   std::cerr.rdbuf(original);
@@ -406,6 +422,7 @@ int main() {
 #endif
 
   require(static_cast<bool>(response), "request did not receive a response");
+  require(responses_finished, "HTTP responses did not finish before shutdown");
   require(response->status == 500, "unexpected status");
   require(response->get_header_value("Content-Type").find("text/plain") !=
               std::string::npos,
@@ -579,13 +596,16 @@ int main() {
     terminal_total += count;
   require(terminal_total == 10,
           "HTTP requests did not each reach exactly one terminal state");
-  require(lifecycle.terminal[static_cast<std::size_t>(
-              RequestTerminalState::Completed)] == 8 &&
-              lifecycle.terminal[static_cast<std::size_t>(
-                  RequestTerminalState::Failed)] == 2 &&
-              lifecycle.terminal[static_cast<std::size_t>(
-                  RequestTerminalState::Cancelled)] == 0,
-          "HTTP terminal attribution changed across normal and error paths");
+  const uint64_t completed = lifecycle.terminal[static_cast<std::size_t>(
+      RequestTerminalState::Completed)];
+  const uint64_t failed = lifecycle.terminal[static_cast<std::size_t>(
+      RequestTerminalState::Failed)];
+  const uint64_t cancelled = lifecycle.terminal[static_cast<std::size_t>(
+      RequestTerminalState::Cancelled)];
+  const std::string attribution =
+      "HTTP terminal attribution changed: completed=" + std::to_string(completed) +
+      " failed=" + std::to_string(failed) + " cancelled=" + std::to_string(cancelled);
+  require(completed == 8 && failed == 2 && cancelled == 0, attribution.c_str());
   require(lifecycle.stage_samples[static_cast<std::size_t>(
               RequestStage::Admission)] == 10,
           "HTTP admission timing did not cover every response path");
