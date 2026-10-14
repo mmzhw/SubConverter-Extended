@@ -215,6 +215,9 @@ struct CacheFetchOperationProbeSnapshot
     bool exception_rethrown_to_waiter = false;
     bool no_consumers_cancelled = false;
     bool owner_kinds_isolated = false;
+    bool successful_completion_reused = false;
+    bool failure_retired_during_callback = false;
+    bool failed_completions_retired = false;
 };
 
 struct OwnedWebGetAsyncConsumerProbeSnapshot

@@ -351,6 +351,17 @@ IF(BUILD_TESTS)
         COMMAND ${Python3_EXECUTABLE}
                 ${CMAKE_SOURCE_DIR}/tests/compatibility_security_baseline.py
                 ${COMPATIBILITY_SECURITY_BASELINE_ARGS})
+    ADD_TEST(
+        NAME upstream_compatibility
+        COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_SOURCE_DIR}/tests/upstream_compatibility_test.py
+                --binary $<TARGET_FILE:${BUILD_TARGET_NAME}>
+                --settings-snapshot-helper
+                $<TARGET_FILE:settings_snapshot_test_helper>)
+    SET_TESTS_PROPERTIES(upstream_compatibility PROPERTIES
+        LABELS full
+        TIMEOUT 120
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
     SET_TESTS_PROPERTIES(compatibility_security_baseline PROPERTIES
         LABELS full
         TIMEOUT 120
@@ -487,6 +498,11 @@ IF(BUILD_TESTS)
     TARGET_INCLUDE_DIRECTORIES(github_proxy_test PRIVATE src)
     ADD_TEST(NAME github_proxy COMMAND github_proxy_test)
     SET_TESTS_PROPERTIES(github_proxy PROPERTIES LABELS fast)
+
+    ADD_EXECUTABLE(ruleset_comment_test tests/ruleset_comment_test.cpp)
+    TARGET_INCLUDE_DIRECTORIES(ruleset_comment_test PRIVATE src)
+    ADD_TEST(NAME ruleset_comment COMMAND ruleset_comment_test)
+    SET_TESTS_PROPERTIES(ruleset_comment PROPERTIES LABELS fast)
 
     ADD_EXECUTABLE(ruleset_output_test
         tests/ruleset_output_test.cpp

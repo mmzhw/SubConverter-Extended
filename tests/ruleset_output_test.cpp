@@ -66,5 +66,17 @@ int main() {
              "DOMAIN,cr.example,Old\rDOMAIN-SUFFIX,cr-suffix.example,Old\r",
              5, "Converted", catalogs) ==
          "cr.example\n.cr-suffix.example\n");
+
+  const std::vector<std::string> regex_types = {"URL-REGEX", "DOMAIN-REGEX"};
+  const RulesetTypeCatalogs regex_catalogs{regex_types, regex_types, regex_types};
+  const std::string regex_rules =
+      "URL-REGEX,^https://example.com/a//b,Proxy\n"
+      "DOMAIN-REGEX,^a // b$,Proxy\n";
+  assert(formatRulesetOutput(regex_rules, 1, "Converted", regex_catalogs) ==
+         regex_rules);
+  assert(formatRulesetOutput(regex_rules, 6, "Converted", regex_catalogs) ==
+         "payload:\n"
+         "  - URL-REGEX,^https://example.com/a//b,Proxy\n"
+         "  - DOMAIN-REGEX,^a // b$,Proxy\n");
   return 0;
 }

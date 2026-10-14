@@ -48,23 +48,27 @@ int main(int argc, char *argv[]) {
       argc == 6 && std::string(argv[1]) == "--webget-probe";
   const bool fetch_shutdown_race =
       argc == 3 && std::string(argv[1]) == "--fetch-shutdown-race";
+  const bool data_uri_probe =
+      argc == 4 && std::string(argv[1]) == "--data-uri-probe";
   const bool expect_reload_failure =
       argc == 4 && std::string(argv[3]) == "--expect-reload-failure";
   if ((!webget_probe && !fetch_shutdown_race && argc != 2 && argc != 3 &&
        argc != 4) ||
-      (argc == 4 && !expect_reload_failure)) {
+      (argc == 4 && !expect_reload_failure && !data_uri_probe)) {
     std::cerr << "usage: settings_snapshot_test_helper <config> "
                  "[reload-config [--expect-reload-failure]]\n"
                  "       settings_snapshot_test_helper --webget-probe "
                  "<config> <url> <cache-ttl> <delay-ms>\n"
                  "       settings_snapshot_test_helper "
-                 "--fetch-shutdown-race <config>\n";
+                 "--fetch-shutdown-race <config>\n"
+                 "       settings_snapshot_test_helper "
+                 "--data-uri-probe <config> <uri>\n";
     return 2;
   }
 
   const std::filesystem::path config =
       std::filesystem::absolute(
-          argv[webget_probe || fetch_shutdown_race ? 2 : 1])
+          argv[webget_probe || fetch_shutdown_race || data_uri_probe ? 2 : 1])
           .lexically_normal();
   if (!config.has_filename()) {
     std::cerr << "configuration path has no filename\n";
@@ -75,6 +79,54 @@ int main(int argc, char *argv[]) {
   global.prefPath = config.filename().string();
   if (!readConf())
     return 1;
+
+  if (data_uri_probe) {
+    OwnedWebGetRequest request;
+    request.url = argv[3];
+    request.proxy = ProxyPolicy::direct();
+    request.context = FetchContext::TrustedConfig;
+    const OwnedWebGetResult result = webGetOwned(request);
+    std::promise<OwnedWebGetAsyncOutcome> completed;
+    auto future = completed.get_future();
+    webGetOwnedAsync(
+        std::move(request),
+        std::make_shared<RequestContext>("data-uri-regression",
+                                         RequestContext::Clock::now()),
+        [&](OwnedWebGetAsyncOutcome outcome) {
+          completed.set_value(std::move(outcome));
+        });
+    if (future.wait_for(std::chrono::seconds(10)) != std::future_status::ready)
+      return 1;
+    const OwnedWebGetAsyncOutcome async_result = future.get();
+    const CacheFetchOperationProbeSnapshot operation =
+        cacheFetchOperationProbe();
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    writer.StartObject();
+    writer.Key("status");
+    writer.Int(result.status_code);
+    writer.Key("body");
+    writer.String(result.content.data(),
+                  static_cast<rapidjson::SizeType>(result.content.size()));
+    writer.Key("async_status");
+    writer.Int(async_result.payload ? async_result.payload->status_code : 0);
+    writer.Key("async_body");
+    if (async_result.payload)
+      writer.String(async_result.payload->content.data(),
+                    static_cast<rapidjson::SizeType>(
+                        async_result.payload->content.size()));
+    else
+      writer.Null();
+    writer.Key("successful_completion_reused");
+    writer.Bool(operation.successful_completion_reused);
+    writer.Key("failure_retired_during_callback");
+    writer.Bool(operation.failure_retired_during_callback);
+    writer.Key("failed_completions_retired");
+    writer.Bool(operation.failed_completions_retired);
+    writer.EndObject();
+    std::cout << buffer.GetString() << '\n';
+    return 0;
+  }
 
   if (fetch_shutdown_race) {
     std::atomic<int> ready{0};
@@ -521,6 +573,12 @@ int main(int argc, char *argv[]) {
     writer.Bool(operation_probe.no_consumers_cancelled);
     writer.Key("operation_owner_kinds_isolated");
     writer.Bool(operation_probe.owner_kinds_isolated);
+    writer.Key("operation_successful_completion_reused");
+    writer.Bool(operation_probe.successful_completion_reused);
+    writer.Key("operation_failure_retired_during_callback");
+    writer.Bool(operation_probe.failure_retired_during_callback);
+    writer.Key("operation_failed_completions_retired");
+    writer.Bool(operation_probe.failed_completions_retired);
     writer.Key("async_consumer_probe_ok");
     writer.Bool(async_consumer_probe.raced_completions == 1 &&
                 async_consumer_probe.precancelled_completions == 1 &&

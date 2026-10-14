@@ -156,6 +156,7 @@ public:
         Attached,
         Completed,
         Abandoned,
+        Retired,
     };
 
     using Callback = std::function<void(SharedCacheFetchPayload,
@@ -173,7 +174,14 @@ public:
     {
         std::lock_guard<std::mutex> lock(mutex_);
         if(done_)
+        {
+            // A retry must not reuse a failed result while its owner is still
+            // delivering callbacks and has not removed the registry entry.
+            if(error_ || !payload_ || payload_->status_code != 200 ||
+               payload_->failure != AsyncFetchFailure::None)
+                return AttachResult::Retired;
             return AttachResult::Completed;
+        }
         if(abandoned_)
             return AttachResult::Abandoned;
         ++consumers_;
@@ -3358,15 +3366,49 @@ static std::string dataGet(const std::string &url)
     std::string::size_type comma = url.find(',');
     if (comma == std::string::npos || comma == url.size() - 1)
         return "";
+    const bool base64 = comma >= 7 && url.compare(comma - 7, 7, ";base64") == 0;
 
-    std::string data = urlDecode(url.substr(comma + 1));
+    // Data URI payloads use percent escapes; '+' and control bytes are data.
+    std::string data;
+    if (url.find('%', comma + 1) == std::string::npos) {
+        data.assign(url, comma + 1, std::string::npos);
+        // Keep the existing tolerance for line-wrapped Base64 transport text.
+        if (base64 && (data.find('\r') != std::string::npos ||
+                       data.find('\n') != std::string::npos)) {
+            data.erase(std::remove_if(data.begin(), data.end(), [](char ch) {
+                return ch == '\r' || ch == '\n';
+            }), data.end());
+        }
+    } else {
+        const auto hex_digit = [](unsigned char ch) -> int {
+            if (ch >= '0' && ch <= '9') return ch - '0';
+            if (ch >= 'A' && ch <= 'F') return ch - 'A' + 10;
+            if (ch >= 'a' && ch <= 'f') return ch - 'a' + 10;
+            return -1;
+        };
+        for (size_t read = comma + 1; read < url.size(); ++read) {
+            if (url[read] == '%' && url.size() - read >= 3) {
+                const int high = hex_digit(url[read + 1]);
+                const int low = hex_digit(url[read + 2]);
+                if (high >= 0 && low >= 0) {
+                    const char decoded = static_cast<char>(high * 16 + low);
+                    if (!base64 || (decoded != '\r' && decoded != '\n'))
+                        data.push_back(decoded);
+                    read += 2;
+                    continue;
+                }
+            }
+            if (!base64 || (url[read] != '\r' && url[read] != '\n'))
+                data.push_back(url[read]);
+        }
+    }
     const long max_download_size = effectiveSettings().maxAllowedDownloadSize;
     if (max_download_size > 0 &&
         data.size() > static_cast<size_t>(max_download_size)) {
         writeLog(LOG_LEVEL_WARNING, "已阻止 data URL：内容超过最大下载大小。");
         return "";
     }
-    if (endsWith(url.substr(0, comma), ";base64")) {
+    if (base64) {
         std::string decoded = urlSafeBase64Decode(data);
         if (max_download_size > 0 &&
             decoded.size() > static_cast<size_t>(max_download_size)) {
@@ -3677,7 +3719,8 @@ public:
                 }
             }
             attach_result = operation->attachConsumer();
-            if(attach_result != CacheFetchOperation::AttachResult::Abandoned)
+            if(attach_result != CacheFetchOperation::AttachResult::Abandoned &&
+               attach_result != CacheFetchOperation::AttachResult::Retired)
                 break;
             std::lock_guard<std::mutex> lock(cache_fetch_mutex);
             auto iter = cache_fetches.find(registry_key);
@@ -3801,6 +3844,9 @@ CacheFetchOperationProbeSnapshot cacheFetchOperationProbe()
         if(!payload || error)
             return;
         ++snapshot.success_callbacks;
+        snapshot.successful_completion_reused =
+            success->attachConsumer() ==
+                CacheFetchOperation::AttachResult::Completed;
         success->subscribe([&](SharedCacheFetchPayload nested_payload,
                                std::exception_ptr nested_error) {
             if(nested_payload && !nested_error)
@@ -3819,7 +3865,12 @@ CacheFetchOperationProbeSnapshot cacheFetchOperationProbe()
     failure->subscribe([&](SharedCacheFetchPayload failed_payload,
                            std::exception_ptr error) {
         if(!failed_payload && error)
+        {
             ++snapshot.exception_callbacks;
+            snapshot.failure_retired_during_callback =
+                failure->attachConsumer() ==
+                    CacheFetchOperation::AttachResult::Retired;
+        }
     });
     failure->publishException(
         std::make_exception_ptr(std::runtime_error("cache fetch probe")));
@@ -3830,6 +3881,30 @@ CacheFetchOperationProbeSnapshot cacheFetchOperationProbe()
     catch(const std::runtime_error &)
     {
         snapshot.exception_rethrown_to_waiter = true;
+    }
+
+    // Probe the publication window without relying on concurrent timing.
+    snapshot.failed_completions_retired = true;
+    for(const auto kind : {CacheFetchOwnerKind::Sync, CacheFetchOwnerKind::Async})
+    {
+        for(int variant = 0; variant < 4; ++variant)
+        {
+            auto operation = std::make_shared<CacheFetchOperation>(kind);
+            bool retired_in_callback = false;
+            operation->subscribe([&](SharedCacheFetchPayload,
+                                     std::exception_ptr) {
+                retired_in_callback = operation->attachConsumer() ==
+                    CacheFetchOperation::AttachResult::Retired;
+            });
+            auto failed = std::make_shared<CacheFetchPayload>();
+            failed->status_code = variant == 0 ? 503 : variant == 1 ? 0 : 200;
+            if(variant == 2)
+                failed->failure = AsyncFetchFailure::Transport;
+            operation->publish(variant == 3 ? SharedCacheFetchPayload{} : failed);
+            snapshot.failed_completions_retired &= retired_in_callback &&
+                operation->attachConsumer() ==
+                    CacheFetchOperation::AttachResult::Retired;
+        }
     }
 
     auto unsubscribe = std::make_shared<CacheFetchOperation>(
@@ -4602,7 +4677,9 @@ void webGetOwnedAsync(OwnedWebGetRequest request,
                 }
                 attach_result = operation->attachConsumer();
                 if(attach_result !=
-                   CacheFetchOperation::AttachResult::Abandoned)
+                       CacheFetchOperation::AttachResult::Abandoned &&
+                   attach_result !=
+                       CacheFetchOperation::AttachResult::Retired)
                     break;
                 std::lock_guard<std::mutex> lock(cache_fetch_mutex);
                 const auto iter = cache_fetches.find(registry_key);

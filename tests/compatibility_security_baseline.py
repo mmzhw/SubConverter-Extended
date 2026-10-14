@@ -1810,6 +1810,9 @@ def owned_webget_boundary_baseline(helper: Path, fixture_base: str) -> None:
             or hit["operation_exception_rethrown_to_waiter"] is not True
             or hit["operation_no_consumers_cancelled"] is not True
             or hit["operation_owner_kinds_isolated"] is not True
+            or hit["operation_successful_completion_reused"] is not True
+            or hit["operation_failure_retired_during_callback"] is not True
+            or hit["operation_failed_completions_retired"] is not True
             or hit["async_consumer_probe_ok"] is not True
             or hit["async_data_ok"] is not True
             or hit["async_cache_ok"] is not True
