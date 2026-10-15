@@ -40,6 +40,7 @@ SubConverter-Extended 基于 [asdlokj1qpi233/subconverter](https://github.com/as
 | :--- | :--- |
 | 使用公共实例生成第一份配置 | [快速开始](https://github.com/Aethersailor/SubConverter-Extended/wiki/Getting-Started) |
 | 使用可视化界面组装和管理订阅链接 | [Web 配置界面](#web-配置界面--web-config-ui) |
+| 确认本 fork 已同步哪些上游改动、下一步同步什么 | [上游同步进度](UPSTREAM-SYNC.md) |
 | 确认客户端应使用哪个 `target` | [客户端与目标格式](https://github.com/Aethersailor/SubConverter-Extended/wiki/Compatibility) |
 | 自行部署服务 | [Docker 部署](https://github.com/Aethersailor/SubConverter-Extended/wiki/Docker-Deployment) · [原生部署](https://github.com/Aethersailor/SubConverter-Extended/wiki/Native-Deployment) |
 | 使用 OpenClash 模板和规则 | [Custom_OpenClash_Rules](https://github.com/Aethersailor/Custom_OpenClash_Rules) |
